@@ -1,0 +1,129 @@
+Site_Name,Date,Unnamed:_2,Time,Weather,Wind_Speed,Wind_Direction,Stream_Stage,Stage_Qualifier,Secchi__Depth,Air_Temp,Water_Temp,Stream_Site_Observations,Comments,Dissolved_Oxygen,DO_Percent,pH,Nitrate,Nitrite,Ammonia,Phosphorus,Chloride,E_coli,Total_Coliforms,Year,Month,Soluble_Nitrogen
+Tenmile Creek: Davis,2012-02-21,,,Fair Skies,8-12,SW,Slightly elevated,Falling,>0.5,18.0,9.0,Clean,,14.0,126,7.0,0.3,0.03,0.03,0.027,15,,,2012,2,0.36
+Tenmile Creek: Davis,2012-03-19,,,Intermittent Rain,4-7,S,Base flow,Stable,>0.5,22.0,19.0,Clean,,9.0,101,6.8,0.3,0.03,0.03,0.033,15,,,2012,3,0.36
+Tenmile Creek: Davis,2012-04-23,,,Fair Skies,1-3,NW,Slightly elevated,Falling,>0.5,14.0,14.0,Clean,,9.0,91,6.4,0.3,0.03,0.03,0.04,15,,,2012,4,0.36
+Tenmile Creek: Davis,2012-05-13,,,Fair Skies,8-12,SE,Slightly elevated,Falling,0.5,26.0,23.0,Clean,,8.0,97,6.3,0.3,0.03,0.03,0.005,10,,,2012,5,0.36
+Tenmile Creek: Davis,2012-05-29,,,Fair Skies,Calm,E,Trace,Stable,>0.5,28.0,24.0,Oily film,film on water is organic.,4.0,50,6.3,0.3,0.03,0.03,0.005,20,,,2012,5,0.36
+Tenmile Creek: Davis,2012-06-20,,,Overcast,4-7,SW,Slightly elevated,Falling,0.1,27.0,25.0,Clean,,6.0,76,6.2,0.3,0.03,0.03,0.087,10,,,2012,6,0.36
+Tenmile Creek: Davis,2012-07-20,,,Fair Skies,4-7,SE,No flow,Stable,>0.5,32.0,28.0,Clean,,6.0,69,6.3,0.3,0.03,0.03,0.033,10,,,2012,7,0.36
+Tenmile Creek: Davis,2012-08-27,,,Fair Skies,4-7,N,Slightly elevated,Falling,0.1,26.0,24.0,Clean,,6.0,69,6.2,0.3,0.03,0.03,0.047,10,,,2012,8,0.36
+Tenmile Creek: Davis,2012-09-20,,,Fair Skies,8-12,S,No flow,Stable,>0.05,24.0,19.0,Clean,,2.6,29,6.2,0.3,0.03,0.03,0.033,10,,,2012,9,0.36
+Tenmile Creek: Davis,2012-10-23,,,Overcast,4-7,SW,Base flow,Falling,0.1,22.0,19.0,Clean,,5.0,56,6.0,0.3,0.03,0.03,0.033,10,,,2012,10,0.36
+Tenmile Creek: Davis,2012-12-21,,,Fair Skies,Calm,NE,No flow,Stable,0.1,11.0,6.0,Floating detritus,,5.0,42,6.3,0.3,0.03,0.03,0.013,10,,,2012,12,0.36
+Tenmile Creek: Davis,2013-01-21,,,Fair Skies,Calm,N,Low flow,Falling,>0.05,7.0,6.0,Clean,,9.0,75,6.3,0.3,0.03,0.03,0.02,20,,,2013,1,0.36
+Tenmile Creek: Davis,2013-02-22,,,Overcast,8-12,N,Elevated,Stable,0.1,1.0,5.0,Clean,,12.0,98,6.3,0.3,0.03,0.03,0.007,10,,,2013,2,0.36
+Tenmile Creek: Davis,2013-03-19,,,Fair Skies,Calm,N,Slightly elevated,Stable,0.1,4.0,14.0,Clean,,9.0,91,6.3,0.3,0.03,0.03,0.02,10,,,2013,3,0.36
+Tenmile Creek: Davis,2013-04-22,,,Fair Skies,8-12,SE,Slightly elevated,Falling,0.5,20.0,16.0,Clean,,10.0,105,6.3,0.3,0.03,0.03,0.04,10,,,2013,4,0.36
+Tenmile Creek: Davis,2013-05-28,,,Fair,8-12mph,SE,Slightly elevated,Falling,0.5,25.0,23.0,Clean,,8.0,96,6.3,0.3,0.03,0.03,0.005,10,,,2013,5,0.36
+Tenmile Creek: Davis,2013-06-20,,,Fair,1-3mph,SE,Slightly elevated,Falling,>0.3,30.0,25.0,Clean,,5.0,64,6.3,0.3,0.03,0.03,0.133,10,144.0,4389.0,2013,6,0.36
+Tenmile Creek: Davis,2013-07-19,,,Fair,Calm,,Trace,Falling,>0.1,28.0,26.0,Foam/scum,,3.0,39,6.3,0.3,0.03,0.03,0.47,15,44.0,2333.0,2013,7,0.36
+Tenmile Creek: Davis,2013-08-28,,,Fair,Calm,S,No flow,Stable,>0.2,28.0,25.0,Oily film,,2.8,35,6.3,0.3,0.03,0.03,0.005,15,79.0,3200.0,2013,8,0.36
+Tenmile Creek: Davis,2013-09-30,,,Fair,8-12mph,SE,No flow,Stable,>0.3,21.0,20.0,Clean,,4.0,47,6.3,0.3,0.03,0.03,0.005,15,,,2013,9,0.36
+Tenmile Creek: Davis,2013-10-16,,,Overcast,4-7,N,Slightly elevated,Stable,0.1,13.0,17.0,Clean,No Nitrite/ Nitrate test strips.,6.0,64,6.2,0.3,0.03,0.03,0.005,5,,,2013,10,0.36
+Tenmile Creek: Davis,2013-12-18,,,Fair,4-7,SE,Elevated,Stable,>.1,11.0,5.0,Clean,,13.0,98,6.4,0.3,0.03,0.03,0.005,25,,,2013,12,0.36
+Tenmile Creek: Davis,2014-01-17,,,Fair,8-12mph,NW,Slightly elevated,Stable,>0.25,10.0,5.0,Clean,,13.0,98,6.7,0.3,0.03,0.03,0.005,20,,,2014,1,0.36
+Tenmile Creek: Davis,2014-02-28,,,Overcast,13-18mph,SE,Base,Stable,>0.6,8.0,6.0,Clean,,13.0,100,7.0,0.3,0.03,0.03,0.005,30,,,2014,2,0.36
+Tenmile Creek: Davis,2014-03-25,,,Fair,4-7mph,E,Slightly elevated,Falling,0.4,13.0,13.0,Clean,,12.0,113,6.3,0.3,0.03,0.03,0.033,10,,,2014,3,0.36
+Tenmile Creek: Davis,2014-04-29,,,Fair,19-24mph,S,Slightly elevated,Falling,0.5,18.0,17.0,Clean,,7.0,74,7.0,0.3,0.03,0.03,0.005,10,,,2014,4,0.36
+Tenmile Creek: Davis,2014-05-20,,,Overcast,8-12mph,SW,Slightly elevated,Falling,>0.6,25.0,21.0,Clean,,6.0,70,6.4,0.3,0.03,0.03,0.005,10,22.0,867.0,2014,5,0.36
+Tenmile Creek: Davis,2014-06-19,,,Overcast,8-12mph,NW,Slightly elevated,Falling,0.5,26.0,26.0,Floating detritus,,5.0,65,6.5,0.3,0.03,0.03,0.027,10,283.0,,2014,6,0.36
+Tenmile Creek: Davis,2014-08-21,,,Overcast,4-7mph,SE,Base,Stable,>0.6,28.0,25.0,Clean,,4.0,52,6.4,0.3,0.03,0.03,0.093,10,0.0,675.0,2014,8,0.36
+Tenmile Creek: Davis,2014-09-23,,,Fair,4-7mph,NE,Base,Stable,>0.7,20.0,20.0,Floating detritus,no DO#2 reagent. YSI SONDE 4.6mg/L O2 at 55% saturation.,4.6,55,6.8,0.3,0.03,0.03,0.04,10,40.0,560.0,2014,9,0.36
+Tenmile Creek: Davis,2014-10-28,,,Fair,4-7mph,NW,Trace,Stable,0.1,25.0,19.0,"Floating detritus, Oily film","no DO#2 reagent, YSI=4.98mg/L at 55% saturation ",4.98,55,6.5,0.3,0.03,0.03,0.033,10,,,2014,10,0.36
+Tenmile Creek: Davis,2014-11-25,,,Fair,4-7mph,NW,Trace,Stable,>0.1,8.0,7.0,"Floating detritus, Significant algae, Oily film",,5.0,42,6.4,0.3,0.03,0.03,0.027,10,,,2014,11,0.36
+Tenmile Creek: Davis,2014-12-19,,,Overcast,Calm,,Elevated,Falling,1.1,7.0,7.0,Foam/scum,,11.0,90,6.7,0.3,0.03,0.03,0.073,15,,,2014,12,0.36
+Tenmile Creek: Davis,2015-01-26,,,Fair,1-3mph,NE,Elevated,Falling,0.9,9.0,5.0,Foam/scum,,12.0,91,6.7,0.3,0.03,0.03,0.033,15,,,2015,1,0.36
+Tenmile Creek: Davis,2015-02-27,,,Overcast,1-3mph,N,Elevated,Stable,1.0,-4.0,2.0,Foam/scum,,15.0,101,7.0,0.3,0.03,0.03,0.02,15,,,2015,2,0.36
+Tenmile Creek: Davis,2015-03-24,,,Fair,13-18mph,SE,Elevated,Stable,1.0,22.0,15.0,Foam/scum,,9.0,90,7.0,0.3,0.03,0.03,0.033,15,,,2015,3,0.36
+Tenmile Creek: Davis,2015-04-23,,,Overcast,1-3mph,NE,Elevated,Falling,0.8,15.0,16.0,Clean,,7.0,93,6.8,0.3,0.03,0.03,0.027,10,,,2015,4,0.36
+Tenmile Creek: Davis,2015-06-24,,,Fair,4-7mph,S,Elevated,Falling,1.1,30.0,26.0,Clean,,5.0,66,6.6,0.3,0.03,0.03,0.033,10,167.0,5433.0,2015,6,0.36
+Tenmile Creek: Davis,2015-07-23,,,Fair,4-7mph,SE,Base,Stable,0.9,30.0,28.0,Clean,,4.0,53,6.8,0.3,0.03,0.03,0.067,10,13.0,1533.0,2015,7,0.36
+Tenmile Creek: Davis,2015-08-25,,,Overcast,4-7mph,W,Trace,Stable,>0.7,27.0,26.0,Clean,,4.0,53,7.0,0.3,0.03,0.03,0.033,10,27.0,6000.0,2015,8,0.36
+Tenmile Creek: Davis,2015-09-17,,,Fair,1-3mph,SE,Base,Stable,0.1,29.0,24.0,Oil,,5.0,63,7.2,0.3,0.03,0.03,0.053,15,33.0,4060.0,2015,9,0.36
+Tenmile Creek: Davis,2015-10-26,,,Fair,8-12mph,N,Elevated,Stable,1.0,16.0,15.0,Foam/scum,,8.0,81,6.8,0.3,0.03,0.03,0.047,15,,,2015,10,0.36
+Tenmile Creek: Davis,2015-11-25,,,Overcast,8-12mph,E,Elevated,Falling,0.9,18.0,11.0,Clean,,3.0,28,6.1,0.3,0.03,0.03,0.005,10,,,2015,11,0.36
+Tenmile Creek: Davis,2016-01-27,,,Fair,4-7mph,SW,Slightly elevated,Falling,0.1,7.0,5.0,Clean,,12.0,90,7.2,0.3,0.03,0.1,0.027,15,,,2016,1,0.42999999999999994
+Tenmile Creek: Davis,2016-02-25,,,Fair,4-7mph,NE,High flow,Falling,,11.0,8.5,Clean,,12.0,101,6.3,0.3,0.03,0.03,0.027,10,,,2016,2,0.36
+Tenmile Creek: Davis,2016-03-23,,,Overcast,1-3mph,SE,Elevated,Falling,0.1,18.0,14.0,Clean,,10.0,96,6.8,0.3,0.03,0.03,0.02,10,,,2016,3,0.36
+Tenmile Creek: Davis,2016-04-26,,,Overcast,,NW,Elevated,Falling,0.8,24.0,21.0,Clean,,7.0,81,6.5,0.3,0.03,0.03,0.08,10,,,2016,4,0.36
+Tenmile Creek: Davis,2016-05-24,,,Fair,4-7mph,SE,Slightly elevated,Falling,0.1,24.0,20.0,Clean,,7.0,78,6.8,0.3,0.03,0.03,0.047,15,533.0,,2016,5,0.36
+Tenmile Creek: Davis,2016-06-22,,,Fair,4-7mph,S,Slightly elevated,Falling,0.8,30.0,28.0,Clean,,5.0,67,6.8,0.3,0.03,0.03,0.27,10,67.0,2378.0,2016,6,0.36
+Tenmile Creek: Davis,2016-07-28,,,Fair,4-7mph,SE,No flow,Stable,>0.7,29.0,26.0,Floating detritus,,2.0,27,6.8,0.3,0.03,0.03,0.06,15,144.0,6611.0,2016,7,0.36
+Tenmile Creek: Davis,2016-08-24,,,Fair,4-7mph,S,Trace,Falling,>0.7,28.0,23.0,Oil/grease,,5.0,63,6.8,0.3,0.03,0.03,0.073,10,33.0,1978.0,2016,8,0.36
+Tenmile Creek: Davis,2016-09-21,,,Fair,4-7mph,SE,No flow,Stable,>0.7,25.0,23.0,Iron precipitates,,2.0,26,6.8,0.3,0.03,0.03,0.033,15,56.0,4222.0,2016,9,0.36
+Tenmile Creek: Davis,2016-10-26,,,Overcast,8-12mph,S,No flow,Stable,>0.6,18.0,18.0,"Foam/scum, Floating detritus, Iron precipitates",,3.0,34,7.2,0.3,0.03,0.03,0.033,15,,,2016,10,0.36
+Tenmile Creek: Davis,2016-11-17,,,Fair,13-18mph,S,No flow,Stable,>0.45,18.0,15.0,Floating detritus,,3.0,32,6.8,0.3,0.03,0.03,0.033,15,,,2016,11,0.36
+Tenmile Creek: Davis,2016-12-22,,,Fair,4-7mph,N,No flow,Stable,>0.5,7.0,4.0,Clean,,3.0,23,7.0,0.3,0.03,0.03,0.02,15,,,2016,12,0.36
+Tenmile Creek: Davis,2017-02-23,,,Fair,4-7mph,SE,Slightly elevated,Falling,0.1,22.0,14.5,Clean,,6.0,62,6.3,0.3,0.03,0.03,0.33,15,,,2017,2,0.36
+Tenmile Creek: Davis,2017-03-27,,,Overcast,1-3mph,E,Slightly elevated,Falling,>0.7,17.0,17.0,Clean,,5.0,55,6.8,0.3,0.03,0.03,0.033,20,,,2017,3,0.36
+Tenmile Creek: Davis,2017-04-26,,,Overcast,Calm,NE,Slightly elevated,Stable,0.8,14.0,18.5,Clean,,7.0,76,6.4,0.3,0.03,0.03,0.073,20,,,2017,4,0.36
+Tenmile Creek: Davis,2017-05-23,,,Fair,1-3mph,SE,Slightly elevated,Stable,0.9,19.0,21.0,Clean,,6.0,70,6.4,0.3,0.03,0.03,0.067,15,,,2017,5,0.36
+Tenmile Creek: Davis,2017-06-28,,,Fair,8-12mph,SE,Trace,Stable,>0.5,31.0,25.0,Clean,,3.0,38,6.3,0.3,0.03,0.03,0.033,10,11.0,767.0,2017,6,0.36
+Tenmile Creek: Davis,2017-07-19,,,Fair,Calm,S,Base,Stable,0.7,29.0,27.0,Clean,,4.0,55,6.3,0.3,0.03,0.03,0.02,15,75.0,633.0,2017,7,0.36
+Tenmile Creek: Davis,2017-08-24,,,Overcast,4-7mph,NE,Elevated,Falling,1.0,23.0,24.0,Clean,,6.0,75,6.3,0.3,0.03,0.03,0.027,10,42.0,,2017,8,0.36
+Tenmile Creek: Davis,2017-09-18,,,Overcast,4-7mph,NE,Trace,Stable,0.7,25.0,22.0,Floating detritus,,3.0,37,6.3,0.3,0.03,0.03,0.033,10,17.0,2300.0,2017,9,0.36
+Tenmile Creek: Davis,2017-10-27,,,Fair,19-24mph,N,Slightly elevated,Falling,0.7,8.0,12.0,Floating detritus,,5.0,48,6.3,0.3,0.03,0.03,0.02,10,,,2017,10,0.36
+Tenmile Creek: Davis,2017-11-28,,,Fair,8-12mph,S,No flow,Stable,>0.7,17.0,9.5,Floating detritus,no DO#2 reagent. YSI SONDE 2.5mg/L O2,2.5,24,6.3,0.3,0.03,0.03,0.053,10,,,2017,11,0.36
+Tenmile Creek: Davis,2017-12-22,,,Intermittent Rain,4-7mph,N,Slightly elevated,Stable,0.7,7.0,9.0,Floating detritus,,5.0,45,6.3,0.3,0.03,0.03,0.02,10,,,2017,12,0.36
+Tenmile Creek: Davis,2018-01-25,,,Fair,1-3 mph,NE,Elevated,Falling,0.8,9.0,6.0,Clean,,9.0,72,6.3,0.3,0.03,0.03,0.047,10,,,2018,1,0.36
+Tenmile Creek: Davis,2018-03-26,,,Overcast,8-12mph,SE,Slightly elevated,Stable,>0.8,18.0,15.0,Clean,,8.0,80,6.8,0.3,0.03,0.03,0.005,15,,,2018,3,0.36
+Tenmile Creek: Davis,2018-04-18,,,Fair,19-24mph,SW,Elevated,Falling,0.9,21.0,16.0,Flow/Habitat alteration,,6.0,63,6.3,0.3,0.03,0.03,0.033,10,,,2018,4,0.36
+Tenmile Creek: Davis,2018-05-23,,,Fair,1-3mph,S,Base,Stable,0.7,26.0,23.0,Floating detritus,bad nitrate strips,4.0,50,6.3,0.3,0.03,0.03,0.033,15,33.0,767.0,2018,5,0.36
+Tenmile Creek: Davis,2018-06-20,,,Heavy rain,1-3mph,S,Elevated,Rising,0.9,22.0,24.0,Floating detritus,"5"" rain in 2hrs.",7.0,86,6.8,0.3,0.03,0.03,0.02,10,1878.0,,2018,6,0.36
+Tenmile Creek: Davis,2018-07-19,,,Fair,4-7mph,SE,Trace,Stable,>0.68,28.0,27.0,Floating detritus,,3.0,40,6.8,0.3,0.03,0.03,0.047,10,0.0,7067.0,2018,7,0.36
+Tenmile Creek: Davis,2018-08-23,,,Fair,4-7mph,NE,Slightly elevated,Falling,0.3,27.0,25.0,Floating detritus,,4.0,50,6.8,1.0,0.03,0.03,0.033,10,100.0,1778.0,2018,8,1.06
+Tenmile Creek: Davis,2018-09-25,,,Fair,4-7mph,,High flow,Falling,0.3,23.0,21.0,Foam/scum,,7.0,80,5.8,0.3,0.03,0.03,0.033,10,89.0,8333.0,2018,9,0.36
+Tenmile Creek: Davis,2018-10-24,,,Overcast,Calm,,Elevated,Falling,0.4,13.0,14.0,Clean,,11.0,106,6.3,0.3,0.03,0.03,0.027,10,,,2018,10,0.36
+Tenmile Creek: Davis,2018-11-14,,,Fair,4-7mph,NE,Elevated,Falling,0.8,6.0,5.0,Clean,,7.0,55,6.3,0.3,0.03,0.03,0.027,10,,,2018,11,0.36
+Tenmile Creek: Davis,2018-12-19,,,Overcast,1-3mph,N,Elevated,Falling,0.4,9.0,8.0,Floating detritus,,12.0,100,6.4,0.3,0.03,0.03,0.01,10,,,2018,12,0.36
+Tenmile Creek: Davis,2019-01-25,,,Overcast,4-7 mph,N,Elevated,Falling,0.2,0.0,4.0,Floating detritus,,15.0,110,6.4,1.0,0.03,0.03,0.013,15,,,2019,1,1.06
+Tenmile Creek: Davis,2019-02-20,,,Overcast,4-7mph,NW,High flow,Falling,,6.0,5.0,Foam/scum,"Unable to get secchi, water too high.",11.0,84,6.3,0.3,0.03,0.03,0.02,10,,,2019,2,0.36
+Tenmile Creek: Davis,2019-04-24,,,Overcast,1-3mph,NE,Slightly elevated,Rising,0.5,18.0,19.0,Foam/scum,,9.0,98,6.8,0.3,0.03,0.03,0.02,10,,,2019,4,0.36
+Tenmile Creek: Davis,2019-05-23,,,Overcast,8-12mph,NE,Elevated,Falling,0.3,22.0,26.0,"Foam/scum, Floating detritus ",,8.0,102,6.3,0.3,0.03,0.03,0.04,10,400.0,9333.0,2019,5,0.36
+Tenmile Creek: Davis,2019-07-24,,,Fair,1-3mph,S,Low flow,Stable,>0.6,26.0,25.0,"Floating detritus, Iron",,3.0,37,6.7,0.3,0.03,0.03,0.033,15,0.0,3756.0,2019,7,0.36
+Tenmile Creek: Davis,2019-08-13,,,Fair,1-3mph,N,Trace,Stable,>0.9,28.0,26.0,"Floating detritus, Iron",,2.0,26,7.0,0.3,0.03,0.03,0.027,15,20.0,5967.0,2019,8,0.36
+Tenmile Creek: Davis,2019-09-25,,,Overcast,1-3mph,E,Base,Stable,0.5,24.0,25.0,"Floating detritus, Iron",,3.0,37,7.0,0.3,0.03,0.03,0.033,15,67.0,1700.0,2019,9,0.36
+Tenmile Creek: Davis,2019-10-17,,,Fair,4-7mph,NW,Elevated,Stable,0.1,13.0,15.0,"Unsightly color, Iron",,9.0,90,6.3,0.3,0.03,0.03,0.033,10,,,2019,10,0.36
+Tenmile Creek: Davis,2019-11-27,,,Fair,1-3mph,N,Elevated,Falling,0.5,7.0,9.0,Clean,,11.0,94,6.3,0.3,0.03,0.03,0.033,10,,,2019,11,0.36
+Tenmile Creek: Davis,2019-12-27,,,Fair,1-3mph,N,Slightly elevated,Stable,>0.7,16.0,9.0,Clean,,12.0,100,6.8,0.3,0.03,0.03,0.033,15,,,2019,12,0.36
+Tenmile Creek: Davis,2020-01-23,,,Fair,1-3mph,W,High flow,Falling,0.2,4.0,4.5,Clean,,13.0,95,6.5,0.3,0.03,0.03,0.067,10,,,2020,1,0.36
+Tenmile Creek: Davis,2020-02-14,,,Fair,4-7mph,SE,Elevated,Falling,0.4,4.3,5.8,Clean,,13.0,100,6.3,0.3,0.03,0.03,0.02,10,,,2020,2,0.36
+Tenmile Creek: Davis,2020-04-09,,,Fair,8-12mph,NE,Slightly elevated,Falling,0.5,20.0,19.0,Floating detritus,,9.0,97,6.7,0.3,0.03,0.03,0.013,15,,,2020,4,0.36
+Tenmile Creek: Davis,2020-05-19,,,Fair,4-7mph,S,Elevated,Falling,0.3,23.0,22.0,"Foam/scum, Floating detritus",,9.0,104,6.3,0.3,0.03,0.03,0.033,10,0.0,1378.0,2020,5,0.36
+Tenmile Creek: Davis,2020-06-16,,,Fair,4-7mph,E,Base,Stable,0.3,27.0,25.0,Floating detritus,,5.0,63,7.0,0.3,0.03,0.03,0.027,15,0.0,7100.0,2020,6,0.36
+Tenmile Creek: Davis,2020-07-15,,,Overcast,4-7mph,S,Base,Stable,>0.78,28.0,28.0,Floating detritus,,2.0,28,7.0,0.3,0.03,0.03,0.027,15,0.0,217.0,2020,7,0.36
+Tenmile Creek: Davis,2020-08-11,,,Overcast,1-3mph,SW,Trace,Falling,>0.1,28.0,27.0,Iron precipitates,,4.0,51,6.5,0.3,0.03,0.03,0.005,15,7.0,280.0,2020,8,0.36
+Tenmile Creek: Davis,2020-09-08,,,Overcast,8-12mph,S,Base,Stable,0.3,26.0,26.0,Floating detritus,,5.0,65,6.5,0.3,0.03,0.03,0.005,10,120.0,740.0,2020,9,0.36
+Tenmile Creek: Davis,2020-10-13,,,Fair,Calm,NE,No flow,Stable,>0.7,16.0,15.0,"Iron precipitates, Floating detritus",,2.0,20,6.0,0.3,0.03,0.03,0.027,10,,,2020,10,0.36
+Tenmile Creek: Davis,2020-11-10,,9:37 AM,Drizzle or light rain,,,Trace,Stable,0.6,22.0,21.0,Floating detritus,,4.0,48,6.5,0.3,0.03,0.03,0.033,10,,,2020,11,0.36
+Tenmile Creek: Davis,2020-12-08,,9:35 AM,Cloudless/Fair Skies,,,Normal,Stable,0.4,6.0,6.0,"Foam/scum, Floating detritus",,7.0,55,6.25,0.3,0.03,0.03,0.027,15,,,2020,12,0.36
+Tenmile Creek: Davis,2021-01-05,,8:49 AM,Cloudless/Fair Skies,,,Above Normal,Falling,0.3,1.0,4.0,"Unsightly color, Foam/scum",,12.0,90,6.5,0.3,0.03,0.1,0.033,20,,,2021,1,0.42999999999999994
+Tenmile Creek: Davis,2021-02-22,,9:15 AM,Cloudless/Fair Skies,,,Above Normal,Rising,0.4,0.0,1.0,Clean,about 1.5 weeks ago was a week long winter storm.,14.0,95,7.0,0.3,0.03,0.03,0.013,25,,,2021,2,0.36
+Tenmile Creek: Davis,2021-03-16,,8:40 AM,Overcast,,,Above Normal,Stable,0.5,9.0,9.0,foam/scum,persistant bubbles,7.0,60,6.5,0.3,0.03,0.03,0.027,25,,,2021,3,0.36
+Tenmile Creek: Davis,2021-04-13,,8:45 AM,Cloudless/Fair Skies,,,Low Flow,Stable,>0.35,14.0,15.0,"foam/scum, Floating detritus, Iron precipitants",,7.0,73,6.75,0.3,0.03,0.03,0.005,20,,,2021,4,0.36
+Tenmile Creek: Davis,2021-05-11,,9:30 AM,Cloudy or partly cloudy,,,Above Normal,Stable,>0.4,14.0,18.0,Clean,,7.0,75,6.5,0.3,0.03,0.03,0.005,15,647.0,1500.0,2021,5,0.36
+Tenmile Creek: Davis,2021-06-01,,10:02 AM,Cloudless/Fair Skies,,,Above Normal,Rising,0.3,20.0,18.0,Clean,,7.0,75,6.5,0.3,0.03,0.03,0.005,15,967.0,11233.0,2021,6,0.36
+Tenmile Creek: Davis,2021-07-13,,8:36 AM,Cloudless/Fair Skies,,,Low Flow,Stable,>0.5,24.0,25.0,"Floating detritus, Iron precipitants",,4.0,55,7.0,0.3,0.03,0.03,0.005,15,383.0,3350.0,2021,7,0.36
+Tenmile Creek: Davis,2021-08-16,,8:37 AM,Cloudless/Fair Skies,,,Low Flow,Stable,>0.4,22.0,24.0,Floating detritus,,2.4,30,6.5,0.3,0.03,0.03,0.005,15,33.0,13133.0,2021,8,0.36
+Tenmile Creek: Davis,2021-09-14,,8:35 AM,Cloudless/Fair Skies,,,Trace,Falling,>0.3,22.0,23.0,"Foam/scum, Floating detritus, Iron precipitants",,4.0,50,6.5,0.3,0.03,0.03,0.005,15,467.0,4533.0,2021,9,0.36
+Tenmile Creek: Davis,2021-10-11,,8:36 AM,Cloudless/Fair Skies,,,Trace,Stable,>0.3,23.0,22.0,"Floating detritus, Iron precipitants",,2.6,35,6.5,0.3,0.03,0.03,0.005,10,,,2021,10,0.36
+Tenmile Creek: Davis,2021-11-15,,8:23 AM,Cloudless/Fair Skies,,,Low Flow,Stable,0.4,7.0,10.0,Floating detritus,,8.0,73,6.5,0.3,0.03,0.03,0.005,15,,,2021,11,0.36
+Tenmile Creek: Davis,2021-12-06,,8:30 AM,Cloudless/Fair Skies,,,Trace,Stable,>0.3,7.0,13.0,"Manure, Floating detritus, Iron precipitants",,5.0,49,6.0,0.3,0.03,0.03,0.133,15,,,2021,12,0.36
+Tenmile Creek: Davis,2022-01-10,,8:36 AM,Cloudless/Fair Skies,,,Low Flow,Stable,0.4,2.0,2.0,"Floating detritus, Iron precipitants",,12.0,87,6.5,0.3,0.03,0.03,0.005,20,,,2022,1,0.36
+Tenmile Creek: Davis,2022-04-11,,9:16 AM,Cloudy or partly cloudy,,,Above Normal,Rising,0.4,19.0,16.0,"Unsightly color, Foam/scum, Floating detritus","*pH faulty Lot#, volunteer recorded 6.5 and 7*",9.0,95,6.5,0.3,0.03,0.03,0.005,15,,,2022,4,0.36
+Tenmile Creek: Davis,2022-05-09,,10:06 AM,Overcast,,,Above Normal,Falling,0.2,25.0,20.0,"foam/scum, Floating detritus, Iron precipitants","*pH faulty Lot#, volunteer recorded 6.5*",7.0,78,6.5,0.3,0.03,0.03,0.033,20,,,2022,5,0.36
+Tenmile Creek: Davis,2022-06-13,,10:27 AM,Cloudless/Fair Skies,,,Above Normal,Falling,0.2,30.0,26.0,"foam/scum, Floating detritus, Iron precipitants","*pH faulty Lot#, volunteer recorded 6.5*",6.0,75,6.5,0.3,0.03,0.03,0.005,5,244.0,1700.0,2022,6,0.36
+Tenmile Creek: Davis,2022-07-25,,9:25 AM,Cloudless/Fair Skies,,,Low Flow,Falling,>0.1,28.0,26.0,"Foam/scum, Floating detritus, Oil","*pH faulty Lot#, volunteer recorded 6.5*",3.0,38,6.5,0.3,0.03,0.03,0.067,15,18400.0,34866.0,2022,7,0.36
+Tenmile Creek: Davis,2022-08-08,,9:15 AM,Cloudless/Fair Skies,,,Trace,Falling,>0.2,24.0,24.0,"Foam/scum, Floating detritus, Oil","*pH faulty Lot#, volunteer recorded 6.5",2.0,26,6.5,0.3,0.03,0.03,0.033,15,28500.0,30000.0,2022,8,0.36
+Tenmile Creek: Davis,2022-10-10,,9:15 AM,Cloudy or partly cloudy,,,Trace,Falling,>0.1,12.0,20.0,"Foam/scum, Floating detritus, Oil, Iron precipitants",,2.4,27,7.0,0.3,0.03,0.1,0.013,15,,,2022,10,0.42999999999999994
+Tenmile Creek: Davis,2022-11-07,,9:49 AM,Overcast,,,Above Normal,Stable,0.1,23.6,15.0,"Foam/scum, Floating detritus",,9.0,90,6.5,1.0,0.03,0.03,0.005,15,,,2022,11,1.06
+Tenmile Creek: Davis,2022-12-05,,9:15 AM,Fog or Dust,,,Normal,Stable,0.3,11.3,8.24,"Foam/scum, Floating detritus",,9.0,78,6.8,0.3,0.03,0.03,0.005,5,,,2022,12,0.36
+Tenmile Creek: Davis,2023-01-16,,9:00 AM,Overcast,,,Normal,Falling,0.3,18.0,9.3,Clean,,15.0,125,7.0,0.3,0.03,0.03,0.02,20,,,2023,1,0.36
+Tenmile Creek: Davis,2023-02-13,,9:25 AM,Cloudless/Fair Skies,,,Above Normal,Falling,0.3,8.0,7.0,"Foam/scum, Silt",,12.0,97,6.5,0.3,0.03,0.03,0.027,15,,,2023,2,0.36
+Tenmile Creek: Davis,2023-03-13,,11:15 AM,Cloudy or partly cloudy,,,Above Normal,Falling,0.4,9.0,12.0,"Foam/scum, Iron precipitants, Silt",,11.0,100,6.5,0.3,0.03,0.03,0.005,15,,,2023,3,0.36
+Tenmile Creek: Davis,2023-04-10,,9:47 AM,Cloudy or partly cloudy,,,Normal,Stable,>0.4,16.1,16.0,"Floating detritus, Iron precipitants",,7.0,72,6.5,0.3,0.03,0.03,0.027,5,,,2023,4,0.36
+Tenmile Creek: Davis,2023-05-08,,10:17 AM,Cloudy or partly cloudy,,,Normal,Stable,0.3,25.0,20.0,"Foam/scum, Floating detritus",,6.0,68,6.5,0.3,0.03,0.03,0.1,20,200.0,15833.0,2023,5,0.36
+Tenmile Creek: Davis,2023-06-06,,9:25 AM,Cloudy or partly cloudy,,,Low Flow,Falling,0.3,25.0,22.0,"Foam/scum, Floating detritus, Iron precipitants, Silt",,0.4,5,6.75,0.3,0.03,0.03,0.013,15,0.0,0.0,2023,6,0.36
+Tenmile Creek: Davis,2023-07-19,,8:45 AM,Cloudy or partly cloudy,,,Normal,Falling,>0.3,26.5,27.5,Foam/scum,,5.0,65,7.0,0.3,0.03,0.03,0.033,5,600.0,1433.0,2023,7,0.36
+Tenmile Creek: Davis,2023-08-14,,9:45 AM,Cloudless/Fair Skies,,,Trace,Falling,0.2,29.0,27.0,"Foam/scum, Floating detritus, Iron precipitants",,2.0,26,6.5,0.3,0.03,0.03,0.033,5,6000.0,6100.0,2023,8,0.36
+Tenmile Creek: Davis,2023-09-11,,9:20 AM,Cloudy or partly cloudy,,,Elevated/No Flow,Falling,>0.2,23.0,22.0,"Foam/scum, Floating detritus, Iron precipitants",,1.4,17,6.5,0.3,0.03,0.03,0.027,5,4033.0,4233.0,2023,9,0.36

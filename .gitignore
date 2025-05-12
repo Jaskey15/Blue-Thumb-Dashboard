@@ -1,0 +1,32 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Virtual environment
+venv/
+env/
+ENV/
+
+# Log files
+*.log
+tenmile_creek.log
+tenmile_creek_setup.log
+
+# Database files you don't want to include (uncomment if needed)
+# *.db
+
+# Environment variables
+.env
+
+# IDE specific files
+.vscode/
+.idea/

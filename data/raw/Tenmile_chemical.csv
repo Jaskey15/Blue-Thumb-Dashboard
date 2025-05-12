@@ -1,0 +1,144 @@
+Site Name,Date,,Time,Weather,"Wind 
+Speed","Wind 
+Direction","Stream 
+Stage","Stage 
+Qualifier","Secchi
+ Depth","Air 
+Temp","Water 
+Temp","Stream Site 
+Observations",Comments,"DO
+mg/L","% Oxygen 
+Saturation",pH,"Nitrate
+mg/L","Nitrite
+mg/L","Ammonia 
+mg/L NH3-N","Orthophosphate
+mg/L P","Chloride 
+mg/L Cl",E. coli,Total Coliforms
+Tenmile Creek: Davis,2/21/2012,,,Fair Skies,8-12,SW,Slightly elevated,Falling,>0.5,18,9,Clean,,14,126,7,BDL,BDL,BDL,0.027,15,,
+Tenmile Creek: Davis,3/19/2012,,,Intermittent Rain,4-7,S,Base flow,Stable,>0.5,22,19,Clean,,9,101,6.8,BDL,BDL,BDL,0.033,15,,
+Tenmile Creek: Davis,4/23/2012,,,Fair Skies,1-3,NW,Slightly elevated,Falling,>0.5,14,14,Clean,,9,91,6.4,BDL,BDL,BDL,0.040,15,,
+Tenmile Creek: Davis,5/13/2012,,,Fair Skies,8-12,SE,Slightly elevated,Falling,0.5,26,23,Clean,,8,97,6.3,BDL,BDL,BDL,BDL,10,,
+Tenmile Creek: Davis,5/29/2012,,,Fair Skies,Calm,E,Trace,Stable,>0.5,28,24,Oily film,film on water is organic.,4,50,6.3,BDL,BDL,BDL,BDL,20,,
+Tenmile Creek: Davis,6/20/2012,,,Overcast,4-7,SW,Slightly elevated,Falling,0.1,27,25,Clean,,6,76,6.2,BDL,BDL,BDL,0.087,10,,
+Tenmile Creek: Davis,7/20/2012,,,Fair Skies,4-7,SE,No flow,Stable,>0.5,32,28,Clean,,6,69,6.3,BDL,BDL,BDL,0.033,10,,
+Tenmile Creek: Davis,8/27/2012,,,Fair Skies,4-7,N,Slightly elevated,Falling,0.1,26,24,Clean,,6,69,6.2,BDL,BDL,BDL,0.047,10,,
+Tenmile Creek: Davis,9/20/2012,,,Fair Skies,8-12,S,No flow,Stable,>0.05,24,19,Clean,,2.6,29,6.2,BDL,BDL,BDL,0.033,10,,
+Tenmile Creek: Davis,10/23/2012,,,Overcast,4-7,SW,Base flow,Falling,0.1,22,19,Clean,,5,56,6,BDL,BDL,BDL,0.033,10,,
+Tenmile Creek: Davis,12/21/2012,,,Fair Skies,Calm,NE,No flow,Stable,0.1,11,6,Floating detritus,,5,42,6.3,BDL,BDL,BDL,0.013,10,,
+Tenmile Creek: Davis,1/21/2013,,,Fair Skies,Calm,N,Low flow,Falling,>0.05,7,6,Clean,,9,75,6.3,BDL,BDL,BDL,0.020,20,,
+Tenmile Creek: Davis,2/22/2013,,,Overcast,8-12,N,Elevated,Stable,0.1,1,5,Clean,,12,98,6.3,BDL,BDL,BDL,0.007,10,,
+Tenmile Creek: Davis,3/19/2013,,,Fair Skies,Calm,N,Slightly elevated,Stable,0.1,4,14,Clean,,9,91,6.3,BDL,BDL,BDL,0.020,10,,
+Tenmile Creek: Davis,4/22/2013,,,Fair Skies,8-12,SE,Slightly elevated,Falling,0.5,20,16,Clean,,10,105,6.3,BDL,BDL,BDL,0.040,10,,
+Tenmile Creek: Davis,5/28/2013,,,Fair,8-12mph,SE,Slightly elevated,Falling,0.5,25,23,Clean,,8,96,6.3,BDL,BDL,BDL,BDL,10,,
+Tenmile Creek: Davis,6/20/2013,,,Fair,1-3mph,SE,Slightly elevated,Falling,>0.3,30,25,Clean,,5,64,6.3,BDL,BDL,BDL,0.133,10,144,4389
+Tenmile Creek: Davis,7/19/2013,,,Fair,Calm,,Trace,Falling,>0.1,28,26,Foam/scum,,3,39,6.3,BDL,BDL,BDL,0.470,15,44,2333
+Tenmile Creek: Davis,8/28/2013,,,Fair,Calm,S,No flow,Stable,>0.2,28,25,Oily film,,2.8,35,6.3,BDL,BDL,BDL,BDL,15,79,3200
+Tenmile Creek: Davis,9/30/2013,,,Fair,8-12mph,SE,No flow,Stable,>0.3,21,20,Clean,,4,47,6.3,BDL,BDL,BDL,BDL,15,,
+Tenmile Creek: Davis,10/16/2013,,,Overcast,4-7,N,Slightly elevated,Stable,0.1,13,17,Clean,No Nitrite/ Nitrate test strips.,6,64,6.2,BDL,BDL,BDL,BDL,5,,
+Tenmile Creek: Davis,12/18/2013,,,Fair,4-7,SE,Elevated,Stable,>.1,11,5,Clean,,13,98,6.4,BDL,BDL,BDL,BDL,25,,
+Tenmile Creek: Davis,1/17/2014,,,Fair,8-12mph,NW,Slightly elevated,Stable,>0.25,10,5,Clean,,13,98,6.7,BDL,BDL,BDL,BDL,20,,
+Tenmile Creek: Davis,2/28/2014,,,Overcast,13-18mph,SE,Base,Stable,>0.6,8,6,Clean,,13,100,7,BDL,BDL,BDL,BDL,30,,
+Tenmile Creek: Davis,3/25/2014,,,Fair,4-7mph,E,Slightly elevated,Falling,0.4,13,13,Clean,,12,113,6.3,BDL,BDL,BDL,0.033,10,,
+Tenmile Creek: Davis,4/29/2014,,,Fair,19-24mph,S,Slightly elevated,Falling,0.5,18,17,Clean,,7,74,7,BDL,BDL,BDL,BDL,10,,
+Tenmile Creek: Davis,5/20/2014,,,Overcast,8-12mph,SW,Slightly elevated,Falling,>0.6,25,21,Clean,,6,70,6.4,BDL,BDL,BDL,BDL,10,22,867
+Tenmile Creek: Davis,6/19/2014,,,Overcast,8-12mph,NW,Slightly elevated,Falling,0.5,26,26,Floating detritus,,5,65,6.5,BDL,BDL,BDL,0.027,10,283,>5417
+Tenmile Creek: Davis,8/21/2014,,,Overcast,4-7mph,SE,Base,Stable,>0.6,28,25,Clean,,4,52,6.4,BDL,BDL,BDL,0.093,10,0,675
+Tenmile Creek: Davis,9/23/2014,,,Fair,4-7mph,NE,Base,Stable,>0.7,20,20,Floating detritus,no DO#2 reagent. YSI SONDE 4.6mg/L O2 at 55% saturation.,4.6,55,6.8,BDL,BDL,BDL,0.040,10,40,560
+Tenmile Creek: Davis,10/28/2014,,,Fair,4-7mph,NW,Trace,Stable,0.1,25,19,"Floating detritus, Oily film","no DO#2 reagent, YSI=4.98mg/L at 55% saturation ",4.98,55,6.5,BDL,BDL,BDL,0.033,10,,
+Tenmile Creek: Davis,11/25/2014,,,Fair,4-7mph,NW,Trace,Stable,>0.1,8,7,"Floating detritus, Significant algae, Oily film",,5,42,6.4,BDL,BDL,BDL,0.027,10,,
+Tenmile Creek: Davis,12/19/2014,,,Overcast,Calm,,Elevated,Falling,1.1,7,7,Foam/scum,,11,90,6.7,BDL,BDL,BDL,0.073,15,,
+Tenmile Creek: Davis,1/26/2015,,,Fair,1-3mph,NE,Elevated,Falling,0.9,9,5,Foam/scum,,12,91,6.7,BDL,BDL,BDL,0.033,15,,
+Tenmile Creek: Davis,2/27/2015,,,Overcast,1-3mph,N,Elevated,Stable,1.0,-4,2,Foam/scum,,15,101,7,BDL,BDL,BDL,0.020,15,,
+Tenmile Creek: Davis,3/24/2015,,,Fair,13-18mph,SE,Elevated,Stable,1.0,22,15,Foam/scum,,9,90,7,BDL,BDL,BDL,0.033,15,,
+Tenmile Creek: Davis,4/23/2015,,,Overcast,1-3mph,NE,Elevated,Falling,0.8,15,16,Clean,,7,93,6.8,BDL,BDL,BDL,0.027,10,,
+Tenmile Creek: Davis,6/24/2015,,,Fair,4-7mph,S,Elevated,Falling,1.1,30,26,Clean,,5,66,6.6,BDL,BDL,BDL,0.033,10,167,5433
+Tenmile Creek: Davis,7/23/2015,,,Fair,4-7mph,SE,Base,Stable,0.9,30,28,Clean,,4,53,6.8,BDL,BDL,BDL,0.067,10,13,1533
+Tenmile Creek: Davis,8/25/2015,,,Overcast,4-7mph,W,Trace,Stable,>0.7,27,26,Clean,,4,53,7,BDL,BDL,BDL,0.033,10,27,6000
+Tenmile Creek: Davis,9/17/2015,,,Fair,1-3mph,SE,Base,Stable,0.1,29,24,Oil,,5,63,7.2,BDL,BDL,BDL,0.053,15,33,4060
+Tenmile Creek: Davis,10/26/2015,,,Fair,8-12mph,N,Elevated,Stable,1.0,16,15,Foam/scum,,8,81,6.8,BDL,BDL,BDL,0.047,15,,
+Tenmile Creek: Davis,11/25/2015,,,Overcast,8-12mph,E,Elevated,Falling,0.9,18,11,Clean,,3,28,6.1,BDL,BDL,BDL,BDL,10,,
+Tenmile Creek: Davis,1/27/2016,,,Fair,4-7mph,SW,Slightly elevated,Falling,0.1,7,5,Clean,,12,90,7.2,BDL,BDL,0.1,0.027,15,,
+Tenmile Creek: Davis,2/25/2016,,,Fair,4-7mph,NE,High flow,Falling,,11,8.5,Clean,,12,101,6.3,BDL,BDL,BDL,0.027,10,,
+Tenmile Creek: Davis,3/23/2016,,,Overcast,1-3mph,SE,Elevated,Falling,0.1,18,14,Clean,,10,96,6.8,BDL,BDL,BDL,0.020,10,,
+Tenmile Creek: Davis,4/26/2016,,,Overcast,,NW,Elevated,Falling,0.8,24,21,Clean,,7,81,6.5,BDL,BDL,BDL,0.080,10,,
+Tenmile Creek: Davis,5/24/2016,,,Fair,4-7mph,SE,Slightly elevated,Falling,0.1,24,20,Clean,,7,78,6.8,BDL,BDL,BDL,0.047,15,533,>6000
+Tenmile Creek: Davis,6/22/2016,,,Fair,4-7mph,S,Slightly elevated,Falling,0.8,30,28,Clean,,5,67,6.8,BDL,BDL,BDL,0.270,10,67,2378
+Tenmile Creek: Davis,7/28/2016,,,Fair,4-7mph,SE,No flow,Stable,>0.7,29,26,Floating detritus,,2,27,6.8,BDL,BDL,BDL,0.060,15,144,6611
+Tenmile Creek: Davis,8/24/2016,,,Fair,4-7mph,S,Trace,Falling,>0.7,28,23,Oil/grease,,5,63,6.8,BDL,BDL,BDL,0.073,10,33,1978
+Tenmile Creek: Davis,9/21/2016,,,Fair,4-7mph,SE,No flow,Stable,>0.7,25,23,Iron precipitates,,2,26,6.8,BDL,BDL,BDL,0.033,15,56,4222
+Tenmile Creek: Davis,10/26/2016,,,Overcast,8-12mph,S,No flow,Stable,>0.6,18,18,"Foam/scum, Floating detritus, Iron precipitates",,3,34,7.2,BDL,BDL,BDL,0.033,15,,
+Tenmile Creek: Davis,11/17/2016,,,Fair,13-18mph,S,No flow,Stable,>0.45,18,15,Floating detritus,,3,32,6.8,BDL,BDL,BDL,0.033,15,,
+Tenmile Creek: Davis,12/22/2016,,,Fair,4-7mph,N,No flow,Stable,>0.5,7,4,Clean,,3,23,7,BDL,BDL,BDL,0.020,15,,
+Tenmile Creek: Davis,2/23/2017,,,Fair,4-7mph,SE,Slightly elevated,Falling,0.1,22,14.5,Clean,,6,62,6.3,BDL,BDL,BDL,0.330,15,,
+Tenmile Creek: Davis,3/27/2017,,,Overcast,1-3mph,E,Slightly elevated,Falling,>0.7,17,17,Clean,,5,55,6.8,BDL,BDL,BDL,0.033,20,,
+Tenmile Creek: Davis,4/26/2017,,,Overcast,Calm,NE,Slightly elevated,Stable,0.8,14,18.5,Clean,,7,76,6.4,BDL,BDL,BDL,0.073,20,,
+Tenmile Creek: Davis,5/23/2017,,,Fair,1-3mph,SE,Slightly elevated,Stable,0.9,19,21,Clean,,6,70,6.4,BDL,BDL,BDL,0.067,15,,
+Tenmile Creek: Davis,6/28/2017,,,Fair,8-12mph,SE,Trace,Stable,>0.5,31,25,Clean,,3,38,6.3,BDL,BDL,BDL,0.033,10,11,767
+Tenmile Creek: Davis,7/19/2017,,,Fair,Calm,S,Base,Stable,0.7,29,27,Clean,,4,55,6.3,BDL,BDL,BDL,0.020,15,75,633
+Tenmile Creek: Davis,8/24/2017,,,Overcast,4-7mph,NE,Elevated,Falling,1.0,23,24,Clean,,6,75,6.3,BDL,BDL,BDL,0.027,10,42,>7500
+Tenmile Creek: Davis,9/18/2017,,,Overcast,4-7mph,NE,Trace,Stable,0.7,25,22,Floating detritus,,3,37,6.3,BDL,BDL,BDL,0.033,10,17,2300
+Tenmile Creek: Davis,10/27/2017,,,Fair,19-24mph,N,Slightly elevated,Falling,0.7,8,12,Floating detritus,,5,48,6.3,BDL,BDL,BDL,0.020,10,,
+Tenmile Creek: Davis,11/28/2017,,,Fair,8-12mph,S,No flow,Stable,>0.7,17,9.5,Floating detritus,no DO#2 reagent. YSI SONDE 2.5mg/L O2,2.5,24,6.3,BDL,BDL,BDL,0.053,10,,
+Tenmile Creek: Davis,12/22/2017,,,Intermittent Rain,4-7mph,N,Slightly elevated,Stable,0.7,7,9,Floating detritus,,5,45,6.3,BDL,BDL,BDL,0.020,10,,
+Tenmile Creek: Davis,1/25/2018,,,Fair,1-3 mph,NE,Elevated,Falling,0.8,9,6,Clean,,9,72,6.3,BDL,BDL,BDL,0.047,10,,
+Tenmile Creek: Davis,3/26/2018,,,Overcast,8-12mph,SE,Slightly elevated,Stable,>0.8,18,15,Clean,,8,80,6.8,BDL,BDL,BDL,BDL,15,,
+Tenmile Creek: Davis,4/18/2018,,,Fair,19-24mph,SW,Elevated,Falling,0.9,21,16,Flow/Habitat alteration,,6,63,6.3,BDL,BDL,BDL,0.033,10,,
+Tenmile Creek: Davis,5/23/2018,,,Fair,1-3mph,S,Base,Stable,0.7,26,23,Floating detritus,bad nitrate strips,4,50,6.3,BDL,BDL,BDL,0.033,15,33,767
+Tenmile Creek: Davis,6/20/2018,,,Heavy rain,1-3mph,S,Elevated,Rising,0.9,22,24,Floating detritus,"5"" rain in 2hrs.",7,86,6.8,BDL,BDL,BDL,0.020,10,1878,">10,000"
+Tenmile Creek: Davis,7/19/2018,,,Fair,4-7mph,SE,Trace,Stable,>0.68,28,27,Floating detritus,,3,40,6.8,BDL,BDL,BDL,0.047,10,0,7067
+Tenmile Creek: Davis,8/23/2018,,,Fair,4-7mph,NE,Slightly elevated,Falling,0.3,27,25,Floating detritus,,4,50,6.8,1,BDL,BDL,0.033,10,100,1778
+Tenmile Creek: Davis,9/25/2018,,,Fair,4-7mph,,High flow,Falling,0.3,23,21,Foam/scum,,7,80,5.8,BDL,BDL,BDL,0.033,10,89,8333
+Tenmile Creek: Davis,10/24/2018,,,Overcast,Calm,,Elevated,Falling,0.4,13,14,Clean,,11,106,6.3,BDL,BDL,BDL,0.027,10,,
+Tenmile Creek: Davis,11/14/2018,,,Fair,4-7mph,NE,Elevated,Falling,0.8,6,5,Clean,,7,55,6.3,BDL,BDL,BDL,0.027,10,,
+Tenmile Creek: Davis,12/19/2018,,,Overcast,1-3mph,N,Elevated,Falling,0.4,9,8,Floating detritus,,12,100,6.4,BDL,BDL,BDL,0.010,10,,
+Tenmile Creek: Davis,1/25/2019,,,Overcast,4-7 mph,N,Elevated,Falling,0.2,0,4,Floating detritus,,15,110,6.4,1,BDL,BDL,0.013,15,,
+Tenmile Creek: Davis,2/20/2019,,,Overcast,4-7mph,NW,High flow,Falling,,6,5,Foam/scum,"Unable to get secchi, water too high.",11,84,6.3,BDL,BDL,BDL,0.020,10,,
+Tenmile Creek: Davis,4/24/2019,,,Overcast,1-3mph,NE,Slightly elevated,Rising,0.5,18,19,Foam/scum,,9,98,6.8,BDL,BDL,BDL,0.020,10,,
+Tenmile Creek: Davis,5/23/2019,,,Overcast,8-12mph,NE,Elevated,Falling,0.3,22,26,"Foam/scum, Floating detritus ",,8,102,6.3,BDL,BDL,BDL,0.040,10,400,9333
+Tenmile Creek: Davis,7/24/2019,,,Fair,1-3mph,S,Low flow,Stable,>0.6,26,25,"Floating detritus, Iron",,3,37,6.7,BDL,BDL,BDL,0.033,15,0,3756
+Tenmile Creek: Davis,8/13/2019,,,Fair,1-3mph,N,Trace,Stable,>0.9,28,26,"Floating detritus, Iron",,2,26,7,BDL,BDL,BDL,0.027,15,20,5967
+Tenmile Creek: Davis,9/25/2019,,,Overcast,1-3mph,E,Base,Stable,0.5,24,25,"Floating detritus, Iron",,3,37,7,BDL,BDL,BDL,0.033,15,67,1700
+Tenmile Creek: Davis,10/17/2019,,,Fair,4-7mph,NW,Elevated,Stable,0.1,13,15,"Unsightly color, Iron",,9,90,6.3,BDL,BDL,BDL,0.033,10,,
+Tenmile Creek: Davis,11/27/2019,,,Fair,1-3mph,N,Elevated,Falling,0.5,7,9,Clean,,11,94,6.3,BDL,BDL,BDL,0.033,10,,
+Tenmile Creek: Davis,12/27/2019,,,Fair,1-3mph,N,Slightly elevated,Stable,>0.7,16,9,Clean,,12,100,6.8,BDL,BDL,BDL,0.033,15,,
+Tenmile Creek: Davis,1/23/2020,,,Fair,1-3mph,W,High flow,Falling,0.2,4,4.5,Clean,,13,95,6.5,BDL,BDL,BDL,0.067,10,,
+Tenmile Creek: Davis,2/14/2020,,,Fair,4-7mph,SE,Elevated,Falling,0.4,4.3,5.8,Clean,,13,100,6.3,BDL,BDL,BDL,0.020,10,,
+Tenmile Creek: Davis,4/9/2020,,,Fair,8-12mph,NE,Slightly elevated,Falling,0.5,20,19,Floating detritus,,9,97,6.7,BDL,BDL,BDL,0.013,15,,
+Tenmile Creek: Davis,5/19/2020,,,Fair,4-7mph,S,Elevated,Falling,0.3,23,22,"Foam/scum, Floating detritus",,9,104,6.3,BDL,BDL,BDL,0.033,10,0,1378
+Tenmile Creek: Davis,6/16/2020,,,Fair,4-7mph,E,Base,Stable,0.3,27,25,Floating detritus,,5,63,7,BDL,BDL,BDL,0.027,15,0,7100
+Tenmile Creek: Davis,7/15/2020,,,Overcast,4-7mph,S,Base,Stable,>0.78,28,28,Floating detritus,,2,28,7,BDL,BDL,BDL,0.027,15,0,217
+Tenmile Creek: Davis,8/11/2020,,,Overcast,1-3mph,SW,Trace,Falling,>0.1,28,27,Iron precipitates,,4,51,6.5,BDL,BDL,BDL,BDL,15,7,280
+Tenmile Creek: Davis,9/8/2020,,,Overcast,8-12mph,S,Base,Stable,0.3,26,26,Floating detritus,,5,65,6.5,BDL,BDL,BDL,BDL,10,120,740
+Tenmile Creek: Davis,10/13/2020,,,Fair,Calm,NE,No flow,Stable,>0.7,16,15,"Iron precipitates, Floating detritus",,2,20,6,BDL,BDL,BDL,0.027,10,,
+Tenmile Creek: Davis,11/10/2020,,9:37 AM,Drizzle or light rain,,,Trace,Stable,0.6,22,21,Floating detritus,,4,48,6.5,BDL,BDL,BDL,0.033,10,,
+Tenmile Creek: Davis,12/8/2020,,9:35 AM,Cloudless/Fair Skies,,,Normal,Stable,0.4,6,6,"Foam/scum, Floating detritus",,7,55,6.25,BDL,BDL,BDL,0.027,15,,
+Tenmile Creek: Davis,1/5/2021,,8:49 AM,Cloudless/Fair Skies,,,Above Normal,Falling,0.3,1,4,"Unsightly color, Foam/scum",,12,90,6.5,BDL,BDL,0.1,0.033,20,,
+Tenmile Creek: Davis,2/22/2021,,9:15 AM,Cloudless/Fair Skies,,,Above Normal,Rising,0.4,0,1,Clean,about 1.5 weeks ago was a week long winter storm.,14,95,7,BDL,BDL,BDL,0.013,25,,
+Tenmile Creek: Davis,3/16/2021,,8:40 AM,Overcast,,,Above Normal,Stable,0.5,9,9,foam/scum,persistant bubbles,7,60,6.5,BDL,BDL,BDL,0.027,25,,
+Tenmile Creek: Davis,4/13/2021,,8:45 AM,Cloudless/Fair Skies,,,Low Flow,Stable,>0.35,14,15,"foam/scum, Floating detritus, Iron precipitants",,7,73,6.75,BDL,BDL,BDL,BDL,20,,
+Tenmile Creek: Davis,5/11/2021,,9:30 AM,Cloudy or partly cloudy,,,Above Normal,Stable,>0.4,14,18,Clean,,7,75,6.5,BDL,BDL,BDL,BDL,15,647,1500
+Tenmile Creek: Davis,6/1/2021,,10:02 AM,Cloudless/Fair Skies,,,Above Normal,Rising,0.3,20,18,Clean,,7,75,6.5,BDL,BDL,BDL,BDL,15,967,11233
+Tenmile Creek: Davis,7/13/2021,,8:36 AM,Cloudless/Fair Skies,,,Low Flow,Stable,>0.5,24,25,"Floating detritus, Iron precipitants",,4,55,7,BDL,BDL,BDL,BDL,15,383,3350
+Tenmile Creek: Davis,8/16/2021,,8:37 AM,Cloudless/Fair Skies,,,Low Flow,Stable,>0.4,22,24,Floating detritus,,2.4,30,6.5,BDL,BDL,BDL,BDL,15,33,13133
+Tenmile Creek: Davis,9/14/2021,,8:35 AM,Cloudless/Fair Skies,,,Trace,Falling,>0.3,22,23,"Foam/scum, Floating detritus, Iron precipitants",,4,50,6.5,BDL,BDL,BDL,BDL,15,467,4533
+Tenmile Creek: Davis,10/11/2021,,8:36 AM,Cloudless/Fair Skies,,,Trace,Stable,>0.3,23,22,"Floating detritus, Iron precipitants",,2.6,35,6.5,BDL,BDL,BDL,BDL,10,,
+Tenmile Creek: Davis,11/15/2021,,8:23 AM,Cloudless/Fair Skies,,,Low Flow,Stable,0.4,7,10,Floating detritus,,8,73,6.5,BDL,BDL,BDL,BDL,15,,
+Tenmile Creek: Davis,12/6/2021,,8:30 AM,Cloudless/Fair Skies,,,Trace,Stable,>0.3,7,13,"Manure, Floating detritus, Iron precipitants",,5,49,6,BDL,BDL,BDL,0.133,15,,
+Tenmile Creek: Davis,1/10/2022,,8:36 AM,Cloudless/Fair Skies,,,Low Flow,Stable,0.4,2,2,"Floating detritus, Iron precipitants",,12,87,6.5,BDL,BDL,BDL,BDL,20,,
+Tenmile Creek: Davis,4/11/2022,,9:16 AM,Cloudy or partly cloudy,,,Above Normal,Rising,0.4,19,16,"Unsightly color, Foam/scum, Floating detritus","*pH faulty Lot#, volunteer recorded 6.5 and 7*",9,95,6.5,BDL,BDL,BDL,BDL,15,,
+Tenmile Creek: Davis,5/9/2022,,10:06 AM,Overcast,,,Above Normal,Falling,0.2,25,20,"foam/scum, Floating detritus, Iron precipitants","*pH faulty Lot#, volunteer recorded 6.5*",7,78,6.5,BDL,BDL,BDL,0.033,20,,
+Tenmile Creek: Davis,6/13/2022,,10:27 AM,Cloudless/Fair Skies,,,Above Normal,Falling,0.2,30,26,"foam/scum, Floating detritus, Iron precipitants","*pH faulty Lot#, volunteer recorded 6.5*",6,75,6.5,BDL,BDL,BDL,BDL,5,244,1700
+Tenmile Creek: Davis,7/25/2022,,9:25 AM,Cloudless/Fair Skies,,,Low Flow,Falling,>0.1,28,26,"Foam/scum, Floating detritus, Oil","*pH faulty Lot#, volunteer recorded 6.5*",3,38,6.5,BDL,BDL,BDL,0.067,15,18400,34866
+Tenmile Creek: Davis,8/8/2022,,9:15 AM,Cloudless/Fair Skies,,,Trace,Falling,>0.2,24,24,"Foam/scum, Floating detritus, Oil","*pH faulty Lot#, volunteer recorded 6.5",2,26,6.5,BDL,BDL,BDL,0.033,15,28500,30000
+Tenmile Creek: Davis,10/10/2022,,9:15 AM,Cloudy or partly cloudy,,,Trace,Falling,>0.1,12,20,"Foam/scum, Floating detritus, Oil, Iron precipitants",,2.4,27,7,BDL,BDL,0.1,0.013,15,,
+Tenmile Creek: Davis,11/7/2022,,9:49 AM,Overcast,,,Above Normal,Stable,0.1,23.6,15,"Foam/scum, Floating detritus",,9,90,6.5,1,BDL,BDL,BDL,15,,
+Tenmile Creek: Davis,12/5/2022,,9:15 AM,Fog or Dust,,,Normal,Stable,0.3,11.3,8.24,"Foam/scum, Floating detritus",,9,78,6.8,BDL,BDL,BDL,BDL,5,,
+Tenmile Creek: Davis,1/16/2023,,9:00 AM,Overcast,,,Normal,Falling,0.3,18,9.3,Clean,,15,125,7,BDL,BDL,BDL,0.020,20,,
+Tenmile Creek: Davis,2/13/2023,,9:25 AM,Cloudless/Fair Skies,,,Above Normal,Falling,0.3,8,7,"Foam/scum, Silt",,12,97,6.5,BDL,BDL,BDL,0.027,15,,
+Tenmile Creek: Davis,3/13/2023,,11:15 AM,Cloudy or partly cloudy,,,Above Normal,Falling,0.4,9,12,"Foam/scum, Iron precipitants, Silt",,11,100,6.5,BDL,BDL,BDL,BDL,15,,
+Tenmile Creek: Davis,4/10/2023,,9:47 AM,Cloudy or partly cloudy,,,Normal,Stable,>0.4,16.1,16,"Floating detritus, Iron precipitants",,7,72,6.5,BDL,BDL,BDL,0.027,5,,
+Tenmile Creek: Davis,5/8/2023,,10:17 AM,Cloudy or partly cloudy,,,Normal,Stable,0.3,25,20,"Foam/scum, Floating detritus",,6,68,6.5,BDL,BDL,BDL,0.100,20,200,15833
+Tenmile Creek: Davis,6/6/2023,,9:25 AM,Cloudy or partly cloudy,,,Low Flow,Falling,0.3,25,22,"Foam/scum, Floating detritus, Iron precipitants, Silt",,0.4,5,6.75,BDL,BDL,BDL,0.013,15,0,0
+Tenmile Creek: Davis,7/19/2023,,8:45 AM,Cloudy or partly cloudy,,,Normal,Falling,>0.3,26.5,27.5,Foam/scum,,5,65,7,BDL,BDL,BDL,0.033,5,600,1433
+Tenmile Creek: Davis,8/14/2023,,9:45 AM,Cloudless/Fair Skies,,,Trace,Falling,0.2,29,27,"Foam/scum, Floating detritus, Iron precipitants",,2,26,6.5,BDL,BDL,BDL,0.033,5,6000,6100
+Tenmile Creek: Davis,9/11/2023,,9:20 AM,Cloudy or partly cloudy,,,Elevated/No Flow,Falling,>0.2,23,22,"Foam/scum, Floating detritus, Iron precipitants",,1.4,17,6.5,BDL,BDL,BDL,0.027,5,4033,4233

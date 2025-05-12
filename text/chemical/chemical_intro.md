@@ -1,0 +1,5 @@
+### Chemical Water Quality 
+
+Chemical monitoring provides valuable insights into the health of aquatic ecosystems, acting as an early warning system for environmental stressors that may not be immediately visible. While chemical data alone cannot fully determine if a stream is healthy, it plays a crucial role in detecting the source of problems that may impact the biological inhabitants of the stream. Chemical parameters can reveal human influences like agricultural runoff, urban development, industrial discharges, and other pollution sources before they cause widespread damage to aquatic communities. The key parameters that Blue Thumb monitors are Dissolved Oxygen, pH, Nitrogen, Phosphorus, and Chloride - each serving as an indicator of different aspects of water quality and potential environmental challenges. By tracking these parameters over time, we can identify trends, detect emerging issues, and guide restoration efforts to maintain or improve the overall health of streams. 
+
+Select a parameter from the dropdown for a description and graph showing the changes over time.

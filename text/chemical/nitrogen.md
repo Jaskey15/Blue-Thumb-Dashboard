@@ -1,0 +1,6 @@
+### Description
+Nitrogen is an essential nutrient that exists in several forms in aquatic systems, including nitrate (NO3), nitrite (NO2), and ammonia (NH3). While naturally present in small amounts, excessive nitrogen — often from fertilizers, wastewater, and animal waste — can severely disrupt stream health. When nitrogen levels are too high, they trigger algal blooms that deplete oxygen when the algae die and decompose, creating "dead zones" harmful to fish and other aquatic life. Different forms of nitrogen have varying impacts: ammonia can be directly toxic to aquatic organisms, while nitrate and nitrite contribute to excessive plant growth. Scientists measure all these nitrogen forms together (called "soluble nitrogen") to assess a stream's nutrient balance and overall ecological health.
+
+### Analysis
+The natural level of soluble nitrogen in surface water is typically below 1 mg/L, and normal levels of nitrogen for this area are 0.45 mg/L. While there were a few measurements above 1 mg/L during the monitoring period, most measurements of the different forms of nitrogen were below the level able to be detected by testing equipment. Nitrogen levels are not presently a concern for this segment of Tenmile Creek.
+
