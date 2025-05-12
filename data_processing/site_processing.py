@@ -1,31 +1,12 @@
 import os
 import pandas as pd
 import sqlite3
-import logging
 
-def setup_logging():
-    """Configure logging to use the logs directory with component-specific log file."""
-    # Get the base directory of the project
-    base_dir = os.path.dirname(os.path.dirname(__file__))
-    
-    # Create logs directory if it doesn't exist
-    logs_dir = os.path.join(base_dir, 'logs')
-    os.makedirs(logs_dir, exist_ok=True)
-    
-    # Get the module name for the log file
-    module_name = os.path.basename(__file__).replace('.py', '')
-    log_file = os.path.join(logs_dir, f"{module_name}.log")
-    
-    # Configure logging
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.FileHandler(log_file),
-            logging.StreamHandler()
-        ]
-    )
-    return logging.getLogger(__name__)
+# Import from data_loader
+from data_processing.data_loader import (
+    setup_logging, load_csv_data, clean_column_names, 
+    save_processed_data, get_file_path
+)
 
 # Initialize logger
 logger = setup_logging()
@@ -71,34 +52,31 @@ def load_site_data():
     Returns a DataFrame with essential site information.
     """
     try:
-        # Define path to site CSV file
-        base_dir = os.path.dirname(os.path.dirname(__file__))
-        site_path = os.path.join(base_dir, 'data', 'raw', 'blue_thumb_site_data.csv')
+        # Use the load_csv_data function from data_loader
+        site_df = load_csv_data('site')
         
-        # Check if the file exists
-        if not os.path.exists(site_path):
-            logger.error(f"Site data file not found: {site_path}")
+        if site_df.empty:
+            logger.error("Failed to load site data")
             return pd.DataFrame()
         
-        # Load the site data
-        logger.info("Loading site data from CSV file")
-        site_df = pd.read_csv(site_path)
+        # Clean column names using the utility function
+        site_df = clean_column_names(site_df)
         
-        # Select only needed columns and rename them
-        essential_columns = {
-            'SiteName': 'site_name', 
-            'Latitude': 'latitude', 
-            'Longitude': 'longitude',
-            'County': 'county', 
-            'RiverBasin': 'river_basin', 
-            'L3_Ecoregion': 'ecoregion',  # Using L3_Ecoregion as it's typically the main ecoregion classification
+        # Map columns to our desired schema
+        column_mapping = {
+            'sitename': 'site_name',
+            'latitude': 'latitude',
+            'longitude': 'longitude',
+            'county': 'county',
+            'riverbasin': 'river_basin',
+            'l3_ecoregion': 'ecoregion'
         }
         
         # Check which columns are available
-        available_columns = {k: v for k, v in essential_columns.items() if k in site_df.columns}
+        available_columns = {k: v for k, v in column_mapping.items() if k in site_df.columns}
         
-        if 'SiteName' not in available_columns:
-            logger.error("Required column 'SiteName' not found in site data file")
+        if 'sitename' not in available_columns:
+            logger.error("Required column 'sitename' not found in site data file")
             return pd.DataFrame()
         
         # Select and rename columns
@@ -114,6 +92,10 @@ def load_site_data():
             sites_df['longitude'].fillna(0, inplace=True)
         
         logger.info(f"Extracted information for {len(sites_df)} unique sites")
+        
+        # Save the processed data using the utility function
+        save_processed_data(sites_df, 'site')
+        
         return sites_df
     
     except Exception as e:
@@ -260,7 +242,7 @@ def process_site_data():
         # Create sites table
         create_sites_table()
         
-        # Load site data
+        # Load site data using the data_loader utility
         sites_df = load_site_data()
         
         if sites_df.empty:
