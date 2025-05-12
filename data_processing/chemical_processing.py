@@ -17,7 +17,7 @@ def process_chemical_data(file_path=None):
     """Process chemical data from CSV file and return cleaned dataframe.""" 
     # Default file path if none provided
     if file_path is None:
-        file_path = '/Users/jacobaskey/Desktop/MyProjects/Tenmile Creek Project/VsCode/venv/dashboard/data/raw/Tenmile_chemical.csv'
+        file_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'raw', 'Tenmile_chemical.csv')
     
     # Check if file exists
     if not os.path.exists(file_path):
