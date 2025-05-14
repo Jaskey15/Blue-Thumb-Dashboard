@@ -39,11 +39,11 @@ os.makedirs(PROCESSED_DATA_DIR, exist_ok=True)
 
 # File paths for each data source
 DATA_FILES = {
-    'site': os.path.join(RAW_DATA_DIR, 'blue_thumb_site_data.csv'),
-    'chemical': os.path.join(RAW_DATA_DIR, 'blue_thumb_chemical_data.csv'),
-    'fish': os.path.join(RAW_DATA_DIR, 'blue_thumb_fish_data.csv'),
-    'macro': os.path.join(RAW_DATA_DIR, 'blue_thumb_macro_data.csv'),
-    'habitat': os.path.join(RAW_DATA_DIR, 'blue_thumb_habitat_data.csv')
+    'site': os.path.join(RAW_DATA_DIR, 'site_data.csv'),
+    'chemical': os.path.join(RAW_DATA_DIR, 'chemical_data.csv'),
+    'fish': os.path.join(RAW_DATA_DIR, 'fish_data.csv'),
+    'macro': os.path.join(RAW_DATA_DIR, 'macro_data.csv'),
+    'habitat': os.path.join(RAW_DATA_DIR, 'habitat_data.csv')
 }
 
 def get_file_path(data_type, processed=False):

@@ -48,7 +48,7 @@ def create_sites_table():
 
 def load_site_data():
     """
-    Load site information from the blue_thumb_site_data.csv file.
+    Load site information from site_data.csv file.
     Returns a DataFrame with essential site information.
     """
     try:
