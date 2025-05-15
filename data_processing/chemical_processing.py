@@ -3,16 +3,14 @@ import os
 import pandas as pd
 import numpy as np
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler("blue_thumb.log"),
-        logging.StreamHandler()
-    ]
+# Import utilities from data_loader
+from data_processing.data_loader import (
+    setup_logging, load_csv_data, clean_column_names, 
+    save_processed_data, get_file_path, get_unique_sites
 )
-logger = logging.getLogger(__name__)
+
+# Use the shared logging setup
+logger = setup_logging()
 
 # Define constants for BDL values (Below Detection Limit)
 # Values obtained from Blue Thumb Coordinator
@@ -58,20 +56,6 @@ KEY_PARAMETERS = [
     'DO_Percent', 'pH', 'Soluble_Nitrogen', 
     'Phosphorus', 'Chloride', 
 ]
-
-def clean_column_names(df):
-    """Clean column names to standardized format."""
-    df.columns = [    
-        col.replace(' \n', '_')
-            .replace('\n', '_')
-            .replace(' ', '_')
-            .replace('-', '_')
-            .replace('.', '')
-            .replace('/', '_')
-        for col in df.columns
-    ]
-    logger.debug("Column names cleaned")
-    return df
 
 def convert_bdl_value(value, bdl_replacement):
     """
@@ -120,29 +104,9 @@ def remove_empty_rows(df, chemical_columns):
     
     return df_filtered
 
-def get_sites_with_chemical_data(df=None):
+def get_sites_with_chemical_data():
     """Return a list of sites that have chemical data."""
-    if df is None:
-        # Load the chemical data if not provided
-        file_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'raw', 'chemical_data.csv')
-        if not os.path.exists(file_path):
-            logger.error(f"Chemical data file not found at: {file_path}")
-            return []
-        
-        try:
-            # Just load the SiteName column to save memory
-            df = pd.read_csv(file_path, usecols=['SiteName'])
-        except Exception as e:
-            logger.error(f"Error loading chemical data for site list: {e}")
-            return []
-    
-    # Get unique site names
-    if 'SiteName' in df.columns:
-        sites = df['SiteName'].dropna().unique().tolist()
-        sites.sort()
-        return sites
-    else:
-        return []
+    return get_unique_sites('chemical')
 
 def get_date_range_for_site(site_name):
     """Get the min and max dates for chemical data at a specific site."""
@@ -162,26 +126,16 @@ def get_date_range_for_site(site_name):
         logger.error(f"Error getting date range for site {site_name}: {e}")
         return None, None
 
-def process_chemical_data(site_name=None, file_path=None):
+def process_chemical_data(site_name=None):
     """
     Process chemical data from CSV file and return cleaned dataframe.
     
     Args:
         site_name: Optional site name to filter data for
-        file_path: Optional path to the chemical data file
         
     Returns:
         Tuple of (cleaned_dataframe, key_parameters, reference_values)
     """
-    # Default file path if none provided
-    if file_path is None:
-        file_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'raw', 'blue_thumb_chemical_data.csv')
-    
-    # Check if file exists
-    if not os.path.exists(file_path):
-        raise FileNotFoundError(f"Chemical data file not found at: {file_path}")
-    
-    # Load the data
     try:
         # Define columns to load
         cols_to_load = [
@@ -190,12 +144,12 @@ def process_chemical_data(site_name=None, file_path=None):
             'OP.Final.1', 'Chloride.Final.1'
         ]
         
-        # Try to load only specified columns, but fall back to loading all if column names differ
-        try:
-            chemical_data = pd.read_csv(file_path, usecols=cols_to_load)
-        except ValueError:
-            logger.warning("Column selection failed, loading all columns")
-            chemical_data = pd.read_csv(file_path)
+        # Load chemical data using data_loader's function
+        chemical_data = load_csv_data('chemical', usecols=cols_to_load, parse_dates=['Date'])
+        
+        if chemical_data.empty:
+            logger.error("Failed to load chemical data")
+            return pd.DataFrame(), KEY_PARAMETERS, REFERENCE_VALUES
             
         logger.info(f"Successfully loaded data with {len(chemical_data)} rows")
         
@@ -206,14 +160,13 @@ def process_chemical_data(site_name=None, file_path=None):
             
             if chemical_data.empty:
                 logger.warning(f"No data found for site: {site_name}")
-                # Return empty frame with expected structure
                 return pd.DataFrame(), KEY_PARAMETERS, REFERENCE_VALUES
     
     except Exception as e:
         logger.error(f"Error loading chemical data: {e}")
-        raise Exception(f"Error loading chemical data: {e}")
+        return pd.DataFrame(), KEY_PARAMETERS, REFERENCE_VALUES
 
-    # Clean column names
+    # Clean column names using data_loader's function
     chemical_data = clean_column_names(chemical_data)
     
     # Map of expected columns to actual columns in the data
@@ -246,14 +199,16 @@ def process_chemical_data(site_name=None, file_path=None):
     # Remove rows where all chemical parameters are null
     df_clean = remove_empty_rows(df_clean, chemical_columns)
     
-    # Convert 'Date' column to datetime format
+    # Ensure Date column exists and is datetime
     if 'date' in df_clean.columns:
-        df_clean['Date'] = pd.to_datetime(df_clean['date'])
-    elif 'Date' in df_clean.columns:
-        df_clean['Date'] = pd.to_datetime(df_clean['Date'])
-    else:
+        df_clean.rename(columns={'date': 'Date'}, inplace=True)
+    
+    if 'Date' not in df_clean.columns:
         logger.warning("No 'Date' column found in the data")
         df_clean['Date'] = pd.to_datetime('today')  # Fallback value
+    elif not pd.api.types.is_datetime64_dtype(df_clean['Date']):
+        # Convert to datetime if it's not already
+        df_clean['Date'] = pd.to_datetime(df_clean['Date'])
 
     # Extract additional time components
     df_clean['Year'] = df_clean['Date'].dt.year
@@ -306,6 +261,10 @@ def process_chemical_data(site_name=None, file_path=None):
     missing_values = df_clean.isnull().sum().sum()
     if missing_values > 0:
         logger.warning(f"Final dataframe contains {missing_values} missing values")
+
+    # Save processed data if a site was specified
+    if site_name:
+        save_processed_data(df_clean, f"chemical_{site_name.replace(' ', '_').lower()}")
 
     logger.info(f"Data processing complete. Output dataframe has {len(df_clean)} rows and {len(df_clean.columns)} columns")
     return df_clean, KEY_PARAMETERS, REFERENCE_VALUES

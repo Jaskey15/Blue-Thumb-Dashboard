@@ -1,41 +1,56 @@
 import logging
 import pandas as pd
 import sqlite3
+import os
+from datetime import datetime
 from database.database import get_connection, close_connection
+from data_processing.data_loader import setup_logging, load_csv_data, clean_column_names
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler("tenmile_creek.log"),
-        logging.StreamHandler()
-    ]
-)
-logger = logging.getLogger(__name__)
+# Set up component-specific logging
+logger = setup_logging()
 
-def load_fish_data():
-    """Load fish data into the database."""
+def load_fish_data(site_name=None):
+    """
+    Load fish data from CSV into the database.
+    
+    Args:
+        site_name: Optional site name to filter data for (default: None, loads all sites)
+    
+    Returns:
+        DataFrame with processed fish data
+    """
     conn = get_connection()
     cursor = conn.cursor()
   
     try:
-        # Check if data already exists
-        cursor.execute('SELECT COUNT(*) FROM fish_summary_scores')
-        data_exists = cursor.fetchone()[0] > 0
-
-        if not data_exists:
-            insert_site_data(cursor)
-            insert_collection_events(cursor)
-            insert_reference_and_metrics_data(cursor)
-            update_metric_results(cursor)
-            update_metric_scores(cursor)
-            calculate_summary_scores(cursor)
-
-            conn.commit()
-            logger.info("Fish data loaded successfully")
-        else:
-            logger.info("Fish data already exists in the database")
+        # Check if database structure is valid
+        if not verify_database_structure():
+            logger.error("Database structure verification failed. Please check the schema.")
+            return pd.DataFrame()
+        
+        # Load fish data from CSV
+        fish_df = process_fish_csv_data(site_name)
+        
+        if fish_df.empty:
+            logger.warning(f"No fish data found for processing.")
+            return pd.DataFrame()
+            
+        # Process sites from the data
+        unique_sites = fish_df['SiteName'].unique()
+        logger.info(f"Found {len(unique_sites)} unique sites in the fish data.")
+        
+        # Insert each site and its associated data
+        for site in unique_sites:
+            site_df = fish_df[fish_df['SiteName'] == site]
+            # Pass site DataFrame to insert_site_data for additional site info
+            site_id = insert_site_data(cursor, site, site_df)
+            
+            if site_id:
+                insert_collection_events(cursor, site_id, site_df)
+                insert_metrics_data(cursor, site_id, site_df)
+            
+        conn.commit()
+        logger.info("Fish data loaded successfully")
 
     except sqlite3.Error as e:
         conn.rollback()
@@ -48,274 +63,480 @@ def load_fish_data():
     finally:
         close_connection(conn)
 
-    return get_fish_dataframe()
+    # If site_name was provided, return data only for that site
+    if site_name:
+        return get_fish_dataframe(site_name)
+    else:
+        return get_fish_dataframe()
 
-def insert_site_data(cursor):
-    """Insert site data into the database."""
+def process_fish_csv_data(site_name=None):
+    """
+    Process fish data from CSV file.
+    
+    Args:
+        site_name: Optional site name to filter data for
+    
+    Returns:
+        DataFrame with processed fish data
+    """
+    try:
+        # Load raw fish data
+        fish_df = load_csv_data('fish')
+        
+        if fish_df.empty:
+            logger.error("Failed to load fish data from CSV.")
+            return pd.DataFrame()
+        
+        # Verify required columns exist
+        required_columns = [
+            'SiteName', 'SAMPLEID', 'Date', 'Year', 'Latitude', 'Longitude',
+            'RiverBasin', 'County', 'L3_Ecoregion',
+            'Total.Species', 'Sensitive.Benthic', 'Sunfish.Species', 
+            'Intolerant.Species', 'Percent.Tolerant', 'Percent.Insectivore', 
+            'Percent.Lithophil', 'Total.Species.IBI', 'Sensitive.Benthic.IBI',
+            'Sunfish.Species.IBI', 'Intolerant.Species.IBI', 'Percent.Tolerant.IBI',
+            'Percent.Insectivore.IBI', 'Percent.Lithophil.IBI', 'OKIBI.Score',
+            'Percent.Reference', 'Fish.Score'
+        ]
+        
+        missing_columns = [col for col in required_columns if col not in fish_df.columns]
+        if missing_columns:
+            logger.warning(f"Missing some columns in fish data: {', '.join(missing_columns)}")
+            # Continue with available columns, but log the warning
+        
+        # Clean column names for consistency
+        fish_df = clean_column_names(fish_df)
+        
+        # Map to standardized column names if needed
+        column_mapping = {
+            'sitename': 'site_name',
+            'sampleid': 'sample_id',
+            'date': 'collection_date',
+            'year': 'year',
+            'latitude': 'latitude',
+            'longitude': 'longitude',
+            'county': 'county',
+            'riverbasin': 'river_basin',
+            'l3_ecoregion': 'ecoregion',
+            'total_species': 'total_species',
+            'sensitive_benthic': 'sensitive_benthic_species',
+            'sunfish_species': 'sunfish_species',
+            'intolerant_species': 'intolerant_species',
+            'percent_tolerant': 'proportion_tolerant',
+            'percent_insectivore': 'proportion_insectivorous',
+            'percent_lithophil': 'proportion_lithophilic',
+            'total_species_ibi': 'total_species_score',
+            'sensitive_benthic_ibi': 'sensitive_benthic_score',
+            'sunfish_species_ibi': 'sunfish_species_score',
+            'intolerant_species_ibi': 'intolerant_species_score',
+            'percent_tolerant_ibi': 'tolerant_score',
+            'percent_insectivore_ibi': 'insectivorous_score',
+            'percent_lithophil_ibi': 'lithophilic_score',
+            'okibi_score': 'total_score',
+            'percent_reference': 'comparison_to_reference',
+            'fish_score': 'integrity_class'
+        }
+        
+        # Create a mapping with only columns that exist in the dataframe
+        valid_mapping = {k: v for k, v in column_mapping.items() if k in fish_df.columns}
+        fish_df = fish_df.rename(columns=valid_mapping)
+        
+        # Handle date formatting
+        if 'collection_date' in fish_df.columns:
+            try:
+                fish_df['collection_date'] = pd.to_datetime(fish_df['collection_date'])
+                fish_df['collection_date_str'] = fish_df['collection_date'].dt.strftime('%Y-%m-%d')
+                
+                # Check if year from date matches year column
+                fish_df['date_year'] = fish_df['collection_date'].dt.year
+                year_mismatches = fish_df[fish_df['date_year'] != fish_df['year']]
+                
+                if not year_mismatches.empty:
+                    logger.warning(f"Found {len(year_mismatches)} records where date year doesn't match year column.")
+                    # Log some examples
+                    for idx, row in year_mismatches.head(5).iterrows():
+                        logger.warning(f"Year mismatch at sample {row.get('sample_id')}: Date={row.get('collection_date_str')} (year={row.get('date_year')}), Year column={row.get('year')}")
+                
+                # Use the year from date as our canonical year
+                fish_df['year'] = fish_df['date_year']
+                
+            except Exception as e:
+                logger.error(f"Error processing dates: {e}")
+        
+        # Check for invalid data
+        invalid_columns = ['total_species_score', 'sensitive_benthic_score', 
+                           'sunfish_species_score', 'intolerant_species_score',
+                           'tolerant_score', 'insectivorous_score', 
+                           'lithophilic_score']
+        
+        # Filter for invalid columns that exist in the DataFrame
+        existing_invalid_cols = [col for col in invalid_columns if col in fish_df.columns]
+        
+        if existing_invalid_cols:
+            invalid_rows = fish_df[fish_df[existing_invalid_cols].eq(-999).any(axis=1)]
+            
+            if not invalid_rows.empty:
+                logger.warning(f"Found {len(invalid_rows)} rows with invalid scores (-999). These will be excluded.")
+                fish_df = fish_df[~fish_df.index.isin(invalid_rows.index)]
+        
+        # Validate IBI scores
+        fish_df = validate_ibi_scores(fish_df)
+        
+        # Filter by site name if provided
+        if site_name:
+            # Case-insensitive filter for site name
+            site_filter = fish_df['site_name'].str.lower() == site_name.lower()
+            filtered_df = fish_df[site_filter]
+            
+            if filtered_df.empty:
+                logger.warning(f"No fish data found for site: {site_name}")
+                return pd.DataFrame()
+            
+            logger.info(f"Filtered to {len(filtered_df)} fish records for site: {site_name}")
+            return filtered_df
+        
+        return fish_df
+        
+    except Exception as e:
+        logger.error(f"Error processing fish CSV data: {e}")
+        return pd.DataFrame()
+
+def validate_ibi_scores(fish_df):
+    """
+    Validate that OKIBI.Score (total_score) equals the sum of IBI component scores.
+    
+    Args:
+        fish_df: DataFrame with fish metrics data
+    
+    Returns:
+        DataFrame with validated data
+    """
+    try:
+        # Create a copy to avoid SettingWithCopyWarning
+        df = fish_df.copy()
+        
+        # Calculate sum of component scores
+        score_columns = ['total_species_score', 'sensitive_benthic_score', 
+                         'sunfish_species_score', 'intolerant_species_score',
+                         'tolerant_score', 'insectivorous_score', 
+                         'lithophilic_score']
+        
+        # Check which columns exist
+        existing_columns = [col for col in score_columns if col in df.columns]
+        
+        if len(existing_columns) < len(score_columns):
+            missing = set(score_columns) - set(existing_columns)
+            logger.warning(f"Missing some IBI component columns: {missing}")
+        
+        if existing_columns and 'total_score' in df.columns:
+            df['calculated_score'] = df[existing_columns].sum(axis=1)
+            
+            # Find mismatches
+            mismatch_mask = df['calculated_score'] != df['total_score']
+            mismatches = df[mismatch_mask]
+            
+            if not mismatches.empty:
+                logger.warning(f"Found {len(mismatches)} records where OKIBI.Score doesn't match sum of components.")
+                # Log some examples
+                for idx, row in mismatches.head(5).iterrows():
+                    logger.warning(f"Score mismatch at sample {row.get('sample_id')}: "
+                                  f"OKIBI.Score={row.get('total_score')}, "
+                                  f"Sum of components={row.get('calculated_score')}")
+                
+                # Flag records with mismatches
+                df['score_validated'] = ~mismatch_mask
+            else:
+                logger.info("All OKIBI.Score values match sum of components.")
+                df['score_validated'] = True
+            
+            # Drop the calculated column as we don't need it anymore
+            df = df.drop(columns=['calculated_score'])
+        
+        return df
+    
+    except Exception as e:
+        logger.error(f"Error validating IBI scores: {e}")
+        return fish_df  # Return original dataframe if validation fails
+
+def insert_site_data(cursor, site_name, site_df=None):
+    """
+    Insert site data into the database if it doesn't exist.
+    
+    Args:
+        cursor: Database cursor
+        site_name: Name of the site
+        site_df: Optional DataFrame with additional site info
+    
+    Returns:
+        int: site_id of the inserted or existing site
+    """
     try:
         # Check if site data already exists
-        cursor.execute('SELECT COUNT(*) FROM sites WHERE site_name = ?',
-                       ('Tenmile Creek: Davis',))
-        site_exists = cursor.fetchone()[0] > 0
+        cursor.execute('SELECT site_id FROM sites WHERE site_name = ?', (site_name,))
+        site_result = cursor.fetchone()
         
-        if not site_exists:
-            # Insert site
+        if site_result:
+            logger.debug(f"Site already exists: {site_name}, site_id={site_result[0]}")
+            return site_result[0]
+        
+        # Additional site info if provided
+        lat = None
+        lon = None
+        county = None
+        river_basin = None
+        ecoregion = None
+        
+        # Extract site info from DataFrame if available
+        if site_df is not None and not site_df.empty:
+            # Get the first row for this site that has the most complete data
+            site_info = site_df.iloc[0]
+            
+            # Check for each potential column with proper error handling
+            if 'latitude' in site_df.columns:
+                lat = site_info['latitude']
+            if 'longitude' in site_df.columns:
+                lon = site_info['longitude']
+            if 'county' in site_df.columns:
+                county = site_info['county']
+            if 'river_basin' in site_df.columns:
+                river_basin = site_info['river_basin']
+            if 'ecoregion' in site_df.columns:
+                ecoregion = site_info['ecoregion']
+        
+        # Insert site with all available info
+        cursor.execute('''
+            INSERT INTO sites (site_name, latitude, longitude, county, river_basin, ecoregion)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (site_name, lat, lon, county, river_basin, ecoregion))
+        
+        site_id = cursor.lastrowid
+        logger.debug(f"Inserted new site: {site_name}, site_id={site_id}")
+        return site_id
+        
+    except Exception as e:
+        logger.error(f"Error inserting site data for {site_name}: {e}")
+        return None
+
+def insert_collection_events(cursor, site_id, site_df):
+    """
+    Insert fish collection events into the database.
+    
+    Args:
+        cursor: Database cursor
+        site_id: ID of the site
+        site_df: DataFrame with fish data for this site
+    
+    Returns:
+        int: Number of collection events inserted
+    """
+    try:
+        # Get unique samples
+        sample_columns = ['sample_id', 'collection_date_str', 'year'] 
+        required_columns = [col for col in sample_columns if col in site_df.columns]
+        
+        if len(required_columns) < 2:
+            logger.error(f"Missing required columns for collection events: need sample_id and collection_date")
+            return 0
+            
+        samples = site_df.drop_duplicates(subset=required_columns)
+        
+        count = 0
+        event_id_map = {}  # Map sample_id to event_id for later use
+        
+        for _, sample in samples.iterrows():
+            sample_id = int(sample['sample_id']) if 'sample_id' in sample else 0
+            collection_date = sample['collection_date_str'] if 'collection_date_str' in sample else None
+            year = int(sample['year']) if 'year' in sample else None
+            
+            # Skip rows with missing essential data
+            if sample_id == 0 or collection_date is None or year is None:
+                logger.warning(f"Skipping collection event with missing data: sample_id={sample_id}, date={collection_date}, year={year}")
+                continue
+            
+            # Check if this sample is already in the database
             cursor.execute('''
-            INSERT INTO sites (site_name)
-            VALUES ('Tenmile Creek: Davis')
-            ''')
-            logger.debug("Inserted site data")
-        else:
-            logger.debug("Site already exists, skipping insertion")
-    except Exception as e:
-        logger.error(f"Error inserting site data: {e}")
-        raise
-
-def insert_collection_events(cursor):
-    """Insert fish collection events into the database."""
-    try:
-        # Define collection events data
-        collection_events = [
-            (1, '2012-06-27', 2012), 
-            (1, '2016-08-22', 2016),
-            (1, '2022-06-22', 2022) 
-        ]
-        cursor.executemany('''
-        INSERT INTO fish_collection_events (site_id, collection_date, year)
-        VALUES (?, ?, ?)
-        ''', collection_events)
-        logger.debug(f"Inserted {len(collection_events)} collection_events")
-
-    except Exception as e:
-        logger.error(f"Error inserting collection events: {e}")
-        raise
-
-def insert_reference_and_metrics_data(cursor):
-    """Insert fish reference values and metrics data"""
-    try:
-        # Define fish metrics
-        fish_metrics = ['Total No. of species', 'No. of sensitive benthic species', 
-                    'No. of sunfish species', 'No. of intolerant species',
-                    'Proportion tolerant individuals', 'Proportion insectivorous cyprinid',
-                    'Proportion lithophilic spawners']
-
-        # Fish reference data
-        fish_reference_data = [('Ouachita Mountains', [15, 4, 4, 5, 0.49, 0.17, 0.35])]
-
-        # Validate reference data
-        for region, values in fish_reference_data:
-            if len(values) != len(fish_metrics):
-                raise ValueError(f"Mismatch between metrics and values for {region}")
+                SELECT event_id FROM fish_collection_events 
+                WHERE site_id = ? AND sample_id = ?
+            ''', (site_id, sample_id))
             
-            # Check for valid numeric values
-            for val in values:
-                if not isinstance(val, (int, float)):
-                     raise ValueError(f"Non-numeric value in reference data: {val}")
-        
-        # Prepare reference data
-        fish_ref_data = []
-        reference_id = 1 # Starting ID for reference values
-        for region, values in fish_reference_data:
-            for i, metric in enumerate(fish_metrics):
-                fish_ref_data.append((reference_id, region, metric, values[i]))
-                reference_id += 1
-
-        # Fish event data
-        fish_event_data = [
-            (1, [22, 1, 6, 1, 0.35, 0.45, 0.02]),  # 2012
-            (2, [18, 5, 6, 3, 0.49, 0.01, 0.32]),   # 2016
-            (3, [24, 7, 7, 5, 0.48, 0.25, 0.19]),   # 2022
-        ]
-
-        # Validate event data
-        for event_id, values in fish_event_data:
-            if len(values) != len(fish_metrics):
-                raise ValueError(f"Mismatch between metrics and values for event {event_id}")
+            result = cursor.fetchone()
             
-            # Check for valid numeric values
-            for val in values:
-                if not isinstance(val, (int, float)):
-                     raise ValueError(f"Non-numeric value in event data: {val}")
+            if result:
+                # Sample already exists, store its event_id
+                event_id_map[sample_id] = result[0]
+                logger.debug(f"Sample already exists: site_id={site_id}, sample_id={sample_id}, event_id={result[0]}")
+            else:
+                # Insert new sample
+                cursor.execute('''
+                    INSERT INTO fish_collection_events (site_id, sample_id, collection_date, year)
+                    VALUES (?, ?, ?, ?)
+                ''', (site_id, sample_id, collection_date, year))
                 
-        # Prepare metrics data
-        fish_data = []
-        for event_id, values in fish_event_data:
-            for i, metric in enumerate(fish_metrics):
-                fish_data.append((event_id, metric, values[i]))
-
-        # Insert reference values
-        cursor.executemany('''
-        INSERT INTO fish_reference_values (reference_id, region, metric_name, metric_value)
-        VALUES (?, ?, ?, ?)
-        ''', fish_ref_data)
-        logger.debug(f"Inserted {len(fish_ref_data)} reference values")
-
-        # Insert metrics
-        cursor.executemany('''
-        INSERT INTO fish_metrics (event_id, metric_name, raw_value)
-        VALUES (?, ?, ?)
-        ''', fish_data)
-        logger.debug(f"Inserted {len(fish_data)} metrics")
-
-    except Exception as e:
-        logger.error(f"Error inserting reference and metrics data: {e}")
-        raise
-
-def update_metric_results(cursor):
-    """Update metric results based on reference values"""
-    try:   
-        # Update fish_metrics table with non-proportion metrics by dividing reference values
-        cursor.execute('''
-        UPDATE fish_metrics
-        SET metric_result = (
-            SELECT fish_metrics.raw_value / fish_reference_values.metric_value
-            FROM fish_reference_values
-            WHERE fish_metrics.metric_name = fish_reference_values.metric_name
-            AND fish_reference_values.region = 'Ouachita Mountains'
-        )
-        WHERE metric_name NOT IN (
-            'Proportion tolerant individuals',
-            'Proportion insectivorous cyprinid',
-            'Proportion lithophilic spawners'
-        )
-        ''')
-        logger.debug("Updated metric results for non-proportion metrics")
-
-        # Set proportion metrics to have same value for metric_result as raw_value
-        cursor.execute('''
-        UPDATE fish_metrics
-        SET metric_result = raw_value
-        WHERE metric_name IN (
-            'Proportion tolerant individuals',
-            'Proportion insectivorous cyprinid',
-            'Proportion lithophilic spawners'
-        )
-        ''')
-        logger.debug("Updated metric results for proportion metrics")
-
-        # Verify all metrics have results
-        cursor.execute("SELECT COUNT(*) FROM fish_metrics WHERE metric_result IS NULL")
-        missing_results = cursor.fetchone()[0]
-        if missing_results > 0:
-            logger.warning(f"{missing_results} metrics are missing results")
-    except Exception as e:
-        logger.error(f"Error updating metric results: {e}")
-        raise
-
-def update_metric_scores(cursor):
-    """Update metric scores based on IBI scoring criteria"""
-    try:
-        # Update scores for count metrics
-        cursor.execute('''
-        UPDATE fish_metrics
-        SET metric_score = CASE
-            WHEN metric_result > 0.67 THEN 5
-            WHEN metric_result >= 0.33 THEN 3
-            ELSE 1
-        END
-        WHERE metric_name IN (
-            'Total No. of species',
-            'No. of sensitive benthic species',
-            'No. of sunfish species',
-            'No. of intolerant species'
-        )
-        ''')
-
-        # Update score for tolerant individuals (inverse relationship)
-        cursor.execute('''
-        UPDATE fish_metrics
-        SET metric_score = CASE
-            WHEN metric_result < 0.10 THEN 5
-            WHEN metric_result <= 0.25 THEN 3
-            ELSE 1
-        END
-        WHERE metric_name = 'Proportion tolerant individuals'
-        ''')
+                event_id = cursor.lastrowid
+                event_id_map[sample_id] = event_id
+                count += 1
+                logger.debug(f"Inserted new sample: site_id={site_id}, sample_id={sample_id}, event_id={event_id}")
         
-        # Update score for insectivorous cyprinid
-        cursor.execute('''
-        UPDATE fish_metrics
-        SET metric_score = CASE
-            WHEN metric_result > 0.45 THEN 5
-            WHEN metric_result >= 0.20 THEN 3
-            ELSE 1
-        END
-        WHERE metric_name = 'Proportion insectivorous cyprinid'
-        ''')
-        # Update score for lithophilic spawners
-        cursor.execute('''
-        UPDATE fish_metrics
-        SET metric_score = CASE
-            WHEN metric_result > 0.36 THEN 5
-            WHEN metric_result >= 0.18 THEN 3
-            ELSE 1
-        END
-        WHERE metric_name = 'Proportion lithophilic spawners'
-        ''')
-        logger.debug("Updated metric scores")
+        logger.info(f"Inserted {count} new collection events for site_id={site_id}")
+        return count
+        
     except Exception as e:
-        logger.error(f"Error updating metric scores: {e}")
-        raise
+        logger.error(f"Error inserting collection events for site_id={site_id}: {e}")
+        return 0
 
-def calculate_summary_scores(cursor):
-    """Calculate and insert summary scores into the database."""
+def insert_metrics_data(cursor, site_id, site_df):
+    """
+    Insert fish metrics and summary scores into the database.
+    
+    Args:
+        cursor: Database cursor
+        site_id: ID of the site
+        site_df: DataFrame with fish data for this site
+    
+    Returns:
+        int: Number of metrics records inserted
+    """
     try:
-        # Verify all metrics have scores
-        cursor.execute("SELECT COUNT(*) FROM fish_metrics WHERE metric_score IS NULL")
-        missing_scores = cursor.fetchone()[0]
-        if missing_scores > 0:
-            logger.warning(f"{missing_scores} metrics are missing scores")
-
-
-        # Calculate and insert summary scores
+        # Get collection events for this site
         cursor.execute('''
-        INSERT INTO fish_summary_scores (event_id, total_score, comparison_to_reference, integrity_class)
-        SELECT 
-            event_id,
-            SUM(metric_score) AS total_score,
-            SUM(metric_score) / 25.0 AS comparison_to_reference,  -- 25.0 is Ouachita Mountains reference score
-            CASE
-                WHEN SUM(metric_score) / 25.0 > 0.97 THEN 'Excellent'
-                WHEN SUM(metric_score) / 25.0 >= 0.8 THEN 'Good'
-                WHEN SUM(metric_score) / 25.0 >= 0.67 THEN 'Fair'
-                WHEN SUM(metric_score) / 25.0 >= 0.47 THEN 'Poor'
-                ELSE 'Very Poor'
-            END AS integrity_class
-        FROM fish_metrics
-        GROUP BY event_id
-        ''')
-        logger.debug("Calculated and inserted summary scores")
+            SELECT event_id, sample_id FROM fish_collection_events 
+            WHERE site_id = ?
+        ''', (site_id,))
+        
+        event_map = {sample_id: event_id for event_id, sample_id in cursor.fetchall()}
+        
+        if not event_map:
+            logger.warning(f"No collection events found for site_id={site_id}")
+            return 0
+        
+        # Prepare metrics for insertion
+        metrics_count = 0
+        summary_count = 0
+        
+        for sample_id, events_df in site_df.groupby('sample_id'):
+            if sample_id not in event_map:
+                logger.warning(f"No event_id found for sample_id={sample_id}")
+                continue
+                
+            event_id = event_map[sample_id]
+            
+            # There should be only one row per sample_id, but just in case
+            sample_data = events_df.iloc[0]
+            
+            # Clear existing metrics for this event (to handle updates)
+            cursor.execute('DELETE FROM fish_metrics WHERE event_id = ?', (event_id,))
+            
+            # Define metric mappings
+            metric_mappings = [
+                ('Total No. of species', 'total_species', 'total_species_score'),
+                ('No. of sensitive benthic species', 'sensitive_benthic_species', 'sensitive_benthic_score'),
+                ('No. of sunfish species', 'sunfish_species', 'sunfish_species_score'),
+                ('No. of intolerant species', 'intolerant_species', 'intolerant_species_score'),
+                ('Proportion tolerant individuals', 'proportion_tolerant', 'tolerant_score'),
+                ('Proportion insectivorous cyprinid', 'proportion_insectivorous', 'insectivorous_score'),
+                ('Proportion lithophilic spawners', 'proportion_lithophilic', 'lithophilic_score')
+            ]
+            
+            # Insert metrics data
+            metrics_data = []
+            for metric_name, raw_col, score_col in metric_mappings:
+                # Check if columns exist in the DataFrame
+                if raw_col in sample_data and score_col in sample_data:
+                    raw_value = sample_data[raw_col]
+                    metric_score = sample_data[score_col]
+                    
+                    # For proportion metrics, use raw value as result
+                    metric_result = raw_value if metric_name.startswith('Proportion') else None
+                    
+                    metrics_data.append((event_id, metric_name, raw_value, metric_result, metric_score))
+            
+            if metrics_data:
+                cursor.executemany('''
+                    INSERT INTO fish_metrics (event_id, metric_name, raw_value, metric_result, metric_score)
+                    VALUES (?, ?, ?, ?, ?)
+                ''', metrics_data)
+                
+                metrics_count += len(metrics_data)
+            
+            # Insert summary scores (clear existing first)
+            cursor.execute('DELETE FROM fish_summary_scores WHERE event_id = ?', (event_id,))
+            
+            # Check if required columns exist
+            if all(col in sample_data for col in ['total_score', 'comparison_to_reference', 'integrity_class']):
+                cursor.execute('''
+                    INSERT INTO fish_summary_scores (event_id, total_score, comparison_to_reference, integrity_class)
+                    VALUES (?, ?, ?, ?)
+                ''', (event_id, sample_data['total_score'], 
+                      sample_data['comparison_to_reference'], 
+                      sample_data['integrity_class']))
+                
+                summary_count += 1
+            else:
+                logger.warning(f"Missing required summary score columns for sample_id={sample_id}")
+        
+        logger.info(f"Inserted {metrics_count} metrics and {summary_count} summary records for site_id={site_id}")
+        return metrics_count
+        
     except Exception as e:
-        logger.error(f"Error calculating summary scores: {e}")
-        raise
+        logger.error(f"Error inserting metrics data for site_id={site_id}: {e}")
+        return 0
 
-def get_fish_dataframe():   
-    """Query the database and return a dataframe with fish data"""
+def get_fish_dataframe(site_name=None):
+    """
+    Query the database and return a dataframe with fish data.
+    
+    Args:
+        site_name: Optional site name to filter data for
+    
+    Returns:
+        DataFrame with fish summary data
+    """
     conn = None 
     try:
         conn = get_connection()
-        fish_query = '''
-        SELECT 
-            f.event_id,
-            e.collection_date,
-            e.year,
-            f.total_score,
-            f.comparison_to_reference,
-            f.integrity_class
-        FROM 
-            fish_summary_scores f
-        JOIN 
-            fish_collection_events e ON f.event_id = e.event_id
-        ORDER BY 
-            e.year
+        
+        # Base query for fish summary data
+        query = '''
+            SELECT 
+                s.site_name,
+                f.event_id,
+                e.sample_id,
+                e.collection_date,
+                e.year,
+                f.total_score,
+                f.comparison_to_reference,
+                f.integrity_class
+            FROM 
+                fish_summary_scores f
+            JOIN 
+                fish_collection_events e ON f.event_id = e.event_id
+            JOIN
+                sites s ON e.site_id = s.site_id
         '''
-        fish_df = pd.read_sql_query(fish_query, conn)
+        
+        # Add filter for site name if provided
+        params = []
+        if site_name:
+            query += ' WHERE s.site_name = ?'
+            params.append(site_name)
+        
+        # Add order by clause
+        query += ' ORDER BY s.site_name, e.year, e.collection_date'
+        
+        # Execute query
+        fish_df = pd.read_sql_query(query, conn, params=params)
 
         # Validation of the dataframe
         if fish_df.empty:
-            logger.warning("No fish data found in the database")
+            if site_name:
+                logger.warning(f"No fish data found for site: {site_name}")
+            else:
+                logger.warning("No fish data found in the database")
         else:
-            logger.info(f"Retrieved {len(fish_df)} fish collection records")
+            if site_name:
+                logger.info(f"Retrieved {len(fish_df)} fish collection records for site: {site_name}")
+            else:
+                logger.info(f"Retrieved {len(fish_df)} fish collection records")
 
             # Check for missing values
             missing_values = fish_df.isnull().sum().sum()
@@ -323,6 +544,7 @@ def get_fish_dataframe():
                 logger.warning(f"Found {missing_values} missing values in the fish data")
 
         return fish_df
+        
     except sqlite3.Error as e:
         logger.error(f"SQLite error in get_fish_dataframe: {e}")
         return pd.DataFrame({'error': ['Database error occurred']})
@@ -333,45 +555,68 @@ def get_fish_dataframe():
         if conn:
             close_connection(conn)
 
-def get_fish_metrics_data_for_table():
-    """Query the database to get detailed fish metrics data for the metrics table display"""
+def get_fish_metrics_data_for_table(site_name=None):
+    """
+    Query the database to get detailed fish metrics data for the metrics table display.
+    
+    Args:
+        site_name: Optional site name to filter data for
+    
+    Returns:
+        Tuple of (metrics_df, summary_df) for display
+    """
     conn = None
     try:
         conn = get_connection()
         
-        # Query to get all metrics for each collection event
+        # Base query for metrics data
         metrics_query = '''
-        SELECT 
-            e.year,
-            m.metric_name,
-            m.raw_value,
-            m.metric_score
-        FROM 
-            fish_metrics m
-        JOIN 
-            fish_collection_events e ON m.event_id = e.event_id
-        ORDER BY 
-            e.year, m.metric_name
+            SELECT 
+                s.site_name,
+                e.year,
+                e.sample_id,
+                m.metric_name,
+                m.raw_value,
+                m.metric_score
+            FROM 
+                fish_metrics m
+            JOIN 
+                fish_collection_events e ON m.event_id = e.event_id
+            JOIN
+                sites s ON e.site_id = s.site_id
         '''
         
-        metrics_df = pd.read_sql_query(metrics_query, conn)
-        
-        # Query to get summary scores
+        # Base query for summary data
         summary_query = '''
-        SELECT 
-            e.year,
-            s.total_score,
-            s.comparison_to_reference,
-            s.integrity_class
-        FROM 
-            fish_summary_scores s
-        JOIN 
-            fish_collection_events e ON s.event_id = e.event_id
-        ORDER BY 
-            e.year
+            SELECT 
+                s.site_name,
+                e.year,
+                e.sample_id,
+                f.total_score,
+                f.comparison_to_reference,
+                f.integrity_class
+            FROM 
+                fish_summary_scores f
+            JOIN 
+                fish_collection_events e ON f.event_id = e.event_id
+            JOIN
+                sites s ON e.site_id = s.site_id
         '''
         
-        summary_df = pd.read_sql_query(summary_query, conn)
+        # Add filter for site name if provided
+        params = []
+        if site_name:
+            metrics_query += ' WHERE s.site_name = ?'
+            summary_query += ' WHERE s.site_name = ?'
+            params.append(site_name)
+        
+        # Add order by clause
+        metrics_query += ' ORDER BY s.site_name, e.year, e.sample_id, m.metric_name'
+        summary_query += ' ORDER BY s.site_name, e.year, e.sample_id'
+        
+        # Execute queries
+        metrics_df = pd.read_sql_query(metrics_query, conn, params=params)
+        summary_df = pd.read_sql_query(summary_query, conn, params=params)
         
         logger.debug(f"Retrieved metrics data for {len(metrics_df)} records and {summary_df.shape[0]} summary records")
         
@@ -385,8 +630,146 @@ def get_fish_metrics_data_for_table():
         if conn:
             close_connection(conn)
 
+def get_sites_with_fish_data():
+    """
+    Get a list of sites that have fish data.
+    
+    Returns:
+        List of site names
+    """
+    conn = None
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT DISTINCT s.site_name
+            FROM sites s
+            JOIN fish_collection_events e ON s.site_id = e.site_id
+            ORDER BY s.site_name
+        ''')
+        
+        sites = [row[0] for row in cursor.fetchall()]
+        logger.debug(f"Found {len(sites)} sites with fish data")
+        return sites
+        
+    except Exception as e:
+        logger.error(f"Error getting sites with fish data: {e}")
+        return []
+        
+    finally:
+        if conn:
+            close_connection(conn)
+
+def get_fish_years_for_site(site_name):
+    """
+    Get a list of years with fish data for a specific site.
+    
+    Args:
+        site_name: Name of the site
+    
+    Returns:
+        List of years sorted in ascending order
+    """
+    conn = None
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT DISTINCT e.year
+            FROM fish_collection_events e
+            JOIN sites s ON e.site_id = s.site_id
+            WHERE s.site_name = ?
+            ORDER BY e.year
+        ''', (site_name,))
+        
+        years = [row[0] for row in cursor.fetchall()]
+        logger.debug(f"Found {len(years)} years with fish data for site: {site_name}")
+        return years
+        
+    except Exception as e:
+        logger.error(f"Error getting years with fish data for site {site_name}: {e}")
+        return []
+        
+    finally:
+        if conn:
+            close_connection(conn)
+
+def get_fish_metrics_by_site_year(site_name, year=None):
+    """
+    Get detailed fish metrics for a specific site and optionally a specific year.
+    
+    Args:
+        site_name: Name of the site
+        year: Optional year to filter for
+    
+    Returns:
+        DataFrame with detailed metrics data
+    """
+    conn = None
+    try:
+        conn = get_connection()
+        
+        query = '''
+            SELECT 
+                s.site_name,
+                e.year,
+                e.sample_id,
+                e.collection_date,
+                m.metric_name,
+                m.raw_value,
+                m.metric_result,
+                m.metric_score,
+                f.total_score,
+                f.comparison_to_reference,
+                f.integrity_class
+            FROM 
+                fish_metrics m
+            JOIN 
+                fish_collection_events e ON m.event_id = e.event_id
+            JOIN
+                sites s ON e.site_id = s.site_id
+            JOIN
+                fish_summary_scores f ON e.event_id = f.event_id
+            WHERE 
+                s.site_name = ?
+        '''
+        
+        params = [site_name]
+        
+        if year is not None:
+            query += ' AND e.year = ?'
+            params.append(year)
+            
+        query += ' ORDER BY e.year, e.collection_date, e.sample_id, m.metric_name'
+        
+        metrics_df = pd.read_sql_query(query, conn, params=params)
+        
+        if metrics_df.empty:
+            logger.warning(f"No fish metrics found for site: {site_name}" + 
+                          (f", year: {year}" if year else ""))
+        else:
+            logger.info(f"Retrieved {len(metrics_df)} fish metrics for site: {site_name}" + 
+                       (f", year: {year}" if year else ""))
+            
+        return metrics_df
+        
+    except Exception as e:
+        logger.error(f"Error retrieving fish metrics for site {site_name}: {e}")
+        return pd.DataFrame()
+        
+    finally:
+        if conn:
+            close_connection(conn)
+
 def verify_database_structure():
-    """Verify that the database has the required tables and structure."""
+    """
+    Verify that the database has the required tables and structure for fish data.
+    
+    Returns:
+        bool: True if structure is valid, False otherwise
+    """
     conn = None
     try:
         conn = get_connection()
@@ -396,7 +779,6 @@ def verify_database_structure():
         required_tables = [
             'sites',
             'fish_collection_events',
-            'fish_reference_values',
             'fish_metrics',
             'fish_summary_scores'
         ]
@@ -407,11 +789,159 @@ def verify_database_structure():
                 logger.error(f"Missing required table: {table}")
                 return False
         
+        # Check if the fish_collection_events table has the sample_id column
+        cursor.execute("PRAGMA table_info(fish_collection_events)")
+        columns = [row[1] for row in cursor.fetchall()]
+        
+        if 'sample_id' not in columns:
+            logger.warning("fish_collection_events table is missing sample_id column. Adding it now.")
+            
+            # Add the sample_id column
+            try:
+                cursor.execute("ALTER TABLE fish_collection_events ADD COLUMN sample_id INTEGER")
+                conn.commit()
+                logger.info("Added sample_id column to fish_collection_events table")
+            except sqlite3.Error as e:
+                logger.error(f"Error adding sample_id column: {e}")
+                return False
+        
+        # Verify the sites table has the additional columns from the new schema
+        cursor.execute("PRAGMA table_info(sites)")
+        columns = [row[1] for row in cursor.fetchall()]
+        
+        expected_site_columns = ['site_id', 'site_name', 'latitude', 'longitude', 'county', 'river_basin', 'ecoregion']
+        missing_columns = [col for col in expected_site_columns if col not in columns]
+        
+        if missing_columns:
+            logger.warning(f"sites table is missing columns: {', '.join(missing_columns)}. Adding them now.")
+            
+            # Add missing columns to the sites table
+            for col in missing_columns:
+                try:
+                    cursor.execute(f"ALTER TABLE sites ADD COLUMN {col} TEXT")
+                    logger.info(f"Added {col} column to sites table")
+                except sqlite3.Error as e:
+                    logger.error(f"Error adding {col} column: {e}")
+                    # Continue with other columns even if one fails
+            
+            conn.commit()
+        
         logger.info("Database structure verified successfully")
         return True
+        
     except Exception as e:
         logger.error(f"Error verifying database structure: {e}")
         return False
+        
+    finally:
+        if conn:
+            close_connection(conn)
+
+def clean_fish_metrics(site_name=None):
+    """
+    Clean up invalid or duplicate fish metrics data in the database.
+    
+    Args:
+        site_name: Optional site name to filter cleanup for
+    
+    Returns:
+        int: Number of records cleaned
+    """
+    conn = None
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        
+        # Start with finding duplicate sample_ids for the same site
+        if site_name:
+            cursor.execute('''
+                SELECT e.site_id, e.sample_id, COUNT(*) as count
+                FROM fish_collection_events e
+                JOIN sites s ON e.site_id = s.site_id
+                WHERE s.site_name = ?
+                GROUP BY e.site_id, e.sample_id
+                HAVING count > 1
+            ''', (site_name,))
+        else:
+            cursor.execute('''
+                SELECT site_id, sample_id, COUNT(*) as count
+                FROM fish_collection_events
+                GROUP BY site_id, sample_id
+                HAVING count > 1
+            ''')
+        
+        duplicates = cursor.fetchall()
+        
+        if duplicates:
+            logger.warning(f"Found {len(duplicates)} duplicate sample IDs in fish_collection_events")
+            
+            # Clean up duplicates by keeping only the most recent entry
+            for site_id, sample_id, count in duplicates:
+                # Find the duplicate event_ids
+                cursor.execute('''
+                    SELECT event_id, collection_date
+                    FROM fish_collection_events
+                    WHERE site_id = ? AND sample_id = ?
+                    ORDER BY collection_date DESC
+                ''', (site_id, sample_id))
+                
+                events = cursor.fetchall()
+                # Keep the first one (most recent), delete the rest
+                keep_event_id = events[0][0]
+                
+                for event_id, _ in events[1:]:
+                    # Delete metrics and summary scores for this event
+                    cursor.execute('DELETE FROM fish_metrics WHERE event_id = ?', (event_id,))
+                    cursor.execute('DELETE FROM fish_summary_scores WHERE event_id = ?', (event_id,))
+                    cursor.execute('DELETE FROM fish_collection_events WHERE event_id = ?', (event_id,))
+                    logger.debug(f"Deleted duplicate event_id={event_id} for sample_id={sample_id}")
+        
+        # Look for metrics with null or invalid scores
+        if site_name:
+            cursor.execute('''
+                SELECT m.event_id, m.metric_name
+                FROM fish_metrics m
+                JOIN fish_collection_events e ON m.event_id = e.event_id
+                JOIN sites s ON e.site_id = s.site_id
+                WHERE s.site_name = ? AND (m.metric_score IS NULL OR m.metric_score < 0)
+            ''', (site_name,))
+        else:
+            cursor.execute('''
+                SELECT event_id, metric_name
+                FROM fish_metrics
+                WHERE metric_score IS NULL OR metric_score < 0
+            ''')
+        
+        invalid_metrics = cursor.fetchall()
+        
+        if invalid_metrics:
+            logger.warning(f"Found {len(invalid_metrics)} fish metrics with invalid scores")
+            
+            # Delete the invalid metrics
+            for event_id, metric_name in invalid_metrics:
+                cursor.execute('''
+                    DELETE FROM fish_metrics 
+                    WHERE event_id = ? AND metric_name = ?
+                ''', (event_id, metric_name))
+                logger.debug(f"Deleted invalid metric {metric_name} for event_id={event_id}")
+        
+        # Commit all changes
+        conn.commit()
+        
+        # Return total number of cleaned records
+        total_cleaned = len(duplicates) + len(invalid_metrics)
+        if total_cleaned > 0:
+            logger.info(f"Cleaned {total_cleaned} fish data records")
+        else:
+            logger.info("No invalid fish data records found to clean")
+            
+        return total_cleaned
+        
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Error cleaning fish metrics: {e}")
+        return 0
+        
     finally:
         if conn:
             close_connection(conn)
@@ -419,8 +949,32 @@ def verify_database_structure():
 if __name__ == "__main__":
     # Verify database before attempting to load data
     if verify_database_structure():
+        # Clean any existing data to ensure consistency
+        clean_fish_metrics()
+        
+        # Load all fish data
         fish_df = load_fish_data()
         logger.info("Fish data summary:")
         logger.info(f"Number of records: {len(fish_df)}")
+        
+        # Get list of sites
+        sites = get_sites_with_fish_data()
+        logger.info(f"Sites with fish data: {', '.join(sites)}")
+        
+        # Print sample data for verification
+        if not fish_df.empty:
+            logger.info("\nSample data:")
+            site_sample = fish_df['site_name'].iloc[0]
+            logger.info(f"Data for site: {site_sample}")
+            
+            # Get years for this site
+            years = get_fish_years_for_site(site_sample)
+            logger.info(f"Years with data: {', '.join(map(str, years))}")
+            
+            # Get metrics for the most recent year
+            if years:
+                recent_year = max(years)
+                metrics = get_fish_metrics_by_site_year(site_sample, recent_year)
+                logger.info(f"Most recent year ({recent_year}) has {len(metrics)} metric records")
     else:
         logger.error("Database verification failed. Please check the database structure.")

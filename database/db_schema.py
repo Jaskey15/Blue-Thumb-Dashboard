@@ -5,21 +5,30 @@ def create_tables():
     conn = get_connection()
     cursor = conn.cursor()
     
-    # Create tables for fish collections
+    # Sites table - common to all data types
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS sites (
         site_id INTEGER PRIMARY KEY,
-        site_name TEXT NOT NULL
+        site_name TEXT NOT NULL,
+        latitude REAL,
+        longitude REAL,
+        county TEXT,
+        river_basin TEXT,
+        ecoregion TEXT,
+        UNIQUE(site_name)
     )
     ''')
 
+    # ---------- FISH DATA TABLES ----------
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS fish_collection_events (
         event_id INTEGER PRIMARY KEY,
         site_id INTEGER NOT NULL,
-        collection_date TEXT NOT NULL, -- Store in YYYY-MM-DD format
+        sample_id INTEGER NOT NULL,
+        collection_date TEXT NOT NULL,
         year INTEGER NOT NULL,
-        FOREIGN KEY (site_id) REFERENCES sites (site_id)
+        FOREIGN KEY (site_id) REFERENCES sites (site_id),
+        UNIQUE(site_id, sample_id)
     )
     ''')
 
@@ -39,7 +48,7 @@ def create_tables():
         metric_name TEXT NOT NULL,
         raw_value REAL NOT NULL,
         metric_result REAL,
-        metric_score INTEGER CHECK (metric_score IN(1, 3, 5)),
+        metric_score INTEGER,
         PRIMARY KEY (event_id, metric_name),
         FOREIGN KEY (event_id) REFERENCES fish_collection_events (event_id)
     )
@@ -55,11 +64,12 @@ def create_tables():
     )
     ''')    
     
-    # Create tables for macroinvertebrates
+    # ---------- MACROINVERTEBRATE DATA TABLES ----------
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS macro_collection_events (
         event_id INTEGER PRIMARY KEY,
         site_id INTEGER NOT NULL,
+        sample_id INTEGER,
         season TEXT CHECK (season IN ('Summer', 'Winter')),
         year INTEGER NOT NULL,
         habitat TEXT CHECK (habitat IN ('Riffle', 'Stream_veg', 'Wood')),
@@ -99,7 +109,130 @@ def create_tables():
         biological_condition TEXT NOT NULL,
         FOREIGN KEY (event_id) REFERENCES macro_collection_events (event_id)
     )
-    ''')    
+    ''')
+    
+    # ---------- CHEMICAL DATA TABLES ----------
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS chemical_collection_events (
+        event_id INTEGER PRIMARY KEY,
+        site_id INTEGER NOT NULL,
+        sample_id INTEGER,
+        collection_date TEXT NOT NULL,
+        year INTEGER NOT NULL,
+        month INTEGER NOT NULL,
+        FOREIGN KEY (site_id) REFERENCES sites (site_id)
+    )
+    ''')
+
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS chemical_parameters (
+        parameter_id INTEGER PRIMARY KEY,
+        parameter_name TEXT NOT NULL,
+        parameter_code TEXT NOT NULL,
+        display_name TEXT NOT NULL,
+        description TEXT,
+        unit TEXT,
+        UNIQUE(parameter_code)
+    )
+    ''')
+
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS chemical_reference_values (
+        reference_id INTEGER PRIMARY KEY,
+        parameter_id INTEGER NOT NULL,
+        threshold_type TEXT NOT NULL,
+        min_value REAL,
+        max_value REAL,
+        description TEXT,
+        FOREIGN KEY (parameter_id) REFERENCES chemical_parameters (parameter_id)
+    )
+    ''')
+
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS chemical_measurements (
+        event_id INTEGER NOT NULL,
+        parameter_id INTEGER NOT NULL,
+        value REAL,
+        bdl_flag BOOLEAN DEFAULT 0,
+        status TEXT,
+        PRIMARY KEY (event_id, parameter_id),
+        FOREIGN KEY (event_id) REFERENCES chemical_collection_events (event_id),
+        FOREIGN KEY (parameter_id) REFERENCES chemical_parameters (parameter_id)
+    )
+    ''')
+    
+    # ---------- HABITAT DATA TABLES ----------
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS habitat_assessments (
+        assessment_id INTEGER PRIMARY KEY,
+        site_id INTEGER NOT NULL,
+        assessment_date TEXT NOT NULL,
+        year INTEGER NOT NULL,
+        total_score REAL NOT NULL,
+        habitat_grade TEXT,
+        FOREIGN KEY (site_id) REFERENCES sites (site_id)
+    )
+    ''')
+
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS habitat_metrics (
+        assessment_id INTEGER NOT NULL,
+        metric_name TEXT NOT NULL,
+        score REAL NOT NULL,
+        PRIMARY KEY (assessment_id, metric_name),
+        FOREIGN KEY (assessment_id) REFERENCES habitat_assessments (assessment_id)
+    )
+    ''')
+    
+    # Run some initial population of common tables
+    # Insert key chemical parameters
+    cursor.execute("SELECT COUNT(*) FROM chemical_parameters")
+    if cursor.fetchone()[0] == 0:
+        # Insert common chemical parameters
+        parameters = [
+            (1, 'Dissolved Oxygen', 'DO_Percent', 'Dissolved Oxygen', 'Percent saturation of dissolved oxygen', '%'),
+            (2, 'pH', 'pH', 'pH', 'Measure of acidity/alkalinity', 'pH units'),
+            (3, 'Soluble Nitrogen', 'Soluble_Nitrogen', 'Nitrogen', 'Total soluble nitrogen including nitrate, nitrite, and ammonia', 'mg/L'),
+            (4, 'Phosphorus', 'Phosphorus', 'Phosphorus', 'Orthophosphate phosphorus', 'mg/L'),
+            (5, 'Chloride', 'Chloride', 'Chloride', 'Chloride ion concentration', 'mg/L')
+        ]
+        cursor.executemany('''
+        INSERT OR IGNORE INTO chemical_parameters 
+        (parameter_id, parameter_name, parameter_code, display_name, description, unit)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ''', parameters)
+        
+        # Insert reference values for these parameters
+        reference_values = [
+            # DO_Percent reference values
+            (1, 1, 'normal_min', 80, NULL, 'Minimum for normal range'),
+            (2, 1, 'normal_max', 130, NULL, 'Maximum for normal range'),
+            (3, 1, 'caution_min', 50, NULL, 'Minimum for caution range'),
+            (4, 1, 'caution_max', 150, NULL, 'Maximum for caution range'),
+            
+            # pH reference values
+            (5, 2, 'normal_min', 6.5, NULL, 'Minimum for normal range'),
+            (6, 2, 'normal_max', 9.0, NULL, 'Maximum for normal range'),
+            
+            # Soluble Nitrogen reference values
+            (7, 3, 'normal', NULL, 0.8, 'Normal threshold'),
+            (8, 3, 'caution', NULL, 1.5, 'Caution threshold'),
+            
+            # Phosphorus reference values
+            (9, 4, 'normal', NULL, 0.05, 'Normal threshold'),
+            (10, 4, 'caution', NULL, 0.1, 'Caution threshold'),
+            
+            # Chloride reference values
+            (11, 5, 'poor', NULL, 250, 'Poor threshold')
+        ]
+        cursor.executemany('''
+        INSERT OR IGNORE INTO chemical_reference_values
+        (reference_id, parameter_id, threshold_type, min_value, max_value, description)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ''', reference_values)
+        
+        conn.commit()
+        print("Initial chemical parameters and reference values added")
     
     close_connection(conn)
     print("Database schema created successfully")
