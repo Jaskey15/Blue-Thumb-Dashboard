@@ -36,24 +36,22 @@ def load_fish_data(site_name=None):
             return pd.DataFrame()
             
         # Process sites from the data
-        site_column = get_site_column(fish_df)
-        if not site_column:
-            logger.error("Cannot find site name column in fish data")
-            return pd.DataFrame()
+        unique_sites = fish_df['site_name'].unique()
+        logger.info(f"Found {len(unique_sites)} unique sites in the fish data.")
             
         unique_sites = fish_df[site_column].unique()
         logger.info(f"Found {len(unique_sites)} unique sites in the fish data.")
         
-        # Insert each site and its associated data
+        # In load_fish_data:
         for site in unique_sites:
-            # CHANGE: Use site_column variable instead of hardcoded 'SiteName'
-            site_df = fish_df[fish_df[site_column] == site]
+            site_df = fish_df[fish_df['site_name'] == site]
             # Pass site DataFrame to insert_site_data for additional site info
             site_id = insert_site_data(cursor, site, site_df)
             
             if site_id:
-                insert_collection_events(cursor, site_id, site_df)
-                insert_metrics_data(cursor, site_id, site_df)
+                # Get event IDs and map in one step
+                count, event_map = insert_collection_events(cursor, site_id, site_df)
+                insert_metrics_data(cursor, site_id, site_df, event_map)
             
         conn.commit()
         logger.info("Fish data loaded successfully")
@@ -74,26 +72,6 @@ def load_fish_data(site_name=None):
         return get_fish_dataframe(site_name)
     else:
         return get_fish_dataframe()
-
-# ADDED: Helper function to get the site column name
-def get_site_column(df):
-    """
-    Find the site name column in the DataFrame regardless of capitalization.
-    
-    Args:
-        df: DataFrame to search
-        
-    Returns:
-        str: Column name for site, or None if not found
-    """
-    # Try different possible variations of the site name column
-    possibilities = ['sitename', 'site_name', 'SiteName', 'site']
-    
-    for col in df.columns:
-        if col.lower() in [p.lower() for p in possibilities]:
-            return col
-            
-    return None
 
 def process_fish_csv_data(site_name=None):
     """
@@ -118,8 +96,7 @@ def process_fish_csv_data(site_name=None):
         
         # Verify required columns exist
         required_columns = [
-            'SiteName', 'SAMPLEID', 'Date', 'Year', 'Latitude', 'Longitude',
-            'RiverBasin', 'County', 'L3_Ecoregion',
+            'SiteName', 'SAMPLEID', 'Date', 'Year',
             'Total.Species', 'Sensitive.Benthic', 'Sunfish.Species', 
             'Intolerant.Species', 'Percent.Tolerant', 'Percent.Insectivore', 
             'Percent.Lithophil', 'Total.Species.IBI', 'Sensitive.Benthic.IBI',
@@ -145,17 +122,11 @@ def process_fish_csv_data(site_name=None):
         logger.debug(f"Cleaned fish data columns: {', '.join(fish_df.columns)}")
         
         # Map to standardized column names if needed
-        # CHANGE: Updated column mapping to match cleaned column names
         column_mapping = {
             'sitename': 'site_name',
             'sampleid': 'sample_id',
             'date': 'collection_date',
             'year': 'year',
-            'latitude': 'latitude',
-            'longitude': 'longitude',
-            'county': 'county',
-            'riverbasin': 'river_basin',
-            'l3_ecoregion': 'ecoregion',
             'totalspecies': 'total_species',
             'sensitivebenthic': 'sensitive_benthic_species',
             'sunfishspecies': 'sunfish_species',
@@ -178,7 +149,6 @@ def process_fish_csv_data(site_name=None):
         # Create a mapping with only columns that exist in the dataframe
         valid_mapping = {}
         for k, v in column_mapping.items():
-            # CHANGE: Case-insensitive column matching
             matching_cols = [col for col in fish_df.columns if col.lower() == k.lower()]
             if matching_cols:
                 valid_mapping[matching_cols[0]] = v
@@ -227,14 +197,7 @@ def process_fish_csv_data(site_name=None):
         fish_df = validate_ibi_scores(fish_df)
         
         # Filter by site name if provided
-        if site_name:
-            # CHANGE: Use flexible site column handling
-            site_column = get_site_column(fish_df)
-            if not site_column:
-                logger.error("Cannot find site name column in fish data")
-                return pd.DataFrame()
-                
-            # Case-insensitive filter for site name
+        if site_name:               
             site_filter = fish_df[site_column].str.lower() == site_name.lower()
             filtered_df = fish_df[site_filter]
             
@@ -310,7 +273,7 @@ def validate_ibi_scores(fish_df):
 
 def insert_site_data(cursor, site_name, site_df=None):
     """
-    Insert site data into the database if it doesn't exist.
+    Check if site exists in database; if not, create it with minimal information.
     
     Args:
         cursor: Database cursor
@@ -321,7 +284,7 @@ def insert_site_data(cursor, site_name, site_df=None):
         int: site_id of the inserted or existing site
     """
     try:
-        # Check if site data already exists
+        # Check if site already exists
         cursor.execute('SELECT site_id FROM sites WHERE site_name = ?', (site_name,))
         site_result = cursor.fetchone()
         
@@ -329,39 +292,30 @@ def insert_site_data(cursor, site_name, site_df=None):
             logger.debug(f"Site already exists: {site_name}, site_id={site_result[0]}")
             return site_result[0]
         
-        # Additional site info if provided
-        lat = None
-        lon = None
-        county = None
-        river_basin = None
-        ecoregion = None
+        # Site doesn't exist - create minimal entry
+        logger.warning(f"Site '{site_name}' not found in sites table. Creating minimal entry.")
         
-        # Extract site info from DataFrame if available
+        # Extract minimal site info if DataFrame provided
+        lat = lon = county = river_basin = ecoregion = None
+        
         if site_df is not None and not site_df.empty:
-            # Get the first row for this site that has the most complete data
+            # Get first row with most complete data
             site_info = site_df.iloc[0]
             
-            # Check for each potential column with proper error handling
-            # CHANGE: Use flexible column name handling
+            # Only check columns we need for minimal site entry
             if 'latitude' in site_df.columns:
                 lat = site_info['latitude']
             if 'longitude' in site_df.columns:
                 lon = site_info['longitude']
-            if 'county' in site_df.columns:
-                county = site_info['county']
-            if 'river_basin' in site_df.columns:
-                river_basin = site_info['river_basin']
-            if 'ecoregion' in site_df.columns:
-                ecoregion = site_info['ecoregion']
         
-        # Insert site with all available info
+        # Insert site data
         cursor.execute('''
             INSERT INTO sites (site_name, latitude, longitude, county, river_basin, ecoregion)
             VALUES (?, ?, ?, ?, ?, ?)
         ''', (site_name, lat, lon, county, river_basin, ecoregion))
         
         site_id = cursor.lastrowid
-        logger.debug(f"Inserted new site: {site_name}, site_id={site_id}")
+        logger.info(f"Created minimal site entry: {site_name}, site_id={site_id}")
         return site_id
         
     except Exception as e:
@@ -378,32 +332,41 @@ def insert_collection_events(cursor, site_id, site_df):
         site_df: DataFrame with fish data for this site
     
     Returns:
-        int: Number of collection events inserted
+        tuple: (Number of collection events inserted, Dictionary mapping sample_ids to event_ids)
     """
     try:
-        # Get unique samples
-        sample_columns = ['sample_id', 'collection_date_str', 'year'] 
-        required_columns = [col for col in sample_columns if col in site_df.columns]
+        # Define required columns - sample_id is the primary identifier
+        required_columns = ['sample_id']
+        optional_columns = ['collection_date_str', 'year']
         
-        if len(required_columns) < 2:
-            logger.error(f"Missing required columns for collection events: need sample_id and collection_date")
-            return 0
+        # Ensure sample_id column exists
+        if 'sample_id' not in site_df.columns:
+            logger.error(f"Missing required column 'sample_id' for collection events")
+            return 0, {}
             
-        samples = site_df.drop_duplicates(subset=required_columns)
+        # Get unique samples by sample_id (the true unique identifier)
+        available_columns = [col for col in required_columns + optional_columns if col in site_df.columns]
+        samples = site_df.drop_duplicates(subset=['sample_id'])
         
         count = 0
         event_id_map = {}  # Map sample_id to event_id for later use
         
         for _, sample in samples.iterrows():
-            sample_id = int(sample['sample_id']) if 'sample_id' in sample else 0
-            collection_date = sample['collection_date_str'] if 'collection_date_str' in sample else None
-            year = int(sample['year']) if 'year' in sample else None
+            sample_id = sample['sample_id']
+                
+            # Extract date and year if available
+            collection_date = sample.get('collection_date_str')
+            year = sample.get('year')
             
-            # Skip rows with missing essential data
-            if sample_id == 0 or collection_date is None or year is None:
-                logger.warning(f"Skipping collection event with missing data: sample_id={sample_id}, date={collection_date}, year={year}")
-                continue
-            
+            # Ensure year is available (derive from date if needed)
+            if year is None and collection_date is not None:
+                try:
+                    # Try to extract year from date
+                    year = pd.to_datetime(collection_date).year
+                    logger.debug(f"Derived year {year} from collection_date {collection_date}")
+                except:
+                    logger.warning(f"Could not derive year from collection_date {collection_date}")
+                    
             # Check if this sample is already in the database
             cursor.execute('''
                 SELECT event_id FROM fish_collection_events 
@@ -429,13 +392,13 @@ def insert_collection_events(cursor, site_id, site_df):
                 logger.debug(f"Inserted new sample: site_id={site_id}, sample_id={sample_id}, event_id={event_id}")
         
         logger.info(f"Inserted {count} new collection events for site_id={site_id}")
-        return count
+        return count, event_id_map
         
     except Exception as e:
         logger.error(f"Error inserting collection events for site_id={site_id}: {e}")
-        return 0
+        return 0, {}
 
-def insert_metrics_data(cursor, site_id, site_df):
+def insert_metrics_data(cursor, site_id, site_df, event_map=None):
     """
     Insert fish metrics and summary scores into the database.
     
@@ -443,18 +406,20 @@ def insert_metrics_data(cursor, site_id, site_df):
         cursor: Database cursor
         site_id: ID of the site
         site_df: DataFrame with fish data for this site
+        event_map: Optional dictionary mapping sample_ids to event_ids
     
     Returns:
         int: Number of metrics records inserted
     """
     try:
-        # Get collection events for this site
-        cursor.execute('''
-            SELECT event_id, sample_id FROM fish_collection_events 
-            WHERE site_id = ?
-        ''', (site_id,))
-        
-        event_map = {sample_id: event_id for event_id, sample_id in cursor.fetchall()}
+        # If event_map wasn't provided, query for it
+        if event_map is None:
+            cursor.execute('''
+                SELECT event_id, sample_id FROM fish_collection_events 
+                WHERE site_id = ?
+            ''', (site_id,))
+            
+            event_map = {sample_id: event_id for event_id, sample_id in cursor.fetchall()}
         
         if not event_map:
             logger.warning(f"No collection events found for site_id={site_id}")
@@ -532,86 +497,13 @@ def insert_metrics_data(cursor, site_id, site_df):
         logger.error(f"Error inserting metrics data for site_id={site_id}: {e}")
         return 0
 
-def get_fish_dataframe(site_name=None):
-    """
-    Query the database and return a dataframe with fish data.
-    
-    Args:
-        site_name: Optional site name to filter data for
-    
-    Returns:
-        DataFrame with fish summary data
-    """
-    conn = None 
-    try:
-        conn = get_connection()
-        
-        # Base query for fish summary data
-        query = '''
-            SELECT 
-                s.site_name,
-                f.event_id,
-                e.sample_id,
-                e.collection_date,
-                e.year,
-                f.total_score,
-                f.comparison_to_reference,
-                f.integrity_class
-            FROM 
-                fish_summary_scores f
-            JOIN 
-                fish_collection_events e ON f.event_id = e.event_id
-            JOIN
-                sites s ON e.site_id = s.site_id
-        '''
-        
-        # Add filter for site name if provided
-        params = []
-        if site_name:
-            query += ' WHERE s.site_name = ?'
-            params.append(site_name)
-        
-        # Add order by clause
-        query += ' ORDER BY s.site_name, e.year, e.collection_date'
-        
-        # Execute query
-        fish_df = pd.read_sql_query(query, conn, params=params)
-
-        # Validation of the dataframe
-        if fish_df.empty:
-            if site_name:
-                logger.warning(f"No fish data found for site: {site_name}")
-            else:
-                logger.warning("No fish data found in the database")
-        else:
-            if site_name:
-                logger.info(f"Retrieved {len(fish_df)} fish collection records for site: {site_name}")
-            else:
-                logger.info(f"Retrieved {len(fish_df)} fish collection records")
-
-            # Check for missing values
-            missing_values = fish_df.isnull().sum().sum()
-            if missing_values > 0:
-                logger.warning(f"Found {missing_values} missing values in the fish data")
-
-        return fish_df
-        
-    except sqlite3.Error as e:
-        logger.error(f"SQLite error in get_fish_dataframe: {e}")
-        return pd.DataFrame({'error': ['Database error occurred']})
-    except Exception as e:
-        logger.error(f"Error retrieving fish data: {e}")
-        return pd.DataFrame({'error': ['Error retrieving fish data']})
-    finally:
-        if conn:
-            close_connection(conn)
-
-def get_fish_metrics_data_for_table(site_name=None):
+def get_fish_metrics_data_for_table(site_name=None, year=None):
     """
     Query the database to get detailed fish metrics data for the metrics table display.
     
     Args:
         site_name: Optional site name to filter data for
+        year: Optional year to filter data for
     
     Returns:
         Tuple of (metrics_df, summary_df) for display
@@ -654,12 +546,23 @@ def get_fish_metrics_data_for_table(site_name=None):
                 sites s ON e.site_id = s.site_id
         '''
         
-        # Add filter for site name if provided
+        # Add filters for site name and/or year if provided
         params = []
+        where_clauses = []
+        
         if site_name:
-            metrics_query += ' WHERE s.site_name = ?'
-            summary_query += ' WHERE s.site_name = ?'
+            where_clauses.append('s.site_name = ?')
             params.append(site_name)
+            
+        if year is not None:
+            where_clauses.append('e.year = ?')
+            params.append(year)
+        
+        # Add WHERE clause if any filters were specified
+        if where_clauses:
+            where_clause = ' WHERE ' + ' AND '.join(where_clauses)
+            metrics_query += where_clause
+            summary_query += where_clause
         
         # Add order by clause
         metrics_query += ' ORDER BY s.site_name, e.year, e.sample_id, m.metric_name'
@@ -669,7 +572,13 @@ def get_fish_metrics_data_for_table(site_name=None):
         metrics_df = pd.read_sql_query(metrics_query, conn, params=params)
         summary_df = pd.read_sql_query(summary_query, conn, params=params)
         
-        logger.debug(f"Retrieved metrics data for {len(metrics_df)} records and {summary_df.shape[0]} summary records")
+        filter_desc = ""
+        if site_name:
+            filter_desc += f" for site '{site_name}'"
+        if year is not None:
+            filter_desc += f" from year {year}"
+            
+        logger.debug(f"Retrieved metrics data{filter_desc}: {len(metrics_df)} metric records and {summary_df.shape[0]} summary records")
         
         return metrics_df, summary_df
     
@@ -933,7 +842,7 @@ def clean_fish_metrics(site_name=None):
                     SELECT event_id, collection_date
                     FROM fish_collection_events
                     WHERE site_id = ? AND sample_id = ?
-                    ORDER BY collection_date DESC
+                    ORDER BY year DESC, collection_date DESC
                 ''', (site_id, sample_id))
                 
                 events = cursor.fetchall()
