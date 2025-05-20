@@ -2,7 +2,7 @@ import os
 import pandas as pd
 import logging
 
-def setup_logging():
+def setup_logging(module_name):
     """Configure logging to use the logs directory with component-specific log file."""
     # Get the base directory of the project
     base_dir = os.path.dirname(os.path.dirname(__file__))
@@ -11,8 +11,7 @@ def setup_logging():
     logs_dir = os.path.join(base_dir, 'logs')
     os.makedirs(logs_dir, exist_ok=True)
     
-    # Get the module name for the log file
-    module_name = os.path.basename(__file__).replace('.py', '')
+    # Create log file path
     log_file = os.path.join(logs_dir, f"{module_name}.log")
     
     # Configure logging
@@ -24,10 +23,10 @@ def setup_logging():
             logging.StreamHandler()
         ]
     )
-    return logging.getLogger(__name__)
+    return logging.getLogger(module_name)
 
 # Initialize logger
-logger = setup_logging()
+logger = setup_logging("data_loader")
 
 # Constants
 RAW_DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'raw')

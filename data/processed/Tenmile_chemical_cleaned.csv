@@ -1,4 +1,4 @@
-Site_Name,Date,Unnamed:_2,Time,Weather,Wind_Speed,Wind_Direction,Stream_Stage,Stage_Qualifier,Secchi__Depth,Air_Temp,Water_Temp,Stream_Site_Observations,Comments,Dissolved_Oxygen,DO_Percent,pH,Nitrate,Nitrite,Ammonia,Phosphorus,Chloride,E_coli,Total_Coliforms,Year,Month,Soluble_Nitrogen
+Site_Name,Date,Unnamed:_2,Time,Weather,Wind_Speed,Wind_Direction,Stream_Stage,Stage_Qualifier,Secchi__Depth,Air_Temp,Water_Temp,Stream_Site_Observations,Comments,Dissolved_Oxygen,do_percent,pH,Nitrate,Nitrite,Ammonia,Phosphorus,Chloride,E_coli,Total_Coliforms,Year,Month,soluble_nitrogen
 Tenmile Creek: Davis,2012-02-21,,,Fair Skies,8-12,SW,Slightly elevated,Falling,>0.5,18.0,9.0,Clean,,14.0,126,7.0,0.3,0.03,0.03,0.027,15,,,2012,2,0.36
 Tenmile Creek: Davis,2012-03-19,,,Intermittent Rain,4-7,S,Base flow,Stable,>0.5,22.0,19.0,Clean,,9.0,101,6.8,0.3,0.03,0.03,0.033,15,,,2012,3,0.36
 Tenmile Creek: Davis,2012-04-23,,,Fair Skies,1-3,NW,Slightly elevated,Falling,>0.5,14.0,14.0,Clean,,9.0,91,6.4,0.3,0.03,0.03,0.04,15,,,2012,4,0.36

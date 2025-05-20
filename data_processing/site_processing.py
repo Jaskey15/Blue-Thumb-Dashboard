@@ -9,7 +9,7 @@ from data_processing.data_loader import (
 )
 
 # Initialize logger
-logger = setup_logging()
+logger = setup_logging("site_processing")
 
 def get_db_connection():
     """Create and return a database connection."""
@@ -61,6 +61,12 @@ def load_site_data():
         
         # Clean column names using the utility function
         site_df = clean_column_names(site_df)
+
+        # Convert latitude and longitude to numeric types
+        if 'latitude' in site_df.columns:
+            site_df['latitude'] = pd.to_numeric(site_df['latitude'], errors='coerce')
+        if 'longitude' in site_df.columns:
+            site_df['longitude'] = pd.to_numeric(site_df['longitude'], errors='coerce')
         
         # Map columns to our desired schema
         column_mapping = {
@@ -69,7 +75,7 @@ def load_site_data():
             'longitude': 'longitude',
             'county': 'county',
             'riverbasin': 'river_basin',
-            'l3_ecoregion': 'ecoregion'
+            'mod_ecoregion': 'ecoregion'
         }
         
         # Check which columns are available

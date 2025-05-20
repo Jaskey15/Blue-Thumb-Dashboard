@@ -68,14 +68,14 @@ class VisualizationTests(unittest.TestCase):
     
     def test_create_site_map_with_parameter(self):
         """Test creation of the site map with a parameter."""
-        fig = create_site_map('chem', 'DO_Percent')
+        fig = create_site_map('chem', 'do_percent')
         self.assertIsInstance(fig, go.Figure)
         # Check that colors are applied based on status
         self.assertGreater(len(fig.data), 0)
     
     def test_get_parameter_label(self):
         """Test getting parameter labels."""
-        label = get_parameter_label('DO_Percent')
+        label = get_parameter_label('do_percent')
         self.assertEqual(label, 'DO Saturation (%)')
         
         # Test with unknown parameter
@@ -84,8 +84,8 @@ class VisualizationTests(unittest.TestCase):
     
     def test_determine_status(self):
         """Test determination of status based on parameter value."""
-        parameter = 'DO_Percent'
-        reference_values = {'DO_Percent': {'normal min': 80, 'normal max': 130}}
+        parameter = 'do_percent'
+        reference_values = {'do_percent': {'normal min': 80, 'normal max': 130}}
         
         # Test normal value
         status, color = determine_status(parameter, 100, reference_values)
@@ -118,9 +118,9 @@ class ComponentCreationTests(unittest.TestCase):
     
     def test_chemical_parameter_names(self):
         """Test parameter name mapping."""
-        self.assertEqual(get_parameter_name('DO_Percent'), 'Dissolved Oxygen')
+        self.assertEqual(get_parameter_name('do_percent'), 'Dissolved Oxygen')
         self.assertEqual(get_parameter_name('pH'), 'pH')
-        self.assertEqual(get_parameter_name('Soluble_Nitrogen'), 'Nitrogen')
+        self.assertEqual(get_parameter_name('soluble_nitrogen'), 'Nitrogen')
         self.assertEqual(get_parameter_name('unknown'), 'unknown')  # Default case
 
 if __name__ == '__main__':

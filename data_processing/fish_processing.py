@@ -7,7 +7,7 @@ from database.database import get_connection, close_connection
 from data_processing.data_loader import setup_logging, load_csv_data, clean_column_names
 
 # Set up component-specific logging
-logger = setup_logging()
+logger = setup_logging("fish_processing")
 
 def load_fish_data(site_name=None):
     """
@@ -36,12 +36,18 @@ def load_fish_data(site_name=None):
             return pd.DataFrame()
             
         # Process sites from the data
-        unique_sites = fish_df['SiteName'].unique()
+        site_column = get_site_column(fish_df)
+        if not site_column:
+            logger.error("Cannot find site name column in fish data")
+            return pd.DataFrame()
+            
+        unique_sites = fish_df[site_column].unique()
         logger.info(f"Found {len(unique_sites)} unique sites in the fish data.")
         
         # Insert each site and its associated data
         for site in unique_sites:
-            site_df = fish_df[fish_df['SiteName'] == site]
+            # CHANGE: Use site_column variable instead of hardcoded 'SiteName'
+            site_df = fish_df[fish_df[site_column] == site]
             # Pass site DataFrame to insert_site_data for additional site info
             site_id = insert_site_data(cursor, site, site_df)
             
@@ -69,6 +75,26 @@ def load_fish_data(site_name=None):
     else:
         return get_fish_dataframe()
 
+# ADDED: Helper function to get the site column name
+def get_site_column(df):
+    """
+    Find the site name column in the DataFrame regardless of capitalization.
+    
+    Args:
+        df: DataFrame to search
+        
+    Returns:
+        str: Column name for site, or None if not found
+    """
+    # Try different possible variations of the site name column
+    possibilities = ['sitename', 'site_name', 'SiteName', 'site']
+    
+    for col in df.columns:
+        if col.lower() in [p.lower() for p in possibilities]:
+            return col
+            
+    return None
+
 def process_fish_csv_data(site_name=None):
     """
     Process fish data from CSV file.
@@ -87,6 +113,9 @@ def process_fish_csv_data(site_name=None):
             logger.error("Failed to load fish data from CSV.")
             return pd.DataFrame()
         
+        # ADDED: Log original column names for debugging
+        logger.debug(f"Original fish data columns: {', '.join(fish_df.columns)}")
+        
         # Verify required columns exist
         required_columns = [
             'SiteName', 'SAMPLEID', 'Date', 'Year', 'Latitude', 'Longitude',
@@ -99,7 +128,12 @@ def process_fish_csv_data(site_name=None):
             'Percent.Reference', 'Fish.Score'
         ]
         
-        missing_columns = [col for col in required_columns if col not in fish_df.columns]
+        # CHANGE: Check for required columns case-insensitively
+        missing_columns = []
+        for req_col in required_columns:
+            if not any(col.lower() == req_col.lower() for col in fish_df.columns):
+                missing_columns.append(req_col)
+                
         if missing_columns:
             logger.warning(f"Missing some columns in fish data: {', '.join(missing_columns)}")
             # Continue with available columns, but log the warning
@@ -107,7 +141,11 @@ def process_fish_csv_data(site_name=None):
         # Clean column names for consistency
         fish_df = clean_column_names(fish_df)
         
+        # ADDED: Log cleaned column names for debugging
+        logger.debug(f"Cleaned fish data columns: {', '.join(fish_df.columns)}")
+        
         # Map to standardized column names if needed
+        # CHANGE: Updated column mapping to match cleaned column names
         column_mapping = {
             'sitename': 'site_name',
             'sampleid': 'sample_id',
@@ -118,27 +156,33 @@ def process_fish_csv_data(site_name=None):
             'county': 'county',
             'riverbasin': 'river_basin',
             'l3_ecoregion': 'ecoregion',
-            'total_species': 'total_species',
-            'sensitive_benthic': 'sensitive_benthic_species',
-            'sunfish_species': 'sunfish_species',
-            'intolerant_species': 'intolerant_species',
-            'percent_tolerant': 'proportion_tolerant',
-            'percent_insectivore': 'proportion_insectivorous',
-            'percent_lithophil': 'proportion_lithophilic',
-            'total_species_ibi': 'total_species_score',
-            'sensitive_benthic_ibi': 'sensitive_benthic_score',
-            'sunfish_species_ibi': 'sunfish_species_score',
-            'intolerant_species_ibi': 'intolerant_species_score',
-            'percent_tolerant_ibi': 'tolerant_score',
-            'percent_insectivore_ibi': 'insectivorous_score',
-            'percent_lithophil_ibi': 'lithophilic_score',
-            'okibi_score': 'total_score',
-            'percent_reference': 'comparison_to_reference',
-            'fish_score': 'integrity_class'
+            'totalspecies': 'total_species',
+            'sensitivebenthic': 'sensitive_benthic_species',
+            'sunfishspecies': 'sunfish_species',
+            'intolerantspecies': 'intolerant_species',
+            'percenttolerant': 'proportion_tolerant',
+            'percentinsectivore': 'proportion_insectivorous',
+            'percentlithophil': 'proportion_lithophilic',
+            'totalspeciesibi': 'total_species_score',
+            'sensitivebenthicibi': 'sensitive_benthic_score',
+            'sunfishspeciesibi': 'sunfish_species_score',
+            'intolerantspeciesibi': 'intolerant_species_score',
+            'percenttolerantibi': 'tolerant_score',
+            'percentinsectivoreibi': 'insectivorous_score',
+            'percentlithophilibi': 'lithophilic_score',
+            'okibiscore': 'total_score',
+            'percentreference': 'comparison_to_reference',
+            'fishscore': 'integrity_class'
         }
         
         # Create a mapping with only columns that exist in the dataframe
-        valid_mapping = {k: v for k, v in column_mapping.items() if k in fish_df.columns}
+        valid_mapping = {}
+        for k, v in column_mapping.items():
+            # CHANGE: Case-insensitive column matching
+            matching_cols = [col for col in fish_df.columns if col.lower() == k.lower()]
+            if matching_cols:
+                valid_mapping[matching_cols[0]] = v
+                
         fish_df = fish_df.rename(columns=valid_mapping)
         
         # Handle date formatting
@@ -184,8 +228,14 @@ def process_fish_csv_data(site_name=None):
         
         # Filter by site name if provided
         if site_name:
+            # CHANGE: Use flexible site column handling
+            site_column = get_site_column(fish_df)
+            if not site_column:
+                logger.error("Cannot find site name column in fish data")
+                return pd.DataFrame()
+                
             # Case-insensitive filter for site name
-            site_filter = fish_df['site_name'].str.lower() == site_name.lower()
+            site_filter = fish_df[site_column].str.lower() == site_name.lower()
             filtered_df = fish_df[site_filter]
             
             if filtered_df.empty:
@@ -292,6 +342,7 @@ def insert_site_data(cursor, site_name, site_df=None):
             site_info = site_df.iloc[0]
             
             # Check for each potential column with proper error handling
+            # CHANGE: Use flexible column name handling
             if 'latitude' in site_df.columns:
                 lat = site_info['latitude']
             if 'longitude' in site_df.columns:

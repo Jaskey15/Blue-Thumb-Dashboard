@@ -19,6 +19,54 @@ def create_tables():
     )
     ''')
 
+    # ---------- CHEMICAL DATA TABLES ----------
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS chemical_collection_events (
+        event_id INTEGER PRIMARY KEY,
+        site_id INTEGER NOT NULL,
+        sample_id INTEGER,
+        collection_date TEXT NOT NULL,
+        year INTEGER NOT NULL,
+        month INTEGER NOT NULL,
+        FOREIGN KEY (site_id) REFERENCES sites (site_id)
+    )
+    ''')
+
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS chemical_parameters (
+        parameter_id INTEGER PRIMARY KEY,
+        parameter_code TEXT NOT NULL,
+        display_name TEXT NOT NULL,
+        description TEXT,
+        unit TEXT,
+        UNIQUE(parameter_code)
+    )
+    ''')
+
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS chemical_reference_values (
+        reference_id INTEGER PRIMARY KEY,
+        parameter_id INTEGER NOT NULL,
+        threshold_type TEXT NOT NULL,
+        value REAL NOT NULL,
+        description TEXT,
+        FOREIGN KEY (parameter_id) REFERENCES chemical_parameters (parameter_id)
+    )
+    ''')
+
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS chemical_measurements (
+        event_id INTEGER NOT NULL,
+        parameter_id INTEGER NOT NULL,
+        value REAL,
+        bdl_flag BOOLEAN DEFAULT 0,
+        status TEXT,
+        PRIMARY KEY (event_id, parameter_id),
+        FOREIGN KEY (event_id) REFERENCES chemical_collection_events (event_id),
+        FOREIGN KEY (parameter_id) REFERENCES chemical_parameters (parameter_id)
+    )
+    ''')
+
     # ---------- FISH DATA TABLES ----------
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS fish_collection_events (
@@ -111,56 +159,6 @@ def create_tables():
     )
     ''')
     
-    # ---------- CHEMICAL DATA TABLES ----------
-    cursor.execute('''
-    CREATE TABLE IF NOT EXISTS chemical_collection_events (
-        event_id INTEGER PRIMARY KEY,
-        site_id INTEGER NOT NULL,
-        sample_id INTEGER,
-        collection_date TEXT NOT NULL,
-        year INTEGER NOT NULL,
-        month INTEGER NOT NULL,
-        FOREIGN KEY (site_id) REFERENCES sites (site_id)
-    )
-    ''')
-
-    cursor.execute('''
-    CREATE TABLE IF NOT EXISTS chemical_parameters (
-        parameter_id INTEGER PRIMARY KEY,
-        parameter_name TEXT NOT NULL,
-        parameter_code TEXT NOT NULL,
-        display_name TEXT NOT NULL,
-        description TEXT,
-        unit TEXT,
-        UNIQUE(parameter_code)
-    )
-    ''')
-
-    cursor.execute('''
-    CREATE TABLE IF NOT EXISTS chemical_reference_values (
-        reference_id INTEGER PRIMARY KEY,
-        parameter_id INTEGER NOT NULL,
-        threshold_type TEXT NOT NULL,
-        min_value REAL,
-        max_value REAL,
-        description TEXT,
-        FOREIGN KEY (parameter_id) REFERENCES chemical_parameters (parameter_id)
-    )
-    ''')
-
-    cursor.execute('''
-    CREATE TABLE IF NOT EXISTS chemical_measurements (
-        event_id INTEGER NOT NULL,
-        parameter_id INTEGER NOT NULL,
-        value REAL,
-        bdl_flag BOOLEAN DEFAULT 0,
-        status TEXT,
-        PRIMARY KEY (event_id, parameter_id),
-        FOREIGN KEY (event_id) REFERENCES chemical_collection_events (event_id),
-        FOREIGN KEY (parameter_id) REFERENCES chemical_parameters (parameter_id)
-    )
-    ''')
-    
     # ---------- HABITAT DATA TABLES ----------
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS habitat_assessments (
@@ -190,9 +188,9 @@ def create_tables():
     if cursor.fetchone()[0] == 0:
         # Insert common chemical parameters
         parameters = [
-            (1, 'Dissolved Oxygen', 'DO_Percent', 'Dissolved Oxygen', 'Percent saturation of dissolved oxygen', '%'),
+            (1, 'Dissolved Oxygen', 'do_percent', 'Dissolved Oxygen', 'Percent saturation of dissolved oxygen', '%'),
             (2, 'pH', 'pH', 'pH', 'Measure of acidity/alkalinity', 'pH units'),
-            (3, 'Soluble Nitrogen', 'Soluble_Nitrogen', 'Nitrogen', 'Total soluble nitrogen including nitrate, nitrite, and ammonia', 'mg/L'),
+            (3, 'Soluble Nitrogen', 'soluble_nitrogen', 'Nitrogen', 'Total soluble nitrogen including nitrate, nitrite, and ammonia', 'mg/L'),
             (4, 'Phosphorus', 'Phosphorus', 'Phosphorus', 'Orthophosphate phosphorus', 'mg/L'),
             (5, 'Chloride', 'Chloride', 'Chloride', 'Chloride ion concentration', 'mg/L')
         ]
@@ -204,26 +202,26 @@ def create_tables():
         
         # Insert reference values for these parameters
         reference_values = [
-            # DO_Percent reference values
-            (1, 1, 'normal_min', 80, NULL, 'Minimum for normal range'),
-            (2, 1, 'normal_max', 130, NULL, 'Maximum for normal range'),
-            (3, 1, 'caution_min', 50, NULL, 'Minimum for caution range'),
-            (4, 1, 'caution_max', 150, NULL, 'Maximum for caution range'),
+            # do_percent reference values
+            (1, 1, 'normal_min', 80, None, 'Minimum for normal range'),
+            (2, 1, 'normal_max', 130, None, 'Maximum for normal range'),
+            (3, 1, 'caution_min', 50, None, 'Minimum for caution range'),
+            (4, 1, 'caution_max', 150, None, 'Maximum for caution range'),
             
             # pH reference values
-            (5, 2, 'normal_min', 6.5, NULL, 'Minimum for normal range'),
-            (6, 2, 'normal_max', 9.0, NULL, 'Maximum for normal range'),
+            (5, 2, 'normal_min', 6.5, None, 'Minimum for normal range'),
+            (6, 2, 'normal_max', 9.0, None, 'Maximum for normal range'),
             
             # Soluble Nitrogen reference values
-            (7, 3, 'normal', NULL, 0.8, 'Normal threshold'),
-            (8, 3, 'caution', NULL, 1.5, 'Caution threshold'),
+            (7, 3, 'normal', None, 0.8, 'Normal threshold'),
+            (8, 3, 'caution', None, 1.5, 'Caution threshold'),
             
             # Phosphorus reference values
-            (9, 4, 'normal', NULL, 0.05, 'Normal threshold'),
-            (10, 4, 'caution', NULL, 0.1, 'Caution threshold'),
+            (9, 4, 'normal', None, 0.05, 'Normal threshold'),
+            (10, 4, 'caution', None, 0.1, 'Caution threshold'),
             
             # Chloride reference values
-            (11, 5, 'poor', NULL, 250, 'Poor threshold')
+            (11, 5, 'poor', None, 250, 'Poor threshold')
         ]
         cursor.executemany('''
         INSERT OR IGNORE INTO chemical_reference_values

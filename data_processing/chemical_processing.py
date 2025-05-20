@@ -1,16 +1,23 @@
 import logging
 import os
+import sys
 import pandas as pd
 import numpy as np
+import sqlite3
+from datetime import datetime
 
-# Import utilities from data_loader
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, project_root)
+
+# Import utilities from data_loader and database
 from data_processing.data_loader import (
     setup_logging, load_csv_data, clean_column_names, 
     save_processed_data, get_file_path, get_unique_sites
 )
+from database.database import get_connection, close_connection
 
 # Use the shared logging setup
-logger = setup_logging()
+logger = setup_logging("chemical_processing")
 
 # Define constants for BDL values (Below Detection Limit)
 # Values obtained from Blue Thumb Coordinator
@@ -21,41 +28,20 @@ BDL_VALUES = {
     'Phosphorus': 0.005,
 }
 
-# Define reference values (based on Blue Thumb documentation)
-REFERENCE_VALUES = {
-    'DO_Percent': {
-        'normal min': 80, 
-        'normal max': 130, 
-        'caution min': 50,
-        'caution max': 150,
-        'description': 'Normal dissolved oxygen saturation range'
-    },
-    'pH': {
-        'normal min': 6.5, 
-        'normal max': 9.0, 
-        'description': 'Normal range for Oklahoma streams'
-    },
-    'Soluble_Nitrogen': {
-        'normal': 0.8, 
-        'caution': 1.5, 
-        'description': 'Normal nitrogen levels for this area'
-    },
-    'Phosphorus': {
-        'normal': 0.05, 
-        'caution': 0.1, 
-        'description': 'Phosphorus levels for streams in Oklahoma'
-    },
-    'Chloride': {
-        'poor': 250,
-        'description': 'Maximum acceptable chloride level'
-    }
-}
-
-# List of key parameters for analysis and visualization
+# Key parameters for analysis and visualization
 KEY_PARAMETERS = [    
-    'DO_Percent', 'pH', 'Soluble_Nitrogen', 
+    'do_percent', 'pH', 'soluble_nitrogen', 
     'Phosphorus', 'Chloride', 
 ]
+
+# Map of parameter codes to parameter_id in the database
+PARAMETER_MAP = {
+    'do_percent': 1,
+    'pH': 2,
+    'soluble_nitrogen': 3,
+    'Phosphorus': 4,
+    'Chloride': 5
+}
 
 def convert_bdl_value(value, bdl_replacement):
     """
@@ -88,8 +74,15 @@ def validate_data_quality(df, chemical_columns):
 
 def remove_empty_rows(df, chemical_columns):
     """Remove rows where all chemical parameters are null."""
-    # Create a subset with just the chemical columns
-    chem_df = df[chemical_columns].copy()
+    # Filter for columns that actually exist in the DataFrame
+    existing_columns = [col for col in chemical_columns if col in df.columns]
+    
+    if not existing_columns:
+        logger.warning("None of the specified chemical columns exist in the DataFrame")
+        return df  # Return original DataFrame if no chemical columns exist
+    
+    # Create a subset with just the existing chemical columns
+    chem_df = df[existing_columns].copy()
     
     # Count non-null values in each row
     non_null_counts = chem_df.notnull().sum(axis=1)
@@ -106,29 +99,341 @@ def remove_empty_rows(df, chemical_columns):
 
 def get_sites_with_chemical_data():
     """Return a list of sites that have chemical data."""
-    return get_unique_sites('chemical')
+    conn = get_connection()
+    try:
+        query = """
+        SELECT DISTINCT s.site_name 
+        FROM sites s
+        JOIN chemical_collection_events c ON s.site_id = c.site_id
+        ORDER BY s.site_name
+        """
+        cursor = conn.cursor()
+        cursor.execute(query)
+        sites = [row[0] for row in cursor.fetchall()]
+        
+        # If no sites found in database, fall back to CSV data
+        if not sites:
+            sites = get_unique_sites('chemical')
+            
+        return sites
+    except Exception as e:
+        logger.error(f"Error getting sites with chemical data: {e}")
+        return get_unique_sites('chemical')  # Fall back to CSV data
+    finally:
+        close_connection(conn)
 
 def get_date_range_for_site(site_name):
     """Get the min and max dates for chemical data at a specific site."""
+    conn = get_connection()
     try:
-        # Load the data for the specified site
-        df = process_chemical_data(site_name)
+        query = """
+        SELECT MIN(collection_date), MAX(collection_date)
+        FROM chemical_collection_events c
+        JOIN sites s ON c.site_id = s.site_id
+        WHERE s.site_name = ?
+        """
+        cursor = conn.cursor()
+        cursor.execute(query, (site_name,))
+        min_date, max_date = cursor.fetchone()
         
-        if df.empty:
+        if min_date and max_date:
+            min_date = pd.to_datetime(min_date)
+            max_date = pd.to_datetime(max_date)
+            return min_date, max_date
+        else:
+            # Fall back to processing data from CSV
+            df = process_chemical_data(site_name)
+            if not df.empty:
+                return df['Date'].min(), df['Date'].max()
             return None, None
-            
-        min_date = df['Date'].min()
-        max_date = df['Date'].max()
-        
-        return min_date, max_date
-    
     except Exception as e:
         logger.error(f"Error getting date range for site {site_name}: {e}")
+        # Fall back to processing from CSV
+        df = process_chemical_data(site_name)
+        if not df.empty:
+            return df['Date'].min(), df['Date'].max()
         return None, None
+    finally:
+        close_connection(conn)
 
-def process_chemical_data(site_name=None):
+def get_site_id(cursor, site_name):
+    """Get or create site ID for a given site name."""
+    cursor.execute("SELECT site_id FROM sites WHERE site_name = ?", (site_name,))
+    result = cursor.fetchone()
+    
+    if result:
+        return result[0]
+    
+    # If site doesn't exist, create it
+    cursor.execute("INSERT INTO sites (site_name) VALUES (?)", (site_name,))
+    return cursor.lastrowid
+
+def get_reference_values():
+    """Get reference values from the database."""
+    conn = get_connection()
+    try:
+        reference_values = {}
+        
+        query = """
+        SELECT p.parameter_code, r.threshold_type, r.min_value, r.max_value
+        FROM chemical_reference_values r
+        JOIN chemical_parameters p ON r.parameter_id = p.parameter_id
+        """
+        
+        df = pd.read_sql_query(query, conn)
+        
+        for param in df['parameter_code'].unique():
+            reference_values[param] = {}
+            param_data = df[df['parameter_code'] == param]
+            
+            for param in df['parameter_code'].unique():
+                reference_values[param] = {}
+                param_data = df[df['parameter_code'] == param]
+
+                # Mapping of database threshold_type to dashboard reference key
+                threshold_mapping = {
+                    'normal_min': 'normal min',
+                    'normal_max': 'normal max',
+                    'caution_min': 'caution min',
+                    'caution_max': 'caution max',
+                    'normal': 'normal',
+                    'caution': 'caution',
+                    'poor': 'poor'
+                }
+
+                # Process all thresholds with a single loop
+                for _, row in param_data.iterrows():
+                    if row['threshold_type'] in threshold_mapping:
+                        reference_key = threshold_mapping[row['threshold_type']]
+                        reference_values[param][reference_key] = row['value']
+                
+        # If no reference values in database, use hardcoded defaults
+        if not reference_values:
+            reference_values = {
+                'do_percent': {
+                    'normal min': 80, 
+                    'normal max': 130, 
+                    'caution min': 50,
+                    'caution max': 150,
+                    'description': 'Normal dissolved oxygen saturation range'
+                },
+                'pH': {
+                    'normal min': 6.5, 
+                    'normal max': 9.0, 
+                    'description': 'Normal range for Oklahoma streams'
+                },
+                'soluble_nitrogen': {
+                    'normal': 0.8, 
+                    'caution': 1.5, 
+                    'description': 'Normal nitrogen levels for this area'
+                },
+                'Phosphorus': {
+                    'normal': 0.05, 
+                    'caution': 0.1, 
+                    'description': 'Phosphorus levels for streams in Oklahoma'
+                },
+                'Chloride': {
+                    'poor': 250,
+                    'description': 'Maximum acceptable chloride level'
+                }
+            }
+            
+        return reference_values
+    except Exception as e:
+        logger.error(f"Error getting reference values: {e}")
+        # Return default reference values
+        return {
+            'do_percent': {
+                'normal min': 80, 
+                'normal max': 130, 
+                'caution min': 50,
+                'caution max': 150,
+                'description': 'Normal dissolved oxygen saturation range'
+            },
+            'pH': {
+                'normal min': 6.5, 
+                'normal max': 9.0, 
+                'description': 'Normal range for Oklahoma streams'
+            },
+            'soluble_nitrogen': {
+                'normal': 0.8, 
+                'caution': 1.5, 
+                'description': 'Normal nitrogen levels for this area'
+            },
+            'Phosphorus': {
+                'normal': 0.05, 
+                'caution': 0.1, 
+                'description': 'Phosphorus levels for streams in Oklahoma'
+            },
+            'Chloride': {
+                'poor': 250,
+                'description': 'Maximum acceptable chloride level'
+            }
+        }
+    finally:
+        close_connection(conn)
+
+def determine_status(parameter, value, reference_values):
+    """Determine the status of a parameter value based on reference thresholds."""
+    if pd.isna(value):
+        return "Unknown"
+        
+    if parameter not in reference_values:
+        return "Normal"  # Default if no reference values
+        
+    ref = reference_values[parameter]
+    
+    if parameter == 'do_percent':
+        if 'normal min' in ref and 'normal max' in ref:
+            if value < ref['caution min'] or value > ref['caution max']:
+                return "Poor"
+            elif value < ref['normal min'] or value > ref['normal max']:
+                return "Caution"
+            else:
+                return "Normal"
+                
+    elif parameter == 'pH':
+        if 'normal min' in ref and 'normal max' in ref:
+            if value < ref['normal min'] or value > ref['normal max']:
+                return "Outside Normal"
+            else:
+                return "Normal"
+                
+    elif parameter in ['soluble_nitrogen', 'Phosphorus']:
+        if 'caution' in ref and 'normal' in ref:
+            if value > ref['caution']:
+                return "Poor"
+            elif value > ref['normal']:
+                return "Caution"
+            else:
+                return "Normal"
+                
+    elif parameter == 'Chloride':
+        if 'poor' in ref:
+            if value > ref['poor']:
+                return "Poor"
+            else:
+                return "Normal"
+                
+    return "Normal"  # Default if no specific condition met
+
+def load_chemical_data_to_db(site_name=None):
     """
-    Process chemical data from CSV file and return cleaned dataframe.
+    Process chemical data from CSV and load it into the database.
+    
+    Args:
+        site_name: Optional site name to filter data for
+    
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Process the data from CSV
+        df_clean, _, _ = process_chemical_data_from_csv(site_name)
+        
+        if df_clean.empty:
+            logger.warning("No chemical data to load into database")
+            return False
+            
+        # Insert data into database
+        # 1. Get or create site_id
+        sites_processed = 0
+        samples_added = 0
+        measurements_added = 0
+        
+        # Group by site name
+        for site, site_df in df_clean.groupby('Site_Name'):
+            sites_processed += 1
+            site_id = get_site_id(cursor, site)
+            
+            # 2. Insert collection events
+            for date, date_df in site_df.groupby('Date'):
+                # Convert date to string format for database
+                date_str = pd.to_datetime(date).strftime('%Y-%m-%d')
+                year = pd.to_datetime(date).year
+                month = pd.to_datetime(date).month
+                
+                # Check if this sample already exists
+                cursor.execute("""
+                SELECT event_id FROM chemical_collection_events 
+                WHERE site_id = ? AND collection_date = ?
+                """, (site_id, date_str))
+                
+                result = cursor.fetchone()
+                
+                if result:
+                    event_id = result[0]
+                    logger.debug(f"Found existing event for {site} on {date_str}, event_id={event_id}")
+                else:
+                    # Insert new collection event
+                    cursor.execute("""
+                    INSERT INTO chemical_collection_events 
+                    (site_id, collection_date, year, month)
+                    VALUES (?, ?, ?, ?)
+                    """, (site_id, date_str, year, month))
+                    
+                    event_id = cursor.lastrowid
+                    samples_added += 1
+                    logger.debug(f"Added new collection event for {site} on {date_str}, event_id={event_id}")
+                
+                # 3. Insert measurements for this event
+                for parameter in KEY_PARAMETERS:
+                    if parameter in date_df.columns:
+                        # Use the first row's value for this parameter (should be only one per date/site)
+                        value = date_df[parameter].iloc[0]
+                        
+                        if pd.isna(value):
+                            continue  # Skip null values
+                            
+                        # Get parameter_id from map
+                        if parameter in PARAMETER_MAP:
+                            parameter_id = PARAMETER_MAP[parameter]
+                            
+                            # Determine status based on reference values
+                            reference_values = get_reference_values()
+                            status = determine_status(parameter, value, reference_values)
+                            
+                            # Check if this measurement already exists
+                            cursor.execute("""
+                            SELECT 1 FROM chemical_measurements 
+                            WHERE event_id = ? AND parameter_id = ?
+                            """, (event_id, parameter_id))
+                            
+                            if cursor.fetchone():
+                                # Update existing measurement
+                                cursor.execute("""
+                                UPDATE chemical_measurements
+                                SET value = ?, status = ?
+                                WHERE event_id = ? AND parameter_id = ?
+                                """, (value, status, event_id, parameter_id))
+                            else:
+                                # Insert new measurement
+                                cursor.execute("""
+                                INSERT INTO chemical_measurements
+                                (event_id, parameter_id, value, status)
+                                VALUES (?, ?, ?, ?)
+                                """, (event_id, parameter_id, value, status))
+                                
+                                measurements_added += 1
+        
+        conn.commit()
+        logger.info(f"Successfully loaded chemical data for {sites_processed} sites, "
+                   f"added {samples_added} new samples and {measurements_added} measurements")
+        return True
+        
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Error loading chemical data to database: {e}")
+        return False
+    finally:
+        close_connection(conn)
+
+def process_chemical_data_from_csv(site_name=None):
+    """
+    Process chemical data from CSV file without database integration.
     
     Args:
         site_name: Optional site name to filter data for
@@ -149,7 +454,7 @@ def process_chemical_data(site_name=None):
         
         if chemical_data.empty:
             logger.error("Failed to load chemical data")
-            return pd.DataFrame(), KEY_PARAMETERS, REFERENCE_VALUES
+            return pd.DataFrame(), KEY_PARAMETERS, get_reference_values()
             
         logger.info(f"Successfully loaded data with {len(chemical_data)} rows")
         
@@ -160,25 +465,27 @@ def process_chemical_data(site_name=None):
             
             if chemical_data.empty:
                 logger.warning(f"No data found for site: {site_name}")
-                return pd.DataFrame(), KEY_PARAMETERS, REFERENCE_VALUES
+                return pd.DataFrame(), KEY_PARAMETERS, get_reference_values()
     
     except Exception as e:
         logger.error(f"Error loading chemical data: {e}")
-        return pd.DataFrame(), KEY_PARAMETERS, REFERENCE_VALUES
+        return pd.DataFrame(), KEY_PARAMETERS, get_reference_values()
 
     # Clean column names using data_loader's function
     chemical_data = clean_column_names(chemical_data)
+
+    logger.info(f"Cleaned column names: {', '.join(chemical_data.columns)}")
     
     # Map of expected columns to actual columns in the data
     column_mapping = {
         'sitename': 'Site_Name',
-        'do_saturation': 'DO_Percent',
-        'ph_final_1': 'pH',
-        'nitrate_final_1': 'Nitrate',
-        'nitrite_final_1': 'Nitrite',
-        'ammonia_final_1': 'Ammonia',
-        'op_final_1': 'Phosphorus',
-        'chloride_final_1': 'Chloride',
+        'dosaturation': 'do_percent',  
+        'phfinal1': 'pH',              
+        'nitratefinal1': 'Nitrate',    
+        'nitritefinal1': 'Nitrite',    
+        'ammoniafinal1': 'Ammonia',   
+        'opfinal1': 'Phosphorus',     
+        'chloridefinal1': 'Chloride',  
     }
     
     # Rename columns for clarity
@@ -193,7 +500,7 @@ def process_chemical_data(site_name=None):
     
     # Define chemical parameter columns for validation and filtering
     chemical_columns = [col for col in [
-        'DO_Percent', 'pH', 'Nitrate', 'Nitrite', 'Ammonia', 'Phosphorus', 'Chloride'
+        'do_percent', 'pH', 'Nitrate', 'Nitrite', 'Ammonia', 'Phosphorus', 'Chloride'
     ] if col in df_clean.columns]
     
     # Remove rows where all chemical parameters are null
@@ -251,11 +558,11 @@ def process_chemical_data(site_name=None):
         nitrite_values = df_clean['Nitrite'].replace({0: BDL_VALUES['Nitrite']}).fillna(BDL_VALUES['Nitrite'])
         ammonia_values = df_clean['Ammonia'].replace({0: BDL_VALUES['Ammonia']}).fillna(BDL_VALUES['Ammonia'])
         
-        df_clean['Soluble_Nitrogen'] = nitrate_values + nitrite_values + ammonia_values
-        logger.debug("Calculated Soluble_Nitrogen from component values")
+        df_clean['soluble_nitrogen'] = nitrate_values + nitrite_values + ammonia_values
+        logger.debug("Calculated soluble_nitrogen from component values")
     else:   
         missing_nitrogen_cols = [col for col in required_nitrogen_cols if col not in df_clean.columns]
-        logger.warning(f"Cannot calculate Soluble_Nitrogen: Missing columns: {', '.join(missing_nitrogen_cols)}")
+        logger.warning(f"Cannot calculate soluble_nitrogen: Missing columns: {', '.join(missing_nitrogen_cols)}")
 
     # Check for missing values in final dataframe
     missing_values = df_clean.isnull().sum().sum()
@@ -267,32 +574,339 @@ def process_chemical_data(site_name=None):
         save_processed_data(df_clean, f"chemical_{site_name.replace(' ', '_').lower()}")
 
     logger.info(f"Data processing complete. Output dataframe has {len(df_clean)} rows and {len(df_clean.columns)} columns")
-    return df_clean, KEY_PARAMETERS, REFERENCE_VALUES
+    return df_clean, KEY_PARAMETERS, get_reference_values()
 
-if __name__ == "__main__":
+def process_chemical_data(site_name=None, use_db=True):
+    """
+    Process chemical data and return cleaned dataframe.
+    This function attempts to use the database first, then falls back to CSV if needed.
+    
+    Args:
+        site_name: Optional site name to filter data for
+        use_db: Whether to try using the database first (default: True)
+        
+    Returns:
+        Tuple of (cleaned_dataframe, key_parameters, reference_values)
+    """
+    # Check if we should use the database
+    if use_db:
+        # Try to get data from database
+        df = get_chemical_data_from_db(site_name)
+        
+        if not df.empty:
+            logger.info(f"Retrieved {len(df)} records from database")
+            return df, KEY_PARAMETERS, get_reference_values()
+        
+        # If no data in database, load from CSV into database first
+        logger.info("No data found in database, loading from CSV")
+        if load_chemical_data_to_db(site_name):
+            # Try again to get from database
+            df = get_chemical_data_from_db(site_name)
+            
+            if not df.empty:
+                logger.info(f"Successfully loaded and retrieved {len(df)} records")
+                return df, KEY_PARAMETERS, get_reference_values()
+    
+    # Fall back to processing from CSV directly
+    logger.info("Falling back to processing directly from CSV")
+    return process_chemical_data_from_csv(site_name)
+
+def get_chemical_data_from_db(site_name=None):
+    """
+    Retrieve chemical data from the database.
+    
+    Args:
+        site_name: Optional site name to filter data for
+        
+    Returns:
+        DataFrame with chemical data
+    """
+    conn = get_connection()
     try:
-        logger.info("Testing chemical data processing")
+        # Base query to get chemical data
+        query = """
+        SELECT 
+            s.site_name AS Site_Name,
+            c.collection_date AS Date,
+            c.year AS Year,
+            c.month AS Month,
+            p.parameter_code AS parameter_code,
+            m.value,
+            m.status
+        FROM 
+            chemical_measurements m
+        JOIN 
+            chemical_collection_events c ON m.event_id = c.event_id
+        JOIN 
+            sites s ON c.site_id = s.site_id
+        JOIN 
+            chemical_parameters p ON m.parameter_id = p.parameter_id
+        """
         
-        # Get list of sites with chemical data
-        sites = get_sites_with_chemical_data()
-        logger.info(f"Found {len(sites)} sites with chemical data")
+        # Add site filter if needed
+        params = []
+        if site_name:
+            query += " WHERE s.site_name = ?"
+            params.append(site_name)
+            
+        # Execute query
+        df = pd.read_sql_query(query, conn, params=params)
         
-        if sites:
-            # Process data for the first site as a test
-            test_site = sites[0]
-            logger.info(f"Processing data for test site: {test_site}")
+        if df.empty:
+            logger.info(f"No chemical data found in database")
+            return pd.DataFrame()
             
-            df_clean, key_parameters, reference_values = process_chemical_data(test_site)
-            
-            if not df_clean.empty:
-                logger.info(f"Successfully processed {len(df_clean)} records for {test_site}")
+        # Convert date column to datetime
+        df['Date'] = pd.to_datetime(df['Date'])
+        
+        # Pivot the data to get one row per date/site
+        pivot_df = df.pivot_table(
+            index=['Site_Name', 'Date', 'Year', 'Month'],
+            columns='parameter_code',
+            values='value',
+            aggfunc='first'
+        ).reset_index()
+        
+        # Check if we have the key parameters
+        for param in KEY_PARAMETERS:
+            if param not in pivot_df.columns:
+                logger.warning(f"Key parameter {param} not found in database data")
                 
-                # Test date range function
-                min_date, max_date = get_date_range_for_site(test_site)
-                if min_date and max_date:
-                    logger.info(f"Date range for {test_site}: {min_date} to {max_date}")
-            else:
-                logger.warning(f"No data found for test site: {test_site}")
+        return pivot_df
         
     except Exception as e:
-        logger.error(f"Error in chemical data processing test: {e}")
+        logger.error(f"Error retrieving chemical data from database: {e}")
+        return pd.DataFrame()
+    finally:
+        close_connection(conn)
+
+def verify_reference_values():
+    """
+    Verify that the chemical_reference_values table contains expected values.
+    If not, populate it with default values.
+    
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Check if table exists
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='chemical_reference_values'")
+        if cursor.fetchone() is None:
+            logger.error("chemical_reference_values table does not exist")
+            return False
+            
+        # Check if table has data
+        cursor.execute("SELECT COUNT(*) FROM chemical_reference_values")
+        count = cursor.fetchone()[0]
+        
+        if count > 0:
+            logger.info(f"chemical_reference_values table has {count} entries")
+            return True
+            
+        # Populate table with default values
+        reference_values = [
+            # do_percent reference values
+            (1, 1, 'normal_min', 80, None, 'Minimum for normal range'),
+            (2, 1, 'normal_max', 130, None, 'Maximum for normal range'),
+            (3, 1, 'caution_min', 50, None, 'Minimum for caution range'),
+            (4, 1, 'caution_max', 150, None, 'Maximum for caution range'),
+            
+            # pH reference values
+            (5, 2, 'normal_min', 6.5, None, 'Minimum for normal range'),
+            (6, 2, 'normal_max', 9.0, None, 'Maximum for normal range'),
+            
+            # Soluble Nitrogen reference values
+            (7, 3, 'normal', None, 0.8, 'Normal threshold'),
+            (8, 3, 'caution', None, 1.5, 'Caution threshold'),
+            
+            # Phosphorus reference values
+            (9, 4, 'normal', None, 0.05, 'Normal threshold'),
+            (10, 4, 'caution', None, 0.1, 'Caution threshold'),
+            
+            # Chloride reference values
+            (11, 5, 'poor', None, 250, 'Poor threshold')
+        ]
+        
+        cursor.executemany('''
+        INSERT OR IGNORE INTO chemical_reference_values
+        (reference_id, parameter_id, threshold_type, min_value, max_value, description)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ''', reference_values)
+        
+        conn.commit()
+        
+        # Verify insertion
+        cursor.execute("SELECT COUNT(*) FROM chemical_reference_values")
+        new_count = cursor.fetchone()[0]
+        
+        logger.info(f"Inserted {new_count} reference values")
+        return new_count > 0
+        
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Error verifying reference values: {e}")
+        return False
+    finally:
+        close_connection(conn)
+
+def verify_parameters():
+    """
+    Verify that the chemical_parameters table contains expected parameters.
+    If not, populate it with default values.
+    
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Check if table exists
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='chemical_parameters'")
+        if cursor.fetchone() is None:
+            logger.error("chemical_parameters table does not exist")
+            return False
+            
+        # Check if table has data
+        cursor.execute("SELECT COUNT(*) FROM chemical_parameters")
+        count = cursor.fetchone()[0]
+        
+        if count > 0:
+            logger.info(f"chemical_parameters table has {count} entries")
+            return True
+            
+        # Populate table with default values
+        parameters = [
+            (1, 'Dissolved Oxygen', 'do_percent', 'Dissolved Oxygen', 'Percent saturation of dissolved oxygen', '%'),
+            (2, 'pH', 'pH', 'pH', 'Measure of acidity/alkalinity', 'pH units'),
+            (3, 'Soluble Nitrogen', 'soluble_nitrogen', 'Nitrogen', 'Total soluble nitrogen including nitrate, nitrite, and ammonia', 'mg/L'),
+            (4, 'Phosphorus', 'Phosphorus', 'Phosphorus', 'Orthophosphate phosphorus', 'mg/L'),
+            (5, 'Chloride', 'Chloride', 'Chloride', 'Chloride ion concentration', 'mg/L')
+        ]
+        
+        cursor.executemany('''
+        INSERT OR IGNORE INTO chemical_parameters 
+        (parameter_id, parameter_name, parameter_code, display_name, description, unit)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ''', parameters)
+        
+        conn.commit()
+        
+        # Verify insertion
+        cursor.execute("SELECT COUNT(*) FROM chemical_parameters")
+        new_count = cursor.fetchone()[0]
+        
+        logger.info(f"Inserted {new_count} parameters")
+        return new_count > 0
+        
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Error verifying parameters: {e}")
+        return False
+    finally:
+        close_connection(conn)
+
+def verify_db_structure():
+   """
+   Verify that the database structure is set up correctly for chemical data.
+   
+   Returns:
+       bool: True if structure is valid, False otherwise
+   """
+   conn = get_connection()
+   cursor = conn.cursor()
+   
+   try:
+       # Check for required tables
+       required_tables = [
+           'sites',
+           'chemical_collection_events',
+           'chemical_parameters',
+           'chemical_reference_values',
+           'chemical_measurements'
+       ]
+       
+       for table in required_tables:
+           cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table}'")
+           if cursor.fetchone() is None:
+               logger.error(f"Missing required table: {table}")
+               return False
+       
+       # Verify parameters and reference values
+       if not verify_parameters():
+           logger.warning("Failed to verify chemical parameters")
+           return False
+           
+       if not verify_reference_values():
+           logger.warning("Failed to verify reference values")
+           return False
+       
+       logger.info("Chemical database structure verified successfully")
+       return True
+       
+   except Exception as e:
+       logger.error(f"Error verifying database structure: {e}")
+       return False
+       
+   finally:
+       close_connection(conn)
+
+def run_initial_db_setup():
+   """
+   Perform initial database setup for chemical data.
+   
+   Returns:
+       bool: True if setup successful, False otherwise
+   """
+   if not verify_db_structure():
+       logger.error("Database verification failed. Schema may need to be updated.")
+       return False
+       
+   # Load data for all sites
+   success = load_chemical_data_to_db()
+   
+   if success:
+       logger.info("Initial database setup completed successfully")
+   else:
+       logger.error("Failed to load chemical data into database")
+       
+   return success
+
+if __name__ == "__main__":
+   try:
+       logger.info("Testing chemical data processing")
+       
+       # Verify database structure
+       if verify_db_structure():
+           logger.info("Database structure is valid")
+           
+           # Get list of sites with chemical data
+           sites = get_sites_with_chemical_data()
+           logger.info(f"Found {len(sites)} sites with chemical data")
+           
+           if sites:
+               # Process data for the first site as a test
+               test_site = sites[0]
+               logger.info(f"Processing data for test site: {test_site}")
+               
+               # Try to get from database first
+               df_clean, key_parameters, reference_values = process_chemical_data(test_site, use_db=True)
+               
+               if not df_clean.empty:
+                   logger.info(f"Successfully processed {len(df_clean)} records for {test_site}")
+                   
+                   # Test date range function
+                   min_date, max_date = get_date_range_for_site(test_site)
+                   if min_date and max_date:
+                       logger.info(f"Date range for {test_site}: {min_date} to {max_date}")
+               else:
+                   logger.warning(f"No data found for test site: {test_site}")
+       else:
+           logger.error("Database verification failed, running initial setup")
+           run_initial_db_setup()
+       
+   except Exception as e:
+       logger.error(f"Error in chemical data processing test: {e}")

@@ -29,7 +29,7 @@ LINE_STYLES = {
 
 # Parameter configuration
 PARAMETER_THRESHOLDS = {
-    'DO_Percent': {
+    'do_percent': {
         'ranges': [
             {'min': -float('inf'), 'max': 50, 'status': 'Poor'},
             {'min': 50, 'max': 80, 'status': 'Caution'},
@@ -45,7 +45,7 @@ PARAMETER_THRESHOLDS = {
             {'min': 9.0, 'max': float('inf'), 'status': 'Outside Normal'}
         ]
     },
-    'Soluble_Nitrogen': {
+    'soluble_nitrogen': {
         'ranges': [
             {'min': -float('inf'), 'max': 0.8, 'status': 'Normal'},
             {'min': 0.8, 'max': 1.5, 'status': 'Caution'},
@@ -69,7 +69,7 @@ PARAMETER_THRESHOLDS = {
 
 # Reference line configuration
 REFERENCE_LINES = {
-    'DO_Percent': [
+    'do_percent': [
         {'value': 80, 'color': 'orange', 'label': 'Normal Min', 'style': LINE_STYLES['normal']},
         {'value': 130, 'color': 'orange', 'label': 'Normal Max', 'style': LINE_STYLES['normal']},
         {'value': 50, 'color': 'red', 'label': 'Caution Min', 'style': LINE_STYLES['caution']},
@@ -79,7 +79,7 @@ REFERENCE_LINES = {
         {'value': 6.5, 'color': 'orange', 'label': 'Normal Min', 'style': LINE_STYLES['normal']},
         {'value': 9.0, 'color': 'orange', 'label': 'Normal Max', 'style': LINE_STYLES['normal']}
     ],
-    'Soluble_Nitrogen': [
+    'soluble_nitrogen': [
         {'value': 0.8, 'color': 'orange', 'label': 'Caution', 'style': LINE_STYLES['normal']},
         {'value': 1.5, 'color': 'red', 'label': 'Poor', 'style': LINE_STYLES['caution']}
     ],
@@ -95,9 +95,9 @@ REFERENCE_LINES = {
 def get_parameter_label(parameter):
     """Return appropriate Y-axis label for a given parameter."""
     labels = {
-        'DO_Percent': 'DO Saturation (%)',
+        'do_percent': 'DO Saturation (%)',
         'pH': 'pH',
-        'Soluble_Nitrogen': 'Soluble Nitrogen (mg/L)',
+        'soluble_nitrogen': 'Soluble Nitrogen (mg/L)',
         'Phosphorus': 'Phosphorus (mg/L)',
         'Chloride': 'Chloride (mg/L)',
     }
@@ -106,9 +106,9 @@ def get_parameter_label(parameter):
 def get_parameter_name(parameter):
     """Convert parameter code to human-readable name."""
     names = {
-        'DO_Percent': 'Dissolved Oxygen',
+        'do_percent': 'Dissolved Oxygen',
         'pH': 'pH',
-        'Soluble_Nitrogen': 'Nitrogen',
+        'soluble_nitrogen': 'Nitrogen',
         'Phosphorus': 'Phosphorus',
         'Chloride': 'Chloride',
     }

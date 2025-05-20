@@ -16,9 +16,9 @@ from data_definitions import CHEMICAL_DIAGRAMS
 
 # Overview tab parameter options
 PARAMETER_OPTIONS = [
-    {'label': 'Chemical: Dissolved Oxygen', 'value': 'chem:DO_Percent'},
+    {'label': 'Chemical: Dissolved Oxygen', 'value': 'chem:do_percent'},
     {'label': 'Chemical: pH', 'value': 'chem:pH'},
-    {'label': 'Chemical: Nitrogen', 'value': 'chem:Soluble_Nitrogen'},
+    {'label': 'Chemical: Nitrogen', 'value': 'chem:soluble_nitrogen'},
     {'label': 'Chemical: Phosphorus', 'value': 'chem:Phosphorus'},
     {'label': 'Chemical: Chloride', 'value': 'chem:Chloride'},
     {'label': 'Biological: Fish Community', 'value': 'bio:Fish_IBI'},
@@ -28,9 +28,9 @@ PARAMETER_OPTIONS = [
 
 # Chemical tab parameter options
 CHEMICAL_OPTIONS = [
-    {'label': 'Dissolved Oxygen', 'value': 'DO_Percent'},
+    {'label': 'Dissolved Oxygen', 'value': 'do_percent'},
     {'label': 'pH', 'value': 'pH'},
-    {'label': 'Nitrogen', 'value': 'Soluble_Nitrogen'},
+    {'label': 'Nitrogen', 'value': 'soluble_nitrogen'},
     {'label': 'Phosphorus', 'value': 'Phosphorus'},
     {'label': 'Chloride', 'value': 'Chloride'},
     {'label': 'All Parameters', 'value': 'all_parameters'}
@@ -423,7 +423,7 @@ def create_chemical_tab():
                 id_value='chemical-parameter-dropdown',
                 label_text='Select Chemical Parameter:',
                 options=CHEMICAL_OPTIONS,
-                default_value='DO_Percent'  # Default value
+                default_value='do_percent'  # Default value
             ),
             
             # Year slider

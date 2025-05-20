@@ -31,10 +31,11 @@ SETUP_STEPS = [
     {
         "name": "chemical data",
         "module": "data_processing.chemical_processing",
-        "function": "process_chemical_data",
+        "function": "run_initial_db_setup",  # Changed from process_chemical_data
         "args": [],
         "critical": True
     },
+    # Rest of the steps remain the same
     {
         "name": "fish data",
         "module": "data_processing.fish_processing",

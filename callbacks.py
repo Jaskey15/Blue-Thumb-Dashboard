@@ -33,7 +33,7 @@ def get_parameter_legend(param_type, param_name):
     """
     # Chemical parameter legends
     if param_type == 'chem':
-        if param_name == 'DO_Percent':
+        if param_name == 'do_percent':
             return [
                 {"color": "#1e8449", "label": "Normal (80-130%)"},
                 {"color": "#ff9800", "label": "Caution (50-80% or 130-150%)"},
@@ -46,7 +46,7 @@ def get_parameter_legend(param_type, param_name):
                 {"color": "#ff9800", "label": "Outside Normal Range"},
                 {"color": "gray", "label": "No data"}
             ]
-        elif param_name == 'Soluble_Nitrogen':
+        elif param_name == 'soluble_nitrogen':
             return [
                 {"color": "#1e8449", "label": "Normal (<0.8 mg/L)"},
                 {"color": "#ff9800", "label": "Caution (0.8-1.5 mg/L)"},
@@ -385,7 +385,7 @@ def register_callbacks(app):
         Update the site map and legend based on the selected parameter.
         
         Args:
-            parameter_value: Selected parameter value (e.g., 'chem:DO_Percent')
+            parameter_value: Selected parameter value (e.g., 'chem:do_percent')
             
         Returns:
             Tuple of (map_figure, legend_html)

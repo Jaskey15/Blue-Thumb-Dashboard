@@ -29,7 +29,7 @@ MARKER_SIZES = {
 
 # Parameter thresholds configuration
 PARAMETER_THRESHOLDS = {
-    'DO_Percent': [
+    'do_percent': [
         {'min': -float('inf'), 'max': 50, 'status': 'Poor', 'color': COLORS['poor']},
         {'min': 50, 'max': 80, 'status': 'Caution', 'color': COLORS['caution']},
         {'min': 80, 'max': 130, 'status': 'Normal', 'color': COLORS['normal']},
@@ -41,7 +41,7 @@ PARAMETER_THRESHOLDS = {
         {'min': -float('inf'), 'max': 6.5, 'status': 'Outside Normal', 'color': COLORS['caution']},
         {'min': 9.0, 'max': float('inf'), 'status': 'Outside Normal', 'color': COLORS['caution']}
     ],
-    'Soluble_Nitrogen': [
+    'soluble_nitrogen': [
         {'min': -float('inf'), 'max': 0.8, 'status': 'Normal', 'color': COLORS['normal']},
         {'min': 0.8, 'max': 1.5, 'status': 'Caution', 'color': COLORS['caution']},
         {'min': 1.5, 'max': float('inf'), 'status': 'Poor', 'color': COLORS['poor']}
@@ -75,9 +75,9 @@ MACRO_THRESHOLDS = [
 
 # Parameter display names
 PARAMETER_LABELS = {
-    'DO_Percent': 'Dissolved Oxygen',
+    'do_percent': 'Dissolved Oxygen',
     'pH': 'pH',
-    'Soluble_Nitrogen': 'Soluble Nitrogen',
+    'soluble_nitrogen': 'Soluble Nitrogen',
     'Phosphorus': 'Phosphorus',
     'Chloride': 'Chloride',
     'Fish_IBI': 'Fish Community Health',
@@ -235,11 +235,11 @@ def format_parameter_value(parameter, value):
     if pd.isna(value):
         return "No data"
         
-    if parameter == 'DO_Percent':
+    if parameter == 'do_percent':
         return f"{value:.1f}%"
     elif parameter == 'pH':
         return f"{value:.1f}"
-    elif parameter in ['Soluble_Nitrogen', 'Phosphorus', 'Chloride']:
+    elif parameter in ['soluble_nitrogen', 'Phosphorus', 'Chloride']:
         return f"{value:.3f} mg/L"
     else:
         return f"{value}"
@@ -477,7 +477,7 @@ def create_site_map(param_type=None, param_name=None):
     
     Args:
         param_type: Type of parameter ('chem' or 'bio')
-        param_name: Specific parameter name (e.g., 'DO_Percent', 'Fish_IBI')
+        param_name: Specific parameter name (e.g., 'do_percent', 'Fish_IBI')
     
     Returns:
         Plotly figure with the interactive map

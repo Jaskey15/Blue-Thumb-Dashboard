@@ -61,36 +61,36 @@ MACRO_DATA = [
 
 # Chemical parameter diagram mapping
 CHEMICAL_DIAGRAMS = {
-    'DO_Percent': '/assets/images/chemical_diagrams/dissolved_oxygen_graphic.jpg',
+    'do_percent': '/assets/images/chemical_diagrams/dissolved_oxygen_graphic.jpg',
     'pH': '/assets/images/chemical_diagrams/pH_graphic.png',
-    'Soluble_Nitrogen': '/assets/images/chemical_diagrams/nitrogen_cycle.png',
+    'soluble_nitrogen': '/assets/images/chemical_diagrams/nitrogen_cycle.png',
     'Phosphorus': '/assets/images/chemical_diagrams/phosphorous_cycle.png',
     'Chloride': '/assets/images/chemical_diagrams/chloride_graphic.png',
 }
 
 # Dictionary of captions for chemical diagrams
 CHEMICAL_DIAGRAM_CAPTIONS = {
-    'DO_Percent': 'The oxygen balance in aquatic environments: atmospheric diffusion and photosynthesis add oxygen to water, while plant, animal, and bacterial respiration deplete it.',
+    'do_percent': 'The oxygen balance in aquatic environments: atmospheric diffusion and photosynthesis add oxygen to water, while plant, animal, and bacterial respiration deplete it.',
     'pH': 'The pH scale ranges from highly acidic (0) to highly alkaline (14), with neutral water at 7. For Oklahoma streams, maintaining pH between 6.5-9 is essential for supporting diverse aquatic communities and preventing harm to sensitive species.',
-    'Soluble_Nitrogen': 'Nitrogen in aquatic ecosystems cycles through various compounds (ammonia, nitrite, nitrate) as it moves through plants, animals, and microorganisms.',
+    'soluble_nitrogen': 'Nitrogen in aquatic ecosystems cycles through various compounds (ammonia, nitrite, nitrate) as it moves through plants, animals, and microorganisms.',
     'Phosphorus': 'Illustration of phosphorus movement through aquatic ecosystems, from external inputs to algae, animals, microbes, and sediment.',
     'Chloride': 'Sources of chloride in streams include road salt, water softeners, and agricultural inputs. Excessive concentrations have a negative impact on stream health.'
 }
 
 # Dictionary mapping parameter codes to their display names
 PARAMETER_DISPLAY_NAMES = {
-    'DO_Percent': 'Dissolved Oxygen',
+    'do_percent': 'Dissolved Oxygen',
     'pH': 'pH',
-    'Soluble_Nitrogen': 'Nitrogen',
+    'soluble_nitrogen': 'Nitrogen',
     'Phosphorus': 'Phosphorus',
     'Chloride': 'Chloride',
 }
 
 # Dictionary mapping parameter codes to their y-axis labels
 PARAMETER_AXIS_LABELS = {
-    'DO_Percent': 'DO Saturation (%)',
+    'do_percent': 'DO Saturation (%)',
     'pH': 'pH',
-    'Soluble_Nitrogen': 'Soluble Nitrogen (mg/L)',
+    'soluble_nitrogen': 'Soluble Nitrogen (mg/L)',
     'Phosphorus': 'Phosphorus (mg/L)',
     'Chloride': 'Chloride (mg/L)',
 }
