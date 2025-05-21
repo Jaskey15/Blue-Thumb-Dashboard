@@ -51,14 +51,18 @@ def reload_all_data():
     """Reload all data from CSV files into the database."""
     try:
         # Import all processing modules
-        from data_processing.site_processing import process_site_data
+        from data_processing.site_processing import load_site_data
         from data_processing.chemical_processing import run_initial_db_setup as load_chemical_data
         from data_processing.fish_processing import load_fish_data
         from data_processing.macro_processing import load_macroinvertebrate_data
+        from data_processing.habitat_processing import load_habitat_data
         
         # Process each data type
         start_time = time.time()
         
+        logger.info("Loading site data...")
+        site_success = load_site_data()
+
         logger.info("Loading chemical data...")
         chemical_success = load_chemical_data()
         
@@ -67,10 +71,13 @@ def reload_all_data():
         
         logger.info("Loading macroinvertebrate data...")
         macro_success = load_macroinvertebrate_data()
+
+        logger.info("Loading habitat data...")
+        habitat_success = load_habitat_data()
         
         elapsed_time = time.time() - start_time
         
-        if chemical_success and fish_success and macro_success:
+        if site_success and chemical_success and fish_success and macro_success and habitat_success:
             logger.info(f"Successfully reloaded all data in {elapsed_time:.2f} seconds")
             return True
         else:

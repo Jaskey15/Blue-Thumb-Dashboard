@@ -20,7 +20,7 @@ header = dbc.Container([
     dbc.Row([
         dbc.Col(
             html.Div([
-                html.H1("Tenmile Creek: Davis Water Quality Dashboard", 
+                html.H1("Blue Thumb Stream Health Dashboard", 
                        className="text-white text-center p-3",
                        style={
                            'font-size': '2.5rem',  

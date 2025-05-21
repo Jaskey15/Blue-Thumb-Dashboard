@@ -248,8 +248,6 @@ def create_tables():
         site_id INTEGER NOT NULL,
         assessment_date TEXT NOT NULL,
         year INTEGER NOT NULL,
-        total_score REAL NOT NULL,
-        habitat_grade TEXT,
         FOREIGN KEY (site_id) REFERENCES sites (site_id)
     )
     ''')
@@ -261,6 +259,15 @@ def create_tables():
         score REAL NOT NULL,
         PRIMARY KEY (assessment_id, metric_name),
         FOREIGN KEY (assessment_id) REFERENCES habitat_assessments (assessment_id)
+    )
+    ''')
+
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS habitat_summary_scores (
+    assessment_id INTEGER NOT NULL,
+    total_score REAL NOT NULL,
+    habitat_grade TEXT NOT NULL,
+    FOREIGN KEY (assessment_id) REFERENCES habitat_assessments (assessment_id)
     )
     ''')
     
