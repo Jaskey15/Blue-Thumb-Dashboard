@@ -287,7 +287,8 @@ def get_date_range(data_type, date_column='date'):
     Returns:
         tuple: (min_date, max_date) or (None, None) if no dates found
     """
-    df = load_csv_data(data_type, parse_dates=[date_column])
+    # Make date_column case-insensitive for the parse_dates parameter
+    df = load_csv_data(data_type, parse_dates=[date_column.lower(), date_column.upper(), date_column.capitalize()])
     
     if df.empty:
         return None, None
@@ -295,7 +296,7 @@ def get_date_range(data_type, date_column='date'):
     # Clean column names
     df = clean_column_names(df)
     
-    # Check if the date column exists
+    # Check if the date column exists (after cleaning, all column names are lowercase)
     date_column = date_column.lower()
     if date_column not in df.columns:
         # Try to find a column with 'date' in the name

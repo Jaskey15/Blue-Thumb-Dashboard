@@ -15,6 +15,7 @@ from data_processing.data_loader import (
     save_processed_data, get_file_path, get_unique_sites
 )
 from database.database import get_connection, close_connection
+from database.db_schema import insert_default_parameters, insert_default_reference_values
 
 # Use the shared logging setup
 logger = setup_logging("chemical_processing")
@@ -175,7 +176,7 @@ def get_reference_values():
         reference_values = {}
         
         query = """
-        SELECT p.parameter_code, r.threshold_type, r.min_value, r.max_value
+        SELECT p.parameter_code, r.threshold_type, r.value
         FROM chemical_reference_values r
         JOIN chemical_parameters p ON r.parameter_id = p.parameter_id
         """
@@ -327,6 +328,8 @@ def load_chemical_data_to_db(site_name=None):
     Returns:
         bool: True if successful, False otherwise
     """
+
+    # Add at the beginning of load_chemical_data_to_db
     conn = get_connection()
     cursor = conn.cursor()
     
@@ -680,78 +683,6 @@ def get_chemical_data_from_db(site_name=None):
     finally:
         close_connection(conn)
 
-def verify_reference_values():
-    """
-    Verify that the chemical_reference_values table contains expected values.
-    If not, populate it with default values.
-    
-    Returns:
-        bool: True if successful, False otherwise
-    """
-    conn = get_connection()
-    cursor = conn.cursor()
-    
-    try:
-        # Check if table exists
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='chemical_reference_values'")
-        if cursor.fetchone() is None:
-            logger.error("chemical_reference_values table does not exist")
-            return False
-            
-        # Check if table has data
-        cursor.execute("SELECT COUNT(*) FROM chemical_reference_values")
-        count = cursor.fetchone()[0]
-        
-        if count > 0:
-            logger.info(f"chemical_reference_values table has {count} entries")
-            return True
-            
-        # Populate table with default values
-        reference_values = [
-            # do_percent reference values
-            (1, 1, 'normal_min', 80, None, 'Minimum for normal range'),
-            (2, 1, 'normal_max', 130, None, 'Maximum for normal range'),
-            (3, 1, 'caution_min', 50, None, 'Minimum for caution range'),
-            (4, 1, 'caution_max', 150, None, 'Maximum for caution range'),
-            
-            # pH reference values
-            (5, 2, 'normal_min', 6.5, None, 'Minimum for normal range'),
-            (6, 2, 'normal_max', 9.0, None, 'Maximum for normal range'),
-            
-            # Soluble Nitrogen reference values
-            (7, 3, 'normal', None, 0.8, 'Normal threshold'),
-            (8, 3, 'caution', None, 1.5, 'Caution threshold'),
-            
-            # Phosphorus reference values
-            (9, 4, 'normal', None, 0.05, 'Normal threshold'),
-            (10, 4, 'caution', None, 0.1, 'Caution threshold'),
-            
-            # Chloride reference values
-            (11, 5, 'poor', None, 250, 'Poor threshold')
-        ]
-        
-        cursor.executemany('''
-        INSERT OR IGNORE INTO chemical_reference_values
-        (reference_id, parameter_id, threshold_type, min_value, max_value, description)
-        VALUES (?, ?, ?, ?, ?, ?)
-        ''', reference_values)
-        
-        conn.commit()
-        
-        # Verify insertion
-        cursor.execute("SELECT COUNT(*) FROM chemical_reference_values")
-        new_count = cursor.fetchone()[0]
-        
-        logger.info(f"Inserted {new_count} reference values")
-        return new_count > 0
-        
-    except Exception as e:
-        conn.rollback()
-        logger.error(f"Error verifying reference values: {e}")
-        return False
-    finally:
-        close_connection(conn)
-
 def verify_parameters():
     """
     Verify that the chemical_parameters table contains expected parameters.
@@ -778,20 +709,9 @@ def verify_parameters():
             logger.info(f"chemical_parameters table has {count} entries")
             return True
             
-        # Populate table with default values
-        parameters = [
-            (1, 'Dissolved Oxygen', 'do_percent', 'Dissolved Oxygen', 'Percent saturation of dissolved oxygen', '%'),
-            (2, 'pH', 'pH', 'pH', 'Measure of acidity/alkalinity', 'pH units'),
-            (3, 'Soluble Nitrogen', 'soluble_nitrogen', 'Nitrogen', 'Total soluble nitrogen including nitrate, nitrite, and ammonia', 'mg/L'),
-            (4, 'Phosphorus', 'Phosphorus', 'Phosphorus', 'Orthophosphate phosphorus', 'mg/L'),
-            (5, 'Chloride', 'Chloride', 'Chloride', 'Chloride ion concentration', 'mg/L')
-        ]
-        
-        cursor.executemany('''
-        INSERT OR IGNORE INTO chemical_parameters 
-        (parameter_id, parameter_name, parameter_code, display_name, description, unit)
-        VALUES (?, ?, ?, ?, ?, ?)
-        ''', parameters)
+        # If no values, import the function to insert defaults
+        from database.db_schema import insert_default_parameters
+        insert_default_parameters(cursor)
         
         conn.commit()
         
@@ -805,6 +725,52 @@ def verify_parameters():
     except Exception as e:
         conn.rollback()
         logger.error(f"Error verifying parameters: {e}")
+        return False
+    finally:
+        close_connection(conn)
+
+def verify_reference_values():
+    """
+    Verify that the chemical_reference_values table contains expected values.
+    If not, populate it with default values.
+    
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Check if table exists
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='chemical_reference_values'")
+        if cursor.fetchone() is None:
+            logger.error("chemical_reference_values table does not exist")
+            return False
+            
+        # Check if table has data
+        cursor.execute("SELECT COUNT(*) FROM chemical_reference_values")
+        count = cursor.fetchone()[0]
+        
+        if count > 0:
+            logger.info(f"chemical_reference_values table has {count} entries")
+            return True
+            
+        # If no values, import the function to insert defaults
+        from database.db_schema import insert_default_reference_values
+        insert_default_reference_values(cursor)
+        
+        conn.commit()
+        
+        # Verify insertion
+        cursor.execute("SELECT COUNT(*) FROM chemical_reference_values")
+        new_count = cursor.fetchone()[0]
+        
+        logger.info(f"Inserted {new_count} reference values")
+        return new_count > 0
+        
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Error verifying reference values: {e}")
         return False
     finally:
         close_connection(conn)
