@@ -260,6 +260,10 @@ def insert_reference_and_metrics_data(cursor):
         if macro_df.empty:
             logger.warning("No macroinvertebrate data to insert")
             return
+        
+        # Group by sample_id - only process each unique sample once
+        unique_samples = macro_df.drop_duplicates(subset=['sample_id']).copy()
+        logger.info(f"Processing metrics for {len(unique_samples)} unique samples")
             
         # Define metric mappings
         metric_mappings = [
@@ -274,19 +278,19 @@ def insert_reference_and_metrics_data(cursor):
         # Check which metrics are available
         available_metrics = []
         for metric_name, raw_col, score_col in metric_mappings:
-            if raw_col in macro_df.columns and score_col in macro_df.columns:
+            if raw_col in unique_samples.columns and score_col in unique_samples.columns:
                 available_metrics.append((metric_name, raw_col, score_col))
         
-        if not available_metrics:
-            logger.error("No metric data available in CSV")
-            return
-            
-        # For each collection event, insert metrics
-        for _, row in macro_df.iterrows():
-            # Get the event_id
+        # Track metrics for debugging
+        metrics_by_event = {}
+        
+        # For each unique sample, insert metrics
+        for _, row in unique_samples.iterrows():
+            # Skip if missing required fields
             if 'site_name' not in row or 'sample_id' not in row:
                 continue
                 
+            # Get the event_id
             cursor.execute('''
                 SELECT e.event_id
                 FROM macro_collection_events e
@@ -296,29 +300,31 @@ def insert_reference_and_metrics_data(cursor):
             
             event_result = cursor.fetchone()
             if not event_result:
+                logger.warning(f"No event found for sample_id={row.get('sample_id')}, site={row.get('site_name')}")
                 continue
                 
             event_id = event_result[0]
+            metrics_by_event[event_id] = set()
             
             # Insert metrics for this event
             for metric_name, raw_col, score_col in available_metrics:
                 if pd.notna(row.get(raw_col)) and pd.notna(row.get(score_col)):
-                    # For proportion metrics, use raw value as result
-                    metric_result = row[raw_col] if metric_name.startswith(('EPT Abundance', '% Contribution')) else None
-                    
                     cursor.execute('''
                         INSERT INTO macro_metrics 
-                        (event_id, metric_name, raw_value, metric_result, metric_score)
-                        VALUES (?, ?, ?, ?, ?)
+                        (event_id, metric_name, raw_value, metric_score)
+                        VALUES (?, ?, ?, ?)
                     ''', (
                         event_id,
                         metric_name,
                         row[raw_col],
-                        metric_result,
                         row[score_col]
                     ))
+                    metrics_by_event[event_id].add(metric_name)
         
-        logger.info("Inserted macroinvertebrate metrics data")
+        # Log summary
+        logger.info(f"Processed metrics for {len(metrics_by_event)} events")
+        total_metrics = sum(len(metrics) for metrics in metrics_by_event.values())
+        logger.info(f"Inserted {total_metrics} total metrics")
         
     except Exception as e:
         logger.error(f"Error inserting reference and metrics data: {e}")

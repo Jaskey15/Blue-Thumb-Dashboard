@@ -125,7 +125,7 @@ def save_processed_data(df, data_type):
     
     Args:
         df: DataFrame to save
-        data_type: Type of data ('site', 'chemical', 'fish', 'macro', 'habitat')
+        data_type: Type of data or filename identifier
     
     Returns:
         bool: True if saving was successful, False otherwise
@@ -134,7 +134,18 @@ def save_processed_data(df, data_type):
         logger.warning(f"No {data_type} data to save")
         return False
     
-    file_path = get_file_path(data_type, processed=True)
+    # Sanitize the data_type for use as a filename
+    # Replace spaces, colons, and other special characters with underscores
+    sanitized_type = data_type
+    for char in [' ', ':', ';', ',', '.', '/', '\\', '(', ')', '[', ']', '{', '}', '|', '*', '?', '&', '^', '%', '$', '#', '@', '!']:
+        sanitized_type = sanitized_type.replace(char, '_')
+    
+    # Make sure we don't have multiple consecutive underscores
+    while '__' in sanitized_type:
+        sanitized_type = sanitized_type.replace('__', '_')
+    
+    # Get the path for processed data
+    file_path = os.path.join(PROCESSED_DATA_DIR, f"processed_{sanitized_type}.csv")
     
     try:
         logger.info(f"Saving processed {data_type} data to {file_path}")
@@ -276,19 +287,28 @@ def convert_bdl_values(df, bdl_columns, bdl_replacements):
     
     return df_copy
 
-def get_date_range(data_type, date_column='date'):
+def get_date_range(data_type, date_column='Date'):
     """
     Get the date range (min and max dates) for a data type.
     
     Args:
-        data_type: Type of data ('site', 'chemical', 'fish', 'macro', 'habitat')
-        date_column: Name of the column containing dates (default: 'date')
+        data_type: Type of data ('chemical', 'fish', 'macro', 'habitat')
+        date_column: Name of the column containing dates (default: 'Date')
     
     Returns:
         tuple: (min_date, max_date) or (None, None) if no dates found
     """
-    # Make date_column case-insensitive for the parse_dates parameter
-    df = load_csv_data(data_type, parse_dates=[date_column.lower(), date_column.upper(), date_column.capitalize()])
+    # Skip site data since it doesn't need date processing
+    if data_type == 'site':
+        logger.info(f"Date range not applicable for site data")
+        return None, None
+        
+    # Load the data with the date column
+    try:
+        df = load_csv_data(data_type, parse_dates=[date_column])
+    except Exception as e:
+        logger.error(f"Error loading {data_type} data for date range: {e}")
+        return None, None
     
     if df.empty:
         return None, None
@@ -296,28 +316,12 @@ def get_date_range(data_type, date_column='date'):
     # Clean column names
     df = clean_column_names(df)
     
-    # Check if the date column exists (after cleaning, all column names are lowercase)
-    date_column = date_column.lower()
-    if date_column not in df.columns:
-        # Try to find a column with 'date' in the name
-        date_columns = [col for col in df.columns if 'date' in col.lower()]
-        if date_columns:
-            date_column = date_columns[0]
-        else:
-            logger.error(f"No date column found in {data_type} data")
-            return None, None
-    
-    # Parse dates if they weren't parsed during loading
-    if not pd.api.types.is_datetime64_dtype(df[date_column]):
-        try:
-            df[date_column] = pd.to_datetime(df[date_column])
-        except:
-            logger.error(f"Could not parse dates in column: {date_column}")
-            return None, None
+    # After cleaning, the date column name will be lowercase
+    date_column_lower = date_column.lower()
     
     # Get min and max dates
-    min_date = df[date_column].min()
-    max_date = df[date_column].max()
+    min_date = df[date_column_lower].min()
+    max_date = df[date_column_lower].max()
     
     logger.info(f"Date range for {data_type} data: {min_date} to {max_date}")
     
@@ -328,9 +332,13 @@ if __name__ == "__main__":
     print("Testing data loader:")
     
     for data_type in DATA_FILES.keys():
-        file_path = get_file_path(data_type)
-        if check_file_exists(file_path):
-            print(f"✓ {data_type.capitalize()} data file found: {file_path}")
+        # Skip site data for date range
+        if data_type == 'site':
+            continue
+            
+        min_date, max_date = get_date_range(data_type)
+        if min_date and max_date:
+            print(f"  - Date range: {min_date} to {max_date}")
             
             # Load a sample of the data
             df = load_csv_data(data_type)

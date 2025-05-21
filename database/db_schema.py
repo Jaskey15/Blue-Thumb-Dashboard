@@ -198,7 +198,7 @@ def create_tables():
         sample_id INTEGER,
         season TEXT CHECK (season IN ('Summer', 'Winter')),
         year INTEGER NOT NULL,
-        habitat TEXT CHECK (habitat IN ('Riffle', 'Stream_veg', 'Wood')),
+        habitat TEXT CHECK (habitat IN ('Riffle', 'Vegetation', 'Woody')),
         FOREIGN KEY (site_id) REFERENCES sites (site_id)
     )
     ''')
@@ -211,7 +211,7 @@ def create_tables():
         reference_id INTEGER PRIMARY KEY,
         region TEXT NOT NULL,
         season TEXT CHECK (season IN ('Summer', 'Winter')),
-        habitat TEXT CHECK (habitat IN ('Riffle', 'Stream_veg', 'Wood')),
+        habitat TEXT CHECK (habitat IN ('Riffle', 'Vegetation', 'Woody')),
         metric_name TEXT NOT NULL,
         metric_value REAL, 
         UNIQUE (region, season, habitat, metric_name)
@@ -221,13 +221,13 @@ def create_tables():
 
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS macro_metrics (
+        metric_id INTEGER PRIMARY KEY,  
         event_id INTEGER NOT NULL,
         metric_name TEXT NOT NULL,
         raw_value REAL NOT NULL,
-        metric_result REAL,
-        metric_score INTEGER CHECK (metric_score IN (0, 2, 4, 6)),
-        PRIMARY KEY (event_id, metric_name),
-        FOREIGN KEY (event_id) REFERENCES macro_collection_events (event_id)
+        metric_score INTEGER,
+        FOREIGN KEY (event_id) REFERENCES macro_collection_events (event_id),
+        UNIQUE (event_id, metric_name)  
     )
     ''')
 

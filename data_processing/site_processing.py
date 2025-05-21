@@ -94,8 +94,7 @@ def load_site_data():
         
         # Fill any missing lat/long with a default value if needed
         if 'latitude' in sites_df.columns and 'longitude' in sites_df.columns:
-            sites_df['latitude'].fillna(0, inplace=True)
-            sites_df['longitude'].fillna(0, inplace=True)
+            sites_df = sites_df.fillna({'latitude': 0, 'longitude': 0})
         
         logger.info(f"Extracted information for {len(sites_df)} unique sites")
         

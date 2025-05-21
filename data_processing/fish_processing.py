@@ -77,7 +77,7 @@ def process_fish_csv_data(site_name=None):
     """
     try:
         # Load raw fish data
-        fish_df = load_csv_data('fish')
+        fish_df = load_csv_data('fish', parse_dates=['Date'])
         
         if fish_df.empty:
             logger.error("Failed to load fish data from CSV.")
