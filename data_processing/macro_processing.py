@@ -1,18 +1,10 @@
-import logging
 import pandas as pd
 import sqlite3
 from database.database import get_connection, close_connection
+from data_processing.data_loader import setup_logging, load_csv_data, clean_column_names
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler("tenmile_creek.log"),
-        logging.StreamHandler()
-    ]
-)
-logger = logging.getLogger(__name__)
+# Set up logging
+logger = setup_logging("macro_processing")
 
 def load_macroinvertebrate_data():
     """Load macroinvertebrate data into the database."""
@@ -28,8 +20,6 @@ def load_macroinvertebrate_data():
             # Insert data
             insert_collection_events(cursor)
             insert_reference_and_metrics_data(cursor)
-            update_metric_results(cursor)
-            update_metric_scores(cursor)
             calculate_summary_scores(cursor)
 
             conn.commit()   
@@ -50,31 +40,213 @@ def load_macroinvertebrate_data():
 
     return get_macroinvertebrate_dataframe()
 
+def process_macro_csv_data(site_name=None):
+    """
+    Process macroinvertebrate data from CSV file.
+    
+    Args:
+        site_name: Optional site name to filter data for
+        
+    Returns:
+        DataFrame with processed macroinvertebrate data
+    """
+    try:
+        # Load raw macro data
+        macro_df = load_csv_data('macro')
+        
+        if macro_df.empty:
+            logger.error("Failed to load macroinvertebrate data from CSV.")
+            return pd.DataFrame()
+        
+        # Clean column names for consistency
+        macro_df = clean_column_names(macro_df)
+        
+        # Map to standardized column names
+        column_mapping = {
+            'sitename': 'site_name',
+            'date': 'collection_date',
+            'year': 'year',
+            'season': 'season',
+            'habitat_type': 'habitat',
+            'sampleid': 'sample_id',
+            'taxa_richness': 'taxa_richness',
+            'modified_hbi': 'hbi_score',
+            'ept_perc': 'ept_abundance',
+            'ept_taxa': 'ept_taxa_richness',
+            'dom_2_taxa': 'contribution_dominants',
+            'shannon_weaver': 'shannon_weaver',
+            'taxa_richness_score': 'taxa_richness_score',
+            'mod_hbi_score': 'hbi_score_score',
+            'ept_perc_score': 'ept_abundance_score',
+            'ept_taxa_score': 'ept_taxa_richness_score',
+            'dom2_taxa_score': 'contribution_dominants_score',
+            'shannon_weaver_score': 'shannon_weaver_score',
+            'percent_reference': 'comparison_to_reference'
+        }
+        
+        # Create a mapping with only columns that exist in the dataframe
+        valid_mapping = {}
+        for k, v in column_mapping.items():
+            matching_cols = [col for col in macro_df.columns if col.lower() == k.lower()]
+            if matching_cols:
+                valid_mapping[matching_cols[0]] = v
+                
+        macro_df = macro_df.rename(columns=valid_mapping)
+        
+        # Handle date formatting
+        if 'collection_date' in macro_df.columns:
+            try:
+                macro_df['collection_date'] = pd.to_datetime(macro_df['collection_date'])
+                macro_df['collection_date_str'] = macro_df['collection_date'].dt.strftime('%Y-%m-%d')
+            except Exception as e:
+                logger.error(f"Error processing dates: {e}")
+        
+        # Check for invalid data (-99 or -999 values)
+        score_columns = [col for col in macro_df.columns if col.endswith('_score')]
+        score_columns.append('comparison_to_reference')
+        
+        # Remove rows with -99 or -999 values in score columns or comparison_to_reference
+        invalid_mask = (macro_df[score_columns] == -99).any(axis=1) | (macro_df[score_columns] == -999).any(axis=1)
+        if invalid_mask.any():
+            logger.warning(f"Removing {invalid_mask.sum()} rows with invalid scores (-99 or -999)")
+            macro_df = macro_df[~invalid_mask]
+        
+        # Calculate total score by summing individual metric scores
+        metric_score_cols = [
+            'taxa_richness_score', 
+            'hbi_score_score', 
+            'ept_abundance_score', 
+            'ept_taxa_richness_score', 
+            'contribution_dominants_score', 
+            'shannon_weaver_score'
+        ]
+        
+        # Check which columns exist and calculate total score
+        available_score_cols = [col for col in metric_score_cols if col in macro_df.columns]
+
+        if len(available_score_cols) == len(metric_score_cols):
+            # Only calculate total if we have all the score columns
+            macro_df['total_score'] = macro_df[available_score_cols].sum(axis=1)
+            logger.info("Calculated total_score from all component score columns")
+        elif available_score_cols:
+            # If we only have some but not all score columns, we should log a warning
+            logger.warning(f"Only found {len(available_score_cols)} of {len(metric_score_cols)} score columns")
+            logger.warning(f"Missing: {set(metric_score_cols) - set(available_score_cols)}")
+            
+            # Calculate total from available columns but note it's incomplete
+            macro_df['total_score'] = macro_df[available_score_cols].sum(axis=1)
+            logger.info("Calculated partial total_score from available component score columns")
+        else:
+            # No score columns available
+            logger.warning("No metric score columns found, cannot calculate total_score")
+            macro_df['total_score'] = None
+        
+        # Determine biological condition based on comparison_to_reference
+        if 'comparison_to_reference' in macro_df.columns:
+            macro_df['biological_condition'] = macro_df['comparison_to_reference'].apply(determine_biological_condition)
+            logger.info("Determined biological_condition based on comparison_to_reference")
+        
+        # Filter by site name if provided
+        if site_name:
+            if 'site_name' in macro_df.columns:
+                site_filter = macro_df['site_name'].str.lower() == site_name.lower()
+                filtered_df = macro_df[site_filter]
+                
+                if filtered_df.empty:
+                    logger.warning(f"No macroinvertebrate data found for site: {site_name}")
+                    return pd.DataFrame()
+                
+                logger.info(f"Filtered to {len(filtered_df)} macroinvertebrate records for site: {site_name}")
+                return filtered_df
+            else:
+                logger.warning("No 'site_name' column found in data")
+        
+        return macro_df
+        
+    except Exception as e:
+        logger.error(f"Error processing macroinvertebrate CSV data: {e}")
+        return pd.DataFrame()
+
+def determine_biological_condition(comparison_value):
+    """
+    Determine biological condition based on comparison to reference value.
+    Uses Table 6 thresholds.
+    
+    Args:
+        comparison_value: The comparison to reference value (0-1 proportion)
+        
+    Returns:
+        str: Biological condition category
+    """
+    if pd.isna(comparison_value):
+        return "Unknown"
+        
+    try:
+        comparison_value = float(comparison_value)
+        
+        if comparison_value > 0.83:
+            return "Non-impaired"
+        elif comparison_value >= 0.54:
+            return "Slightly Impaired"
+        elif comparison_value >= 0.17:
+            return "Moderately Impaired"
+        else:
+            return "Severely Impaired"
+    except:
+        return "Unknown"
+
 def insert_collection_events(cursor):
     """Insert macroinvertebrate collection events into the database."""
     try:
-        # Define collection events data
-        collection_events = [
-            (1, 'Winter', 2014, 'Riffle'), 
-            (1, 'Winter', 2017, 'Riffle'),
-            (1, 'Winter', 2018, 'Riffle'),
-            (1, 'Winter', 2020, 'Riffle'),
-            (1, 'Winter', 2021, 'Riffle'),
-            (1, 'Winter', 2022, 'Riffle'),
-            (1, 'Summer', 2013, 'Riffle'),
-            (1, 'Summer', 2014, 'Riffle'),
-            (1, 'Summer', 2019, 'Riffle'),
-            (1, 'Summer', 2020, 'Riffle'),
-            (1, 'Summer', 2021, 'Riffle'),
-            (1, 'Summer', 2022, 'Riffle')
-        ]
-
-        cursor.executemany('''
-        INSERT INTO macro_collection_events (site_id, season, year, habitat)
-        VALUES (?, ?, ?, ?)
-        ''', collection_events)
-
-        logger.debug(f"Inserted {len(collection_events)} macroinvertebrate collection events")
+        # Process data from CSV
+        macro_df = process_macro_csv_data()
+        
+        if macro_df.empty:
+            logger.warning("No macroinvertebrate data to insert")
+            return
+            
+        # Get required columns
+        required_cols = ['site_name', 'sample_id', 'season', 'year', 'habitat']
+        missing_cols = [col for col in required_cols if col not in macro_df.columns]
+        
+        if missing_cols:
+            logger.error(f"Missing required columns for collection events: {missing_cols}")
+            return
+            
+        # Get unique collection events
+        unique_events = macro_df.drop_duplicates(subset=['site_name', 'sample_id', 'season', 'year']).copy()
+        
+        # Insert each collection event
+        for _, event in unique_events.iterrows():
+            # Get or create site_id
+            cursor.execute("SELECT site_id FROM sites WHERE site_name = ?", (event['site_name'],))
+            site_result = cursor.fetchone()
+            
+            if site_result:
+                site_id = site_result[0]
+            else:
+                # Insert minimal site data
+                cursor.execute(
+                    "INSERT INTO sites (site_name) VALUES (?)", 
+                    (event['site_name'],)
+                )
+                site_id = cursor.lastrowid
+            
+            # Insert collection event
+            cursor.execute('''
+                INSERT INTO macro_collection_events 
+                (site_id, sample_id, season, year, habitat)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (
+                site_id, 
+                event.get('sample_id'), 
+                event.get('season'), 
+                event.get('year'), 
+                event.get('habitat')
+            ))
+        
+        logger.info(f"Inserted {len(unique_events)} macroinvertebrate collection events")
+        
     except Exception as e:
         logger.error(f"Error inserting collection events: {e}")
         raise
@@ -82,267 +254,127 @@ def insert_collection_events(cursor):
 def insert_reference_and_metrics_data(cursor):
     """Insert macroinvertebrate reference values and metrics data"""
     try:
-        # Define macroinvertebrate metrics
-        macro_metrics = ['Taxa Richness', 'EPT Taxa Richness', 'EPT Abundance',
-                    'HBI Score', '% Contribution Dominants', 'Shannon-Weaver']
-
-        # Macroinvertebrates reference data
-        macro_reference_data = [
-            ("Ouachita Mountains", "Winter", "Riffle", [21.34, 11.2, 0.45, 5.03, 0.40, 2.49]),
-            ("Ouachita Mountains", "Summer", "Riffle", [21.96, 9.9, 0.61, 4.68, 0.37, 2.51])
-        ]
-
-        # Validate reference data
-        for region, season, habitat, values in macro_reference_data:
-            if len(values) != len(macro_metrics):
-                raise ValueError(f"Mismatch between metrics and values for {region}, {season}")
+        # Process data from CSV
+        macro_df = process_macro_csv_data()
+        
+        if macro_df.empty:
+            logger.warning("No macroinvertebrate data to insert")
+            return
             
-            for val in values:
-                if not isinstance(val, (int, float)):
-                    raise ValueError(f"Non-numeric value in reference data: {val}")
+        # Define metric mappings
+        metric_mappings = [
+            ('Taxa Richness', 'taxa_richness', 'taxa_richness_score'),
+            ('EPT Taxa Richness', 'ept_taxa_richness', 'ept_taxa_richness_score'),
+            ('EPT Abundance', 'ept_abundance', 'ept_abundance_score'),
+            ('HBI Score', 'hbi_score', 'hbi_score_score'),
+            ('% Contribution Dominants', 'contribution_dominants', 'contribution_dominants_score'),
+            ('Shannon-Weaver', 'shannon_weaver', 'shannon_weaver_score')
+        ]
+        
+        # Check which metrics are available
+        available_metrics = []
+        for metric_name, raw_col, score_col in metric_mappings:
+            if raw_col in macro_df.columns and score_col in macro_df.columns:
+                available_metrics.append((metric_name, raw_col, score_col))
+        
+        if not available_metrics:
+            logger.error("No metric data available in CSV")
+            return
+            
+        # For each collection event, insert metrics
+        for _, row in macro_df.iterrows():
+            # Get the event_id
+            if 'site_name' not in row or 'sample_id' not in row:
+                continue
                 
-        # Prepare reference data
-        macro_ref_data = []
-        reference_id = 1 # Starting ID for reference values
-        for region, season, habitat, values in macro_reference_data:
-            for i, metric in enumerate(macro_metrics):
-                macro_ref_data.append((reference_id, region, season, habitat, metric, values[i]))
-                reference_id += 1
-
-        # Macroinvertebrate event data 
-        macro_event_data = [
-            # Winter collections
-            (1, [12, 4, 0.13, 5.52, 0.79, 1.18]),  # 2014
-            (2, [8, 2, 0.06, 5.80, 0.85, 1.03]),   # 2017
-            (3, [17, 4, 0.25, 5.70, 0.52, 2.20]),   # 2018
-            (4, [15, 7, 0.44, 4.57, 0.56, 2.04]),   # 2020
-            (5, [19, 6, 0.19, 5.39, 0.49, 2.33]),   # 2021
-            (6, [16, 7, 0.20, 5.61, 0.64, 1.75]),   # 2022
-
-            # Summer collections
-            (7, [18, 5, 0.07, 5.75, 0.48, 2.24]),   # 2013
-            (8, [12, 2, 0.02, 5.50, 0.67, 1.66]),   # 2014
-            (9, [18, 5, 0.09, 5.70, 0.38, 2.23]),   # 2019
-            (10, [17, 7, 0.16, 5.10, 0.49, 2.19]),   # 2020
-            (11, [18, 6, 0.23, 4.92, 0.45, 2.25]),   # 2021
-            (12, [20, 8, 0.31, 5.06, 0.29, 2.68])   # 2022
-        ]
-
-        # Validate metric data
-        for event_id, values in macro_event_data:
-            if len(values) != len(macro_metrics):
-                raise ValueError(f"Mismatch between metrics and values for event {event_id}")
+            cursor.execute('''
+                SELECT e.event_id
+                FROM macro_collection_events e
+                JOIN sites s ON e.site_id = s.site_id
+                WHERE s.site_name = ? AND e.sample_id = ?
+            ''', (row['site_name'], row['sample_id']))
             
-            for val in values:
-                if not isinstance(val, (int, float)):
-                    raise ValueError(f"Non-numeric value in event data: {val}")
+            event_result = cursor.fetchone()
+            if not event_result:
+                continue
+                
+            event_id = event_result[0]
             
-        # Prepare metrics data
-        macro_data = []
-        for event_id, values in macro_event_data:
-            for i, metric in enumerate(macro_metrics):
-                macro_data.append((event_id, metric, values[i]))
-
-        # Insert into reference values
-        cursor.executemany('''
-        INSERT INTO macro_reference_values (reference_id, region, season, habitat, metric_name, metric_value)
-        VALUES (?, ?, ?, ?, ?, ?)
-        ''', macro_ref_data)
-        logger.debug(f"Inserted {len(macro_ref_data)} reference values")
-
-        # Insert metrics
-        cursor.executemany('''
-        INSERT INTO macro_metrics (event_id, metric_name, raw_value)
-        VALUES (?, ?, ?)
-        ''', macro_data)
-        logger.debug(f"Inserted {len(macro_data)} metrics")
+            # Insert metrics for this event
+            for metric_name, raw_col, score_col in available_metrics:
+                if pd.notna(row.get(raw_col)) and pd.notna(row.get(score_col)):
+                    # For proportion metrics, use raw value as result
+                    metric_result = row[raw_col] if metric_name.startswith(('EPT Abundance', '% Contribution')) else None
+                    
+                    cursor.execute('''
+                        INSERT INTO macro_metrics 
+                        (event_id, metric_name, raw_value, metric_result, metric_score)
+                        VALUES (?, ?, ?, ?, ?)
+                    ''', (
+                        event_id,
+                        metric_name,
+                        row[raw_col],
+                        metric_result,
+                        row[score_col]
+                    ))
+        
+        logger.info("Inserted macroinvertebrate metrics data")
+        
     except Exception as e:
         logger.error(f"Error inserting reference and metrics data: {e}")
-        raise
-
-def update_metric_results(cursor):
-    """Update metric results based on reference values"""
-    try:   
-        # Update macro_metrics table with non-proportion metrics by dividing reference values
-        cursor.execute('''
-        UPDATE macro_metrics
-        SET metric_result = (
-            SELECT macro_metrics.raw_value / macro_reference_values.metric_value
-            FROM macro_reference_values
-            JOIN macro_collection_events ON macro_collection_events.event_id = macro_metrics.event_id
-            WHERE macro_metrics.metric_name = macro_reference_values.metric_name
-            AND macro_collection_events.season = macro_reference_values.season
-            AND macro_reference_values.region = 'Ouachita Mountains'
-            AND macro_reference_values.habitat = 'Riffle'
-        )
-        WHERE metric_name IN (
-            'Taxa Richness', 
-            'EPT Taxa Richness'
-        );
-        ''')
-        logger.debug("Updated metric results for Taxa Richeness and EPT Taxa Richness")
-
-        # Special case for HBI Score - invert the ratio (reference/raw)
-        cursor.execute('''
-        UPDATE macro_metrics
-        SET metric_result = (
-            SELECT macro_reference_values.metric_value / macro_metrics.raw_value
-            FROM macro_reference_values
-            JOIN macro_collection_events ON macro_collection_events.event_id = macro_metrics.event_id
-            WHERE macro_metrics.metric_name = macro_reference_values.metric_name
-            AND macro_collection_events.season = macro_reference_values.season
-            AND macro_reference_values.region = 'Ouachita Mountains'
-            AND macro_reference_values.habitat = 'Riffle'
-        )
-        WHERE metric_name = 'HBI Score';
-        ''')
-        logger.debug("Updated metric results for HBI Score")
-
-        # Set proportion metrics to have same value for metric_result as raw_value
-        cursor.execute('''
-        UPDATE macro_metrics
-        SET metric_result = raw_value
-        WHERE metric_name IN (
-            'EPT Abundance',
-            '% Contribution Dominants',
-            'Shannon-Weaver'
-        )
-        ''')
-        logger.debug("Updated metric results for proportion metrics")
-
-        # Verify all metrics have results
-        cursor.execute("SELECT COUNT(*) FROM macro_metrics WHERE metric_result IS NULL")
-        missing_results = cursor.fetchone()[0]
-        if missing_results > 0:
-            logger.warning(f"{missing_results} metrics are missing results")
-    except Exception as e:
-        logger.error(f"Error updating metric results: {e}")
-        raise
-
-def update_metric_scores(cursor):
-    """Update metric scores based on bioassessment scoring criteria"""
-    try:
-        scoring_queries = [
-            ('''
-            UPDATE macro_metrics
-            SET metric_score = CASE
-                WHEN metric_result > 0.80 THEN 6
-                WHEN metric_result >= 0.60 THEN 4
-                WHEN metric_result >= 0.40 THEN 2
-                ELSE 0
-            END
-            WHERE metric_name = 'Taxa Richness';
-            ''', 'Taxa Richness'),
-
-            ('''
-            UPDATE macro_metrics
-            SET metric_score = CASE
-                WHEN metric_result > 0.85 THEN 6
-                WHEN metric_result >= 0.70 THEN 4
-                WHEN metric_result >= 0.50 THEN 2
-                ELSE 0
-            END
-            WHERE metric_name = 'HBI Score';
-            ''', 'HBI Score'),
-
-            ('''
-            UPDATE macro_metrics
-            SET metric_score = CASE
-                WHEN raw_value > 0.30 THEN 6
-                WHEN raw_value > 0.20 THEN 4
-                WHEN raw_value >= 0.10 THEN 2
-                ELSE 0
-            END
-            WHERE metric_name = 'EPT Abundance';
-            ''', 'EPT Abundance'),
-
-            ('''
-            UPDATE macro_metrics
-            SET metric_score = CASE
-                WHEN metric_result > 0.90 THEN 6
-                WHEN metric_result >= 0.80 THEN 4
-                WHEN metric_result >= 0.70 THEN 2
-                ELSE 0
-            END
-            WHERE metric_name = 'EPT Taxa Richness';
-            ''', 'EPT Taxa Richness'),
-
-            ('''
-            UPDATE macro_metrics
-            SET metric_score = CASE
-                WHEN raw_value < 0.60 THEN 6
-                WHEN raw_value <= 0.70 THEN 4
-                WHEN raw_value <= 0.80 THEN 2
-                ELSE 0
-            END
-            WHERE metric_name = '% Contribution Dominants';
-            ''', '% Contribution Dominants'),
-
-           ('''
-            UPDATE macro_metrics
-            SET metric_score = CASE
-                WHEN raw_value > 3.5 THEN 6
-                WHEN raw_value >= 2.5 THEN 4
-                WHEN raw_value >= 1.5 THEN 2
-                ELSE 0
-            END
-            WHERE metric_name = 'Shannon-Weaver';
-            ''', 'Shannon-Weaver')
-        ]
-
-        for query, metric_name in scoring_queries:
-            cursor.execute(query)
-            logger.debug(f"Updated metric scores for {metric_name}")
-
-        # Verify all metrics have scores
-        cursor.execute("SELECT COUNT(*) FROM macro_metrics WHERE metric_score IS NULL")
-        missing_scores = cursor.fetchone()[0]
-        if missing_scores > 0:
-            logger.warning(f"{missing_scores} metrics are missing scores")
-    except Exception as e:
-        logger.error(f"Error updating metric scores: {e}")
         raise
 
 def calculate_summary_scores(cursor):
     """Calculate and insert summary scores into the database."""
     try:
-        cursor.execute('''
-        WITH scores AS (
-            SELECT 
-                m.event_id,
-                SUM(m.metric_score) AS total_score,
-                CASE
-                    WHEN e.season = 'Winter' THEN SUM(m.metric_score) / 32.0 -- Winter reference score
-                    WHEN e.season = 'Summer' THEN SUM(m.metric_score) / 34.0 -- Summer reference score
-                END AS comparison_to_reference
-            FROM macro_metrics m
-            JOIN macro_collection_events e ON m.event_id = e.event_id
-            GROUP BY m.event_id, e.season
-        )
-        INSERT INTO macro_summary_scores (event_id, total_score, comparison_to_reference, biological_condition)
-        SELECT 
-            event_id,
-            total_score,
-            comparison_to_reference,
-            CASE
-                WHEN comparison_to_reference > 0.83 THEN 'Non-impaired'
-                WHEN comparison_to_reference >= 0.54 THEN 'Slightly Impaired'
-                WHEN comparison_to_reference >= 0.17 THEN 'Moderately Impaired'
-                ELSE 'Severely Impaired'
-            END AS biological_condition
-        FROM scores;
-        ''')
-        logger.debug("Calculated and inserted summary scores")
-
-        # Verify summary scores were created for all events
-        cursor.execute('''
-        SELECT COUNT(*) FROM macro_collection_events e
-        LEFT JOIN macro_summary_scores s ON e.event_id = s.event_id
-        WHERE s.event_id IS NULL
-        ''')
-        missing_summaries = cursor.fetchone()[0]
-        if missing_summaries > 0:
-            logger.warning(f"{missing_summaries} collection events are missing summary scores")
+        # Process data from CSV
+        macro_df = process_macro_csv_data()
+        
+        if macro_df.empty:
+            logger.warning("No macroinvertebrate data to calculate summary scores")
+            return
+            
+        # Check for required columns
+        required_cols = ['site_name', 'sample_id', 'total_score', 'comparison_to_reference']
+        missing_cols = [col for col in required_cols if col not in macro_df.columns]
+        
+        if missing_cols:
+            logger.error(f"Missing required columns for summary scores: {missing_cols}")
+            return
+            
+        # For each collection event, insert summary scores
+        for _, row in macro_df.iterrows():
+            # Get the event_id
+            cursor.execute('''
+                SELECT e.event_id
+                FROM macro_collection_events e
+                JOIN sites s ON e.site_id = s.site_id
+                WHERE s.site_name = ? AND e.sample_id = ?
+            ''', (row['site_name'], row['sample_id']))
+            
+            event_result = cursor.fetchone()
+            if not event_result:
+                continue
+                
+            event_id = event_result[0]
+            
+            # Determine biological condition
+            biological_condition = determine_biological_condition(row['comparison_to_reference'])
+            
+            # Insert summary score
+            cursor.execute('''
+                INSERT INTO macro_summary_scores
+                (event_id, total_score, comparison_to_reference, biological_condition)
+                VALUES (?, ?, ?, ?)
+            ''', (
+                event_id,
+                row['total_score'],
+                row['comparison_to_reference'],
+                biological_condition
+            ))
+        
+        logger.info("Calculated and inserted summary scores")
+            
     except Exception as e:
         logger.error(f"Error calculating summary scores: {e}")
         raise
@@ -458,7 +490,6 @@ def verify_macro_database_structure():
         required_tables = [
             'sites',
             'macro_collection_events',
-            'macro_reference_values',
             'macro_metrics',
             'macro_summary_scores'
         ]

@@ -129,7 +129,10 @@ def create_tables():
     )
     ''')
 
-    cursor.execute('''
+    # Reference values table - currently don't have access to this data
+    # If reference values by region become available in the future, uncomment this table
+    '''
+    cursor.execute("""
     CREATE TABLE IF NOT EXISTS macro_reference_values (
         reference_id INTEGER PRIMARY KEY,
         region TEXT NOT NULL,
@@ -139,7 +142,8 @@ def create_tables():
         metric_value REAL, 
         UNIQUE (region, season, habitat, metric_name)
     )
-    ''')  
+    """)  
+    '''
 
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS macro_metrics (
