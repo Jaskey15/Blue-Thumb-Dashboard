@@ -2,11 +2,8 @@ import os
 import pandas as pd
 import sqlite3
 
-# Import from data_loader
-from data_processing.data_loader import (
-    setup_logging, load_csv_data, clean_column_names, 
-    save_processed_data, get_file_path
-)
+from data_processing.data_loader import load_csv_data, clean_column_names, save_processed_data
+from utils import setup_logging
 
 # Initialize logger
 logger = setup_logging("site_processing")

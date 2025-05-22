@@ -1,23 +1,15 @@
 """
-Setup script for Tenmile Creek Water Quality Dashboard.
+Setup script for Blue Thumb Statewide Water Quality Dashboard.
 This script initializes the database and processes all data.
 """
 import sys
-import logging
 import importlib.util
 import os
 import time
+from utils import setup_logging
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler("tenmile_creek_setup.log"),
-        logging.StreamHandler()
-    ]
-)
-logger = logging.getLogger(__name__)
+logger = setup_logging("setup")
 
 # Define processing steps as a configuration list for better maintainability
 SETUP_STEPS = [
@@ -29,13 +21,19 @@ SETUP_STEPS = [
         "critical": True  # If this fails, we should exit
     },
     {
-        "name": "chemical data",
-        "module": "data_processing.chemical_processing",
-        "function": "run_initial_db_setup",  # Changed from process_chemical_data
+        "name": "site data",
+        "module": "data_processing.site_processing",
+        "function": "process_site_data",
         "args": [],
         "critical": True
     },
-    # Rest of the steps remain the same
+    {
+        "name": "chemical data",
+        "module": "data_processing.chemical_processing",
+        "function": "run_initial_db_setup",
+        "args": [],
+        "critical": True
+    },
     {
         "name": "fish data",
         "module": "data_processing.fish_processing",
@@ -47,6 +45,13 @@ SETUP_STEPS = [
         "name": "macroinvertebrate data",
         "module": "data_processing.macro_processing",
         "function": "load_macroinvertebrate_data",
+        "args": [],
+        "critical": True
+    },
+    {
+        "name": "habitat data",
+        "module": "data_processing.habitat_processing",
+        "function": "load_habitat_data",
         "args": [],
         "critical": True
     }
@@ -71,8 +76,11 @@ def check_prerequisites():
     
     # Check for required data files
     required_data_files = [
-        "data/raw/Tenmile_chemical.csv",
-        # Add more required files here if needed
+        "data/raw/chemical_data.csv",
+        "data/raw/fish_data.csv",
+        "data/raw/habitat_data.csv",
+        "data/raw/macro_data.csv",
+        "data/raw/site_data.csv"
     ]
     
     missing_files = []
@@ -120,7 +128,7 @@ def execute_step(step):
 
 def main():
     """Run all setup tasks in the correct order."""
-    logger.info("Starting Tenmile Creek Dashboard setup...")
+    logger.info("Starting Blue Thumb Statewide Dashboard setup...")
     
     # Check prerequisites before proceeding
     if not check_prerequisites():
@@ -135,21 +143,8 @@ def main():
             results[step["name"]] = result
     
     # All done!
-    logger.info("Setup complete! Run 'python -m app' to start the dashboard.")
+    logger.info("Setup complete! Run 'python app.py' to start the dashboard.")
     logger.info("Dashboard will be available at http://127.0.0.1:8050/")
-    
-    # Ask if user wants to start the dashboard now
-    response = input("Would you like to start the dashboard now? (y/n): ")
-    if response.lower() in ['y', 'yes']:
-        logger.info("Starting dashboard...")
-        try:
-            from app import app
-            app.run(debug=True)
-        except Exception as e:
-            logger.error(f"Error starting dashboard: {e}")
-            sys.exit(1)
-    else:
-        logger.info("Dashboard not started. You can run it later with 'python -m app'")
 
 if __name__ == "__main__":
     main()

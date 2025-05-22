@@ -1,9 +1,9 @@
 import pandas as pd
 import sqlite3
 from database.database import get_connection, close_connection
-from data_processing.data_loader import setup_logging, load_csv_data, clean_column_names
+from data_processing.data_loader import load_csv_data, clean_column_names
+from utils import setup_logging
 
-# Set up component-specific logging
 logger = setup_logging("fish_processing")
 
 def load_fish_data(site_name=None):

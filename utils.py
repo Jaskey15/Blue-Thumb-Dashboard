@@ -9,9 +9,6 @@ import logging
 from dash import html, dcc
 import dash_bootstrap_components as dbc
 
-# Configure logger
-logger = logging.getLogger(__name__)
-
 # Common style configurations
 CAPTION_STYLE = {
     'font-style': 'italic',
@@ -26,6 +23,44 @@ DEFAULT_IMAGE_STYLE = {
     'max-width': '100%',
     'height': 'auto'
 }
+
+def setup_logging(module_name):
+    """Configure logging to use the logs directory with component-specific log file."""
+    # Get the base directory of the project
+    base_dir = os.path.dirname(os.path.dirname(__file__))
+    
+    # Determine log subdirectory based on module name
+    log_subdirectory = "general"  # default
+    
+    if "processing" in module_name:
+        log_subdirectory = "processing"
+    elif "viz" in module_name:
+        log_subdirectory = "visualization"
+    elif module_name in ["setup", "app", "callbacks"]:
+        log_subdirectory = "application"
+    elif module_name == "utils":
+        log_subdirectory = "utilities"
+    
+    # Create logs directory structure
+    logs_dir = os.path.join(base_dir, 'logs', log_subdirectory)
+    os.makedirs(logs_dir, exist_ok=True)
+    
+    # Create log file path
+    log_file = os.path.join(logs_dir, f"{module_name}.log")
+    
+    # Configure logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler(log_file),
+            logging.StreamHandler()
+        ]
+    )
+    return logging.getLogger(module_name)
+
+# Configure logger
+logger = setup_logging("utils")
 
 def load_markdown_content(filename, fallback_message=None):
     """

@@ -1,5 +1,8 @@
-import plotly.graph_objects as go
 import pandas as pd
+from database.database import get_connection, close_connection
+from utils import setup_logging
+
+logger = setup_logging("map_viz")
 
 # Styling constants
 COLORS = {
@@ -19,6 +22,13 @@ COLORS = {
         'slightly_impaired': '#ff9800',   # Orange
         'moderately_impaired': '#f57c00', # Dark orange
         'severely_impaired': '#e74c3c',   # Red
+    },
+    'habitat': {
+        'a': '#1e8449',    # Green (A grade)
+        'b': '#7cb342',    # Light green (B grade)
+        'c': '#ff9800',    # Orange (C grade)
+        'd': '#e53e3e',    # Red-orange (D grade)
+        'f': '#e74c3c'     # Red (F grade)
     }
 }
 
@@ -73,6 +83,15 @@ MACRO_THRESHOLDS = [
     {'min': -float('inf'), 'max': 0.17, 'status': 'Severely Impaired', 'color': COLORS['macro']['severely_impaired']}
 ]
 
+# Habitat assessment thresholds (based on total score)
+HABITAT_THRESHOLDS = [
+    {'min': 90, 'max': float('inf'), 'status': 'A', 'color': COLORS['habitat']['a']},
+    {'min': 80, 'max': 90, 'status': 'B', 'color': COLORS['habitat']['b']},
+    {'min': 70, 'max': 80, 'status': 'C', 'color': COLORS['habitat']['c']},
+    {'min': 60, 'max': 70, 'status': 'D', 'color': COLORS['habitat']['d']},
+    {'min': -float('inf'), 'max': 60, 'status': 'F', 'color': COLORS['habitat']['f']}
+]
+
 # Parameter display names
 PARAMETER_LABELS = {
     'do_percent': 'Dissolved Oxygen',
@@ -82,91 +101,136 @@ PARAMETER_LABELS = {
     'Chloride': 'Chloride',
     'Fish_IBI': 'Fish Community Health',
     'Macro_Summer': 'Macroinvertebrate Community (Summer)',
-    'Macro_Winter': 'Macroinvertebrate Community (Winter)'
+    'Macro_Winter': 'Macroinvertebrate Community (Winter)',
+    'Habitat_Grade': 'Habitat Assessment Grade'
 }
 
-# Monitoring sites
-MONITORING_SITES = [
-    {"name": "Tenmile Creek: Davis", "lat": 34.298889, "lon": -95.737222}
-]
+try:
+    MONITORING_SITES = load_sites_from_database()
+except Exception as e:
+    print(f"Warning: Could not load sites from database: {e}")
+    MONITORING_SITES = []  # Fallback to empty list
 
-def get_latest_chemical_data():
+def load_sites_from_database():
     """
-    Get the most recent reading for each chemical parameter at each monitoring site.
+    Load all monitoring sites from the database with coordinates and metadata.
     
     Returns:
-        Tuple of (latest_data, key_parameters, reference_values)
+        List of site dictionaries with name, lat, lon, county, river_basin, ecoregion
     """
+    conn = None
     try:
-        # Import necessary data processing functions
-        from data_processing.chemical_processing import process_chemical_data
+        conn = get_connection()
         
-        # Get the chemical data
-        df_clean, key_parameters, reference_values = process_chemical_data()
+        query = """
+        SELECT site_name, latitude, longitude, county, river_basin, ecoregion
+        FROM sites
+        WHERE latitude IS NOT NULL AND longitude IS NOT NULL
+        ORDER BY site_name
+        """
         
-        # Group by site and get the most recent date for each site
-        latest_data = df_clean.sort_values('Date').groupby('Site_Name').last().reset_index()
+        cursor = conn.cursor()
+        cursor.execute(query)
+        rows = cursor.fetchall()
         
-        return latest_data, key_parameters, reference_values
-    
+        sites = []
+        for row in rows:
+            site_name, lat, lon, county, river_basin, ecoregion = row
+            
+            # Handle missing metadata
+            county = county if county is not None else "Unknown"
+            river_basin = river_basin if river_basin is not None else "Unknown"
+            ecoregion = ecoregion if ecoregion is not None else "Unknown"
+            
+            sites.append({
+                "name": site_name,
+                "lat": lat,
+                "lon": lon,
+                "county": county,
+                "river_basin": river_basin,
+                "ecoregion": ecoregion
+            })
+        
+        logger.info(f"Successfully loaded {len(sites)} monitoring sites from database")
+        return sites
+        
     except Exception as e:
-        print(f"Error getting latest chemical data: {e}")
-        return pd.DataFrame(), [], {}
+        logger.error(f"Error loading sites from database: {e}")
+        raise Exception(f"Could not load monitoring sites: {str(e)}")
+        
+    finally:
+        if conn:
+            close_connection(conn)
 
-def get_latest_fish_data():
+def get_latest_data_by_type(data_type):
     """
-    Get the latest fish IBI scores.
-    
-    Returns:
-        DataFrame containing fish IBI data
-    """
-    try:
-        from data_processing.fish_processing import get_fish_dataframe
-        
-        # Get fish data
-        fish_df = get_fish_dataframe()
-        
-        # Sort by year to ensure we get the latest data
-        if not fish_df.empty:
-            fish_df = fish_df.sort_values('year')
-        
-        return fish_df
-    
-    except Exception as e:
-        print(f"Error getting latest fish data: {e}")
-        return pd.DataFrame()
-
-def get_latest_macro_data():
-    """
-    Get the latest macroinvertebrate bioassessment scores.
-    
-    Returns:
-        DataFrame containing macroinvertebrate data
-    """
-    try:
-        from data_processing.macro_processing import get_macroinvertebrate_dataframe
-        
-        # Get macroinvertebrate data
-        macro_df = get_macroinvertebrate_dataframe()
-        
-        # Sort by year to ensure we get the latest data
-        if not macro_df.empty:
-            macro_df = macro_df.sort_values(['season', 'year'])
-        
-        return macro_df
-    
-    except Exception as e:
-        print(f"Error getting latest macroinvertebrate data: {e}")
-        return pd.DataFrame()
-
-def determine_status(parameter, value, reference_values):
-    """
-    Determine the status and corresponding color for a parameter value.
+    Get the latest data for each site by data type.
     
     Args:
-        parameter: Parameter name to check
+        data_type: 'chemical', 'fish', 'macro', or 'habitat'
+    
+    Returns:
+        DataFrame with latest data per site (and season for macro data)
+    """
+    try:
+        # Map data types to their processing functions
+        data_function_map = {
+            'chemical': ('data_processing.chemical_processing', 'process_chemical_data'),
+            'fish': ('data_processing.fish_processing', 'get_fish_dataframe'),
+            'macro': ('data_processing.macro_processing', 'get_macroinvertebrate_dataframe'),
+            'habitat': ('data_processing.habitat_processing', 'get_habitat_dataframe')
+        }
+        
+        if data_type not in data_function_map:
+            raise ValueError(f"Unknown data type: {data_type}")
+        
+        # Get the appropriate processing function
+        module_name, function_name = data_function_map[data_type]
+        
+        # Dynamic import and function call
+        if data_type == 'chemical':
+            from data_processing.chemical_processing import process_chemical_data
+            df, _, _ = process_chemical_data()  # Returns tuple for chemical data
+        elif data_type == 'fish':
+            from data_processing.fish_processing import get_fish_dataframe
+            df = get_fish_dataframe()
+        elif data_type == 'macro':
+            from data_processing.macro_processing import get_macroinvertebrate_dataframe
+            df = get_macroinvertebrate_dataframe()
+        elif data_type == 'habitat':
+            from data_processing.habitat_processing import get_habitat_dataframe
+            df = get_habitat_dataframe()
+        
+        if df.empty:
+            return pd.DataFrame()
+        
+        # Handle different grouping logic based on data type
+        if data_type == 'chemical':
+            # Chemical data uses 'Date' column and 'Site_Name'
+            latest_data = df.sort_values('Date').groupby('Site_Name').last().reset_index()
+        elif data_type == 'macro':
+            # Macro data needs grouping by both site and season
+            # Assumes columns are 'site_name', 'season', 'year'
+            latest_data = df.sort_values(['season', 'year']).groupby(['site_name', 'season']).last().reset_index()
+        else:
+            # Fish and habitat data use 'year' column and 'site_name'
+            latest_data = df.sort_values('year').groupby('site_name').last().reset_index()
+        
+        logger.info(f"Retrieved latest {data_type} data for {len(latest_data)} records")
+        return latest_data
+        
+    except Exception as e:
+        logger.error(f"Error getting latest {data_type} data: {e}")
+        return pd.DataFrame()
+
+def determine_status_by_type(data_type, value, parameter_name=None):
+    """
+    Determine the status and corresponding color for a parameter value by data type.
+    
+    Args:
+        data_type: Type of data ('chemical', 'fish', 'macro', 'habitat')
         value: Parameter value to evaluate
-        reference_values: Dictionary of reference values
+        parameter_name: Specific parameter name (required for chemical data)
     
     Returns:
         Tuple of (status_text, color_code)
@@ -179,47 +243,27 @@ def determine_status(parameter, value, reference_values):
     if pd.isna(value):
         return status, color
     
-    # Use parameter thresholds configuration
-    if parameter in PARAMETER_THRESHOLDS:
-        thresholds = PARAMETER_THRESHOLDS[parameter]
-        
-        for threshold in thresholds:
-            if threshold['min'] <= value < threshold['max']:
-                return threshold['status'], threshold['color']
+    # Map data types to their threshold configurations
+    if data_type == 'chemical':
+        if parameter_name and parameter_name in PARAMETER_THRESHOLDS:
+            thresholds = PARAMETER_THRESHOLDS[parameter_name]
+        else:
+            return status, color
+    elif data_type == 'fish':
+        thresholds = FISH_IBI_THRESHOLDS
+    elif data_type == 'macro':
+        thresholds = MACRO_THRESHOLDS
+    elif data_type == 'habitat':
+        thresholds = HABITAT_THRESHOLDS
+    else:
+        return status, color
+    
+    # Check value against thresholds
+    for threshold in thresholds:
+        if threshold['min'] <= value < threshold['max']:
+            return threshold['status'], threshold['color']
     
     return status, color
-
-def determine_fish_status(ibi_score):
-    """
-    Determine the status and color for a fish IBI score.
-    
-    Args:
-        ibi_score: Fish IBI score to evaluate
-    
-    Returns:
-        Tuple of (status_text, color_code)
-    """
-    for threshold in FISH_IBI_THRESHOLDS:
-        if threshold['min'] <= ibi_score < threshold['max']:
-            return threshold['status'], threshold['color']
-    
-    return "Unknown", COLORS['unknown']
-
-def determine_macro_status(bio_score):
-    """
-    Determine the status and color for a macroinvertebrate bioassessment score.
-    
-    Args:
-        bio_score: Bioassessment score to evaluate
-    
-    Returns:
-        Tuple of (status_text, color_code)
-    """
-    for threshold in MACRO_THRESHOLDS:
-        if threshold['min'] <= bio_score < threshold['max']:
-            return threshold['status'], threshold['color']
-    
-    return "Unknown", COLORS['unknown']
 
 def format_parameter_value(parameter, value):
     """
@@ -294,91 +338,98 @@ def add_site_marker(fig, lat, lon, color, site_name, hover_text=None):
     
     return fig
 
-def add_chemical_markers(fig, sites, param_name):
+def add_data_markers(fig, sites, data_type, parameter_name=None, season=None):
     """
-    Add chemical parameter markers to the map.
+    Add markers to the map for any data type.
     
     Args:
         fig: The plotly figure to add markers to
         sites: List of site dictionaries with coordinates
-        param_name: Chemical parameter name
+        data_type: 'chemical', 'fish', 'macro', 'habitat'
+        parameter_name: For chemical data (specific parameter like 'do_percent')
+        season: For macro data ('Summer' or 'Winter')
     
     Returns:
         The updated figure
     """
-    # Get the latest chemical readings and reference values
-    latest_data, key_parameters, reference_values = get_latest_chemical_data()
+    # Get the latest data for this data type
+    latest_data = get_latest_data_by_type(data_type)
     
-    # Check if the selected parameter is valid
-    if param_name in key_parameters:
-        for site in sites:
-            site_name = site["name"]
-            site_data = latest_data[latest_data['Site_Name'] == site_name]
-            
-            if not site_data.empty and param_name in site_data.columns:
-                # Get value and determine status for chemical parameter
-                value = site_data[param_name].values[0]
-                status, color = determine_status(param_name, value, reference_values)
-                formatted_value = format_parameter_value(param_name, value)
-                
-                # Format the date for display
-                date_str = pd.to_datetime(site_data['Date'].values[0]).strftime('%B %d, %Y')
-                
-                # Add marker with color based on status
-                hover_text = f"{site_name}<br>{param_name}: {formatted_value}<br>Status: {status}<br>Last reading: {date_str}"
-                fig = add_site_marker(
-                    fig=fig,
-                    lat=site["lat"],
-                    lon=site["lon"],
-                    color=color,
-                    site_name=site_name,
-                    hover_text=hover_text
-                )
-            else:
-                # Add default marker if no data available
-                hover_text = f"{site_name}<br>No data available for {param_name}"
-                fig = add_site_marker(
-                    fig=fig,
-                    lat=site["lat"],
-                    lon=site["lon"],
-                    color=COLORS['unknown'],
-                    site_name=site_name,
-                    hover_text=hover_text
-                )
+    # Data type specific configurations
+    data_config = {
+        'chemical': {
+            'value_column': parameter_name,
+            'date_column': 'Date',
+            'site_column': 'Site_Name',
+            'needs_reference_values': True
+        },
+        'fish': {
+            'value_column': 'comparison_to_reference',
+            'date_column': 'year',
+            'site_column': 'site_name',
+            'needs_reference_values': False
+        },
+        'macro': {
+            'value_column': 'comparison_to_reference',
+            'date_column': 'year',
+            'site_column': 'site_name',
+            'needs_reference_values': False
+        },
+        'habitat': {
+            'value_column': 'total_score',
+            'date_column': 'year',
+            'site_column': 'site_name',
+            'needs_reference_values': False
+        }
+    }
     
-    return fig
-
-def add_fish_markers(fig, sites):
-    """
-    Add fish IBI markers to the map.
+    config = data_config[data_type]
     
-    Args:
-        fig: The plotly figure to add markers to
-        sites: List of site dictionaries with coordinates
-    
-    Returns:
-        The updated figure
-    """
-    # Get fish IBI scores
-    fish_data = get_latest_fish_data()
+    # Get reference values if needed (for chemical data)
+    reference_values = None
+    if config['needs_reference_values']:
+        _, key_parameters, reference_values = get_latest_data_by_type('chemical')
+        # Check if parameter is valid
+        if parameter_name not in key_parameters:
+            return fig
     
     for site in sites:
         site_name = site["name"]
         
-        if not fish_data.empty:
-            # Get the latest IBI score
-            ibi_score = fish_data['comparison_to_reference'].iloc[-1]
-            integrity_class = fish_data['integrity_class'].iloc[-1]
+        # Find data for this site
+        site_data = latest_data[latest_data[config['site_column']] == site_name]
+        
+        # Handle season filtering for macro data
+        if data_type == 'macro' and season:
+            site_data = site_data[site_data['season'] == season]
+        
+        if not site_data.empty and config['value_column'] in site_data.columns:
+            # Get the value and determine status
+            value = site_data[config['value_column']].iloc[0]
             
-            # Get the date of the latest reading
-            year = fish_data['year'].iloc[-1]
-            date_str = str(year)  # Use year as the date string
+            if data_type == 'chemical':
+                status, color = determine_status_by_type('chemical', value, parameter_name)
+                formatted_value = format_parameter_value(parameter_name, value)
+                date_str = pd.to_datetime(site_data[config['date_column']].iloc[0]).strftime('%B %d, %Y')
+                hover_text = f"{site_name}<br>{parameter_name}: {formatted_value}<br>Status: {status}<br>Last reading: {date_str}"
             
-            # Determine status and color based on IBI score
-            status, color = determine_fish_status(ibi_score)
+            elif data_type == 'fish':
+                status, color = determine_status_by_type('fish', value)
+                year = site_data[config['date_column']].iloc[0]
+                hover_text = f"{site_name}<br>IBI Score: {value:.2f}<br>Status: {status}<br>Last survey: {year}"
             
-            # Add marker
-            hover_text = f"{site_name}<br>IBI Score: {ibi_score:.2f}<br>Status: {status}<br>Last survey: {date_str}"
+            elif data_type == 'macro':
+                status, color = determine_status_by_type('macro', value)
+                year = site_data[config['date_column']].iloc[0]
+                date_str = f"{season} {year}"
+                hover_text = f"{site_name}<br>Bioassessment Score: {value:.2f}<br>Status: {status}<br>Last survey: {date_str}"
+            
+            elif data_type == 'habitat':
+                status, color = determine_status_by_type('habitat', value)
+                year = site_data[config['date_column']].iloc[0]
+                hover_text = f"{site_name}<br>Habitat Score: {value:.1f}<br>Grade: {status}<br>Last assessment: {year}"
+            
+            # Add marker with determined color
             fig = add_site_marker(
                 fig=fig,
                 lat=site["lat"],
@@ -388,85 +439,20 @@ def add_fish_markers(fig, sites):
                 hover_text=hover_text
             )
         else:
-            # No fish data
-            hover_text = f"{site_name}<br>No fish data available"
-            fig = add_site_marker(
-                fig=fig,
-                lat=site["lat"],
-                lon=site["lon"],
-                color=COLORS['unknown'],
-                site_name=site_name,
-                hover_text=hover_text
-            )
-    
-    return fig
-
-def add_macro_markers(fig, sites, season):
-    """
-    Add macroinvertebrate markers to the map.
-    
-    Args:
-        fig: The plotly figure to add markers to
-        sites: List of site dictionaries with coordinates
-        season: Season to display ('Summer' or 'Winter')
-    
-    Returns:
-        The updated figure
-    """
-    # Get macroinvertebrate bioassessment scores
-    macro_data = get_latest_macro_data()
-    
-    for site in sites:
-        site_name = site["name"]
-        
-        if not macro_data.empty:
-            # Filter for the requested season
-            season_data = macro_data[macro_data['season'] == season]
-            
-            if not season_data.empty:
-                # Get the latest score for the specified season
-                season_data = season_data.sort_values('year')
-                bio_score = season_data['comparison_to_reference'].iloc[-1]
-                condition = season_data['biological_condition'].iloc[-1]
-                
-                # Get the year of the latest reading
-                year = season_data['year'].iloc[-1]
-                date_str = f"{season} {year}"
-                
-                # Determine status and color based on bioassessment score
-                status, color = determine_macro_status(bio_score)
-                
-                # Add marker
-                hover_text = f"{site_name}<br>Bioassessment Score: {bio_score:.2f}<br>Status: {status}<br>Last survey: {date_str}"
-                fig = add_site_marker(
-                    fig=fig,
-                    lat=site["lat"],
-                    lon=site["lon"],
-                    color=color,
-                    site_name=site_name,
-                    hover_text=hover_text
-                )
+            # No data available - add gray marker
+            if data_type == 'macro' and season:
+                no_data_text = f"{site_name}<br>No {season} macroinvertebrate data available"
             else:
-                # No data for this season
-                hover_text = f"{site_name}<br>No {season} macroinvertebrate data available"
-                fig = add_site_marker(
-                    fig=fig,
-                    lat=site["lat"],
-                    lon=site["lon"],
-                    color=COLORS['unknown'],
-                    site_name=site_name,
-                    hover_text=hover_text
-                )
-        else:
-            # No macroinvertebrate data
-            hover_text = f"{site_name}<br>No macroinvertebrate data available"
+                data_label = PARAMETER_LABELS.get(f"{data_type.title()}_{'_'.join(parameter_name.split('_')) if parameter_name else 'Data'}", f"{data_type} data")
+                no_data_text = f"{site_name}<br>No {data_label.lower()} available"
+            
             fig = add_site_marker(
                 fig=fig,
                 lat=site["lat"],
                 lon=site["lon"],
                 color=COLORS['unknown'],
                 site_name=site_name,
-                hover_text=hover_text
+                hover_text=no_data_text
             )
     
     return fig
@@ -476,8 +462,8 @@ def create_site_map(param_type=None, param_name=None):
     Create an interactive map of monitoring sites with color-coded status markers.
     
     Args:
-        param_type: Type of parameter ('chem' or 'bio')
-        param_name: Specific parameter name (e.g., 'do_percent', 'Fish_IBI')
+        param_type: Type of parameter ('chem', 'bio', or 'habitat')
+        param_name: Specific parameter name (e.g., 'do_percent', 'Fish_IBI', 'Habitat_Grade')
     
     Returns:
         Plotly figure with the interactive map
@@ -486,33 +472,64 @@ def create_site_map(param_type=None, param_name=None):
         # Create the base map
         fig = go.Figure()
         
+        # Check if we have sites loaded
+        if not MONITORING_SITES:
+            fig.update_layout(
+                mapbox=dict(
+                    style="white-bg",
+                    center=dict(lat=35.5, lon=-98.2),
+                    zoom=6.2
+                ),
+                margin=dict(l=0, r=0, t=0, b=0),
+                height=600,
+                annotations=[
+                    dict(
+                        text="Error: No monitoring sites available",
+                        showarrow=False,
+                        xref="paper",
+                        yref="paper",
+                        x=0.5,
+                        y=0.5,
+                        font=dict(size=14, color="red")
+                    )
+                ]
+            )
+            return fig
+        
         # If parameter type and name are provided, determine marker colors based on status
         if param_type and param_name:
             if param_type == 'chem':
-                fig = add_chemical_markers(fig, MONITORING_SITES, param_name)
+                fig = add_data_markers(fig, MONITORING_SITES, 'chemical', parameter_name=param_name)
             elif param_type == 'bio':
                 if param_name == 'Fish_IBI':
-                    fig = add_fish_markers(fig, MONITORING_SITES)
+                    fig = add_data_markers(fig, MONITORING_SITES, 'fish')
                 elif param_name == 'Macro_Summer':
-                    fig = add_macro_markers(fig, MONITORING_SITES, 'Summer')
+                    fig = add_data_markers(fig, MONITORING_SITES, 'macro', season='Summer')
                 elif param_name == 'Macro_Winter':
-                    fig = add_macro_markers(fig, MONITORING_SITES, 'Winter')
+                    fig = add_data_markers(fig, MONITORING_SITES, 'macro', season='Winter')
+            elif param_type == 'habitat':
+                fig = add_data_markers(fig, MONITORING_SITES, 'habitat')
         else:
-            # No parameter selected, use default markers
+            # No parameter selected, use default blue markers with site info
             for site in MONITORING_SITES:
+                hover_text = (f"{site['name']}<br>"
+                             f"County: {site['county']}<br>"
+                             f"River Basin: {site['river_basin']}<br>"
+                             f"Ecoregion: {site['ecoregion']}")
+                
                 fig = add_site_marker(
                     fig=fig,
                     lat=site["lat"],
                     lon=site["lon"],
-                    color='red',
+                    color='#3366CC',  # Blue for neutral/default state
                     site_name=site["name"],
-                    hover_text=site["name"]
+                    hover_text=hover_text
                 )
         
         # Set up map layout
         fig.update_layout(
             mapbox=dict(
-                style="white-bg",  # Start with a white background
+                style="white-bg",
                 layers=[
                     {
                         "below": 'traces',
@@ -527,7 +544,7 @@ def create_site_map(param_type=None, param_name=None):
                 zoom=6.2
             ),
             margin=dict(l=0, r=0, t=0, b=0),
-            height=600,  # Increased height for better vertical display
+            height=600,
             showlegend=False,
             annotations=[
                 dict(

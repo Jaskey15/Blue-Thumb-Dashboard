@@ -1,21 +1,20 @@
-import logging
 import os
 import sys
 import pandas as pd
 import numpy as np
-import sqlite3
-from datetime import datetime
+
 
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
 
 # Import utilities from data_loader and database
 from data_processing.data_loader import (
-    setup_logging, load_csv_data, clean_column_names, 
-    save_processed_data, get_file_path, get_unique_sites
+    load_csv_data, clean_column_names, 
+    save_processed_data, get_unique_sites
 )
 from database.database import get_connection, close_connection
-from database.db_schema import insert_default_parameters, insert_default_reference_values
+
+from utils import setup_logging
 
 # Use the shared logging setup
 logger = setup_logging("chemical_processing")
