@@ -4,16 +4,11 @@ Use this script to quickly rebuild your database after schema changes.
 """
 
 import os
-import logging
 import time
-import sqlite3
+from utils import setup_logging
 
 # Setup logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger("reset_database")
+logger = setup_logging("reset_database")
 
 def delete_database_file():
     """Delete the SQLite database file if it exists."""
@@ -49,35 +44,44 @@ def recreate_schema():
 
 def reload_all_data():
     """Reload all data from CSV files into the database."""
-    try:
+    try:        
         # Import all processing modules
-        from data_processing.site_processing import load_site_data
+        from data_processing.site_processing import process_site_data
         from data_processing.chemical_processing import run_initial_db_setup as load_chemical_data
         from data_processing.fish_processing import load_fish_data
         from data_processing.macro_processing import load_macroinvertebrate_data
         from data_processing.habitat_processing import load_habitat_data
         
-        # Process each data type
         start_time = time.time()
         
-        logger.info("Loading site data...")
-        site_success = load_site_data()
-
-        logger.info("Loading chemical data...")
-        chemical_success = load_chemical_data()
+        # CRITICAL: Site processing must run first and complete successfully
+        logger.info("Step 1: Loading site data...")
+        site_success = process_site_data()
         
-        logger.info("Loading fish data...")
-        fish_success = load_fish_data()
+        if not site_success:
+            logger.error("Site processing failed. Cannot continue with other data processing.")
+            return False
         
-        logger.info("Loading macroinvertebrate data...")
-        macro_success = load_macroinvertebrate_data()
+        # Only proceed with other data processing if sites were loaded successfully
+        logger.info("Step 2: Loading chemical data...")
+        chemical_result = load_chemical_data()
+        chemical_success = chemical_result is not False and chemical_result is not None
+        
+        logger.info("Step 3: Loading fish data...")
+        fish_result = load_fish_data()
+        fish_success = not (hasattr(fish_result, 'empty') and fish_result.empty) if fish_result is not None else False
+        
+        logger.info("Step 4: Loading macroinvertebrate data...")
+        macro_result = load_macroinvertebrate_data()
+        macro_success = not (hasattr(macro_result, 'empty') and macro_result.empty) if macro_result is not None else False
 
-        logger.info("Loading habitat data...")
-        habitat_success = load_habitat_data()
+        logger.info("Step 5: Loading habitat data...")
+        habitat_result = load_habitat_data()
+        habitat_success = not (hasattr(habitat_result, 'empty') and habitat_result.empty) if habitat_result is not None else False
         
         elapsed_time = time.time() - start_time
         
-        if site_success and chemical_success and fish_success and macro_success and habitat_success:
+        if chemical_success and fish_success and macro_success and habitat_success:
             logger.info(f"Successfully reloaded all data in {elapsed_time:.2f} seconds")
             return True
         else:

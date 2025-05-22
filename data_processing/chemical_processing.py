@@ -3,14 +3,13 @@ import sys
 import pandas as pd
 import numpy as np
 
-
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
 
 # Import utilities from data_loader and database
 from data_processing.data_loader import (
     load_csv_data, clean_column_names, 
-    save_processed_data, get_unique_sites
+    save_processed_data, get_unique_sites,
 )
 from database.database import get_connection, close_connection
 
@@ -157,16 +156,14 @@ def get_date_range_for_site(site_name):
         close_connection(conn)
 
 def get_site_id(cursor, site_name):
-    """Get or create site ID for a given site name."""
+    """Get site ID for a given site name (assumes site already exists)."""
     cursor.execute("SELECT site_id FROM sites WHERE site_name = ?", (site_name,))
     result = cursor.fetchone()
     
     if result:
         return result[0]
-    
-    # If site doesn't exist, create it
-    cursor.execute("INSERT INTO sites (site_name) VALUES (?)", (site_name,))
-    return cursor.lastrowid
+    else:
+        raise ValueError(f"Site '{site_name}' not found in database. Run site processing first.")
 
 def get_reference_values():
     """Get reference values from the database."""
@@ -320,6 +317,7 @@ def determine_status(parameter, value, reference_values):
 def load_chemical_data_to_db(site_name=None):
     """
     Process chemical data from CSV and load it into the database.
+    Uses batch processing and intelligent gap-filling for performance.
     
     Args:
         site_name: Optional site name to filter data for
@@ -327,8 +325,6 @@ def load_chemical_data_to_db(site_name=None):
     Returns:
         bool: True if successful, False otherwise
     """
-
-    # Add at the beginning of load_chemical_data_to_db
     conn = get_connection()
     cursor = conn.cursor()
     
@@ -339,36 +335,66 @@ def load_chemical_data_to_db(site_name=None):
         if df_clean.empty:
             logger.warning("No chemical data to load into database")
             return False
-            
-        # Insert data into database
-        # 1. Get or create site_id
+        
+        # BATCH LOADING: Get all existing data upfront
+        logger.info("Loading existing data for comparison...")
+        
+        # Get all existing collection events as a set of (site_name, date_str)
+        existing_events_query = """
+        SELECT s.site_name, c.collection_date, c.event_id
+        FROM chemical_collection_events c
+        JOIN sites s ON c.site_id = s.site_id
+        """
+        existing_events_df = pd.read_sql_query(existing_events_query, conn)
+        existing_events = set(zip(existing_events_df['site_name'], existing_events_df['collection_date']))
+        event_lookup = dict(zip(zip(existing_events_df['site_name'], existing_events_df['collection_date']), 
+                                existing_events_df['event_id']))
+        
+        # Get all existing measurements as a set of (event_id, parameter_id)
+        existing_measurements_query = """
+        SELECT event_id, parameter_id
+        FROM chemical_measurements
+        """
+        existing_measurements_df = pd.read_sql_query(existing_measurements_query, conn)
+        existing_measurements = set(zip(existing_measurements_df['event_id'], existing_measurements_df['parameter_id']))
+        
+        # Get all existing sites
+        existing_sites_df = pd.read_sql_query("SELECT site_name, site_id FROM sites", conn)
+        site_lookup = dict(zip(existing_sites_df['site_name'], existing_sites_df['site_id']))
+        
+        logger.info(f"Found {len(existing_events)} existing events, {len(existing_measurements)} existing measurements")
+        
+        # Track what we're adding
         sites_processed = 0
         samples_added = 0
         measurements_added = 0
+        sites_created = 0
+        
+        # INTELLIGENT GAP FILLING: Only process what's missing
+        reference_values = get_reference_values()
         
         # Group by site name
         for site, site_df in df_clean.groupby('Site_Name'):
             sites_processed += 1
-            site_id = get_site_id(cursor, site)
             
-            # 2. Insert collection events
+            # Get or create site_id (batch lookup first)
+            if site in site_lookup:
+                site_id = site_lookup[site]
+            else:
+                cursor.execute("INSERT INTO sites (site_name) VALUES (?)", (site,))
+                site_id = cursor.lastrowid
+                site_lookup[site] = site_id  # Update our lookup
+                sites_created += 1
+            
+            # Process collection events for this site
             for date, date_df in site_df.groupby('Date'):
-                # Convert date to string format for database
                 date_str = pd.to_datetime(date).strftime('%Y-%m-%d')
                 year = pd.to_datetime(date).year
                 month = pd.to_datetime(date).month
                 
-                # Check if this sample already exists
-                cursor.execute("""
-                SELECT event_id FROM chemical_collection_events 
-                WHERE site_id = ? AND collection_date = ?
-                """, (site_id, date_str))
-                
-                result = cursor.fetchone()
-                
-                if result:
-                    event_id = result[0]
-                    logger.debug(f"Found existing event for {site} on {date_str}, event_id={event_id}")
+                # Check if this event already exists (batch lookup)
+                if (site, date_str) in existing_events:
+                    event_id = event_lookup[(site, date_str)]
                 else:
                     # Insert new collection event
                     cursor.execute("""
@@ -378,40 +404,26 @@ def load_chemical_data_to_db(site_name=None):
                     """, (site_id, date_str, year, month))
                     
                     event_id = cursor.lastrowid
+                    existing_events.add((site, date_str))  # Update our lookup
+                    event_lookup[(site, date_str)] = event_id
                     samples_added += 1
-                    logger.debug(f"Added new collection event for {site} on {date_str}, event_id={event_id}")
                 
-                # 3. Insert measurements for this event
+                # Process measurements for this event
                 for parameter in KEY_PARAMETERS:
                     if parameter in date_df.columns:
-                        # Use the first row's value for this parameter (should be only one per date/site)
                         value = date_df[parameter].iloc[0]
                         
                         if pd.isna(value):
                             continue  # Skip null values
                             
-                        # Get parameter_id from map
                         if parameter in PARAMETER_MAP:
                             parameter_id = PARAMETER_MAP[parameter]
                             
-                            # Determine status based on reference values
-                            reference_values = get_reference_values()
-                            status = determine_status(parameter, value, reference_values)
-                            
-                            # Check if this measurement already exists
-                            cursor.execute("""
-                            SELECT 1 FROM chemical_measurements 
-                            WHERE event_id = ? AND parameter_id = ?
-                            """, (event_id, parameter_id))
-                            
-                            if cursor.fetchone():
-                                # Update existing measurement
-                                cursor.execute("""
-                                UPDATE chemical_measurements
-                                SET value = ?, status = ?
-                                WHERE event_id = ? AND parameter_id = ?
-                                """, (value, status, event_id, parameter_id))
-                            else:
+                            # Check if this measurement already exists (batch lookup)
+                            if (event_id, parameter_id) not in existing_measurements:
+                                # Calculate status
+                                status = determine_status(parameter, value, reference_values)
+                                
                                 # Insert new measurement
                                 cursor.execute("""
                                 INSERT INTO chemical_measurements
@@ -419,11 +431,15 @@ def load_chemical_data_to_db(site_name=None):
                                 VALUES (?, ?, ?, ?)
                                 """, (event_id, parameter_id, value, status))
                                 
+                                existing_measurements.add((event_id, parameter_id))  # Update our lookup
                                 measurements_added += 1
         
         conn.commit()
-        logger.info(f"Successfully loaded chemical data for {sites_processed} sites, "
-                   f"added {samples_added} new samples and {measurements_added} measurements")
+        logger.info(f"Successfully processed chemical data for {sites_processed} sites:")
+        logger.info(f"  - Created {sites_created} new sites")
+        logger.info(f"  - Added {samples_added} new collection events")
+        logger.info(f"  - Added {measurements_added} new measurements")
+        
         return True
         
     except Exception as e:
@@ -571,9 +587,8 @@ def process_chemical_data_from_csv(site_name=None):
     if missing_values > 0:
         logger.warning(f"Final dataframe contains {missing_values} missing values")
 
-    # Save processed data if a site was specified
-    if site_name:
-        save_processed_data(df_clean, f"chemical_{site_name.replace(' ', '_').lower()}")
+    # Save processed data 
+    save_processed_data(df_clean, 'chemical_data')
 
     logger.info(f"Data processing complete. Output dataframe has {len(df_clean)} rows and {len(df_clean.columns)} columns")
     return df_clean, KEY_PARAMETERS, get_reference_values()

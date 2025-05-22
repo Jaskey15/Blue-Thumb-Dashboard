@@ -1,7 +1,7 @@
 import pandas as pd
 import sqlite3
 from database.database import get_connection, close_connection
-from data_processing.data_loader import load_csv_data, clean_column_names
+from data_processing.data_loader import load_csv_data, clean_column_names, save_processed_data
 from utils import setup_logging
 
 logger = setup_logging("fish_processing")
@@ -141,21 +141,8 @@ def process_fish_csv_data(site_name=None):
         # Validate IBI scores (check if total_score matches sum of component scores)
         fish_df = validate_ibi_scores(fish_df)
         
-        # Filter by site name if provided
-        if site_name:
-            if 'site_name' in fish_df.columns:
-                site_filter = fish_df['site_name'].str.lower() == site_name.lower()
-                filtered_df = fish_df[site_filter]
-                
-                if filtered_df.empty:
-                    logger.warning(f"No fish data found for site: {site_name}")
-                    return pd.DataFrame()
-                
-                logger.info(f"Filtered to {len(filtered_df)} fish records for site: {site_name}")
-                return filtered_df
-            else:
-                logger.warning("No 'site_name' column found in data")
-        
+        save_processed_data(fish_df, 'fish_data')
+
         return fish_df
         
     except Exception as e:
@@ -241,19 +228,15 @@ def insert_collection_events(cursor, fish_df):
         unique_events = fish_df.drop_duplicates(subset=['site_name', 'sample_id']).copy()
         
         for _, event in unique_events.iterrows():
-            # Get or create site_id
+            # Get site_id (assumes site already exists)
             cursor.execute("SELECT site_id FROM sites WHERE site_name = ?", (event['site_name'],))
             site_result = cursor.fetchone()
-            
+
             if site_result:
                 site_id = site_result[0]
             else:
-                # Insert minimal site data
-                cursor.execute(
-                    "INSERT INTO sites (site_name) VALUES (?)", 
-                    (event['site_name'],)
-                )
-                site_id = cursor.lastrowid
+                logger.error(f"Site '{event['site_name']}' not found in database. Run site processing first.")
+                continue  # Skip this event
             
             # Check if this sample is already in the database
             cursor.execute('''

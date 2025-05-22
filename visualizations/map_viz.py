@@ -1,4 +1,5 @@
 import pandas as pd
+import plotly.graph_objects as go
 from database.database import get_connection, close_connection
 from utils import setup_logging
 
@@ -105,12 +106,6 @@ PARAMETER_LABELS = {
     'Habitat_Grade': 'Habitat Assessment Grade'
 }
 
-try:
-    MONITORING_SITES = load_sites_from_database()
-except Exception as e:
-    print(f"Warning: Could not load sites from database: {e}")
-    MONITORING_SITES = []  # Fallback to empty list
-
 def load_sites_from_database():
     """
     Load all monitoring sites from the database with coordinates and metadata.
@@ -173,35 +168,28 @@ def get_latest_data_by_type(data_type):
         DataFrame with latest data per site (and season for macro data)
     """
     try:
-        # Map data types to their processing functions
-        data_function_map = {
-            'chemical': ('data_processing.chemical_processing', 'process_chemical_data'),
-            'fish': ('data_processing.fish_processing', 'get_fish_dataframe'),
-            'macro': ('data_processing.macro_processing', 'get_macroinvertebrate_dataframe'),
-            'habitat': ('data_processing.habitat_processing', 'get_habitat_dataframe')
-        }
-        
-        if data_type not in data_function_map:
-            raise ValueError(f"Unknown data type: {data_type}")
-        
-        # Get the appropriate processing function
-        module_name, function_name = data_function_map[data_type]
-        
-        # Dynamic import and function call
+        # Call only database query functions, not processing functions
         if data_type == 'chemical':
-            from data_processing.chemical_processing import process_chemical_data
-            df, _, _ = process_chemical_data()  # Returns tuple for chemical data
+            from data_processing.chemical_processing import get_chemical_data_from_db
+            df = get_chemical_data_from_db()  # Only query, don't process
+            
         elif data_type == 'fish':
             from data_processing.fish_processing import get_fish_dataframe
-            df = get_fish_dataframe()
+            df = get_fish_dataframe()  # This already only queries
+            
         elif data_type == 'macro':
             from data_processing.macro_processing import get_macroinvertebrate_dataframe
-            df = get_macroinvertebrate_dataframe()
+            df = get_macroinvertebrate_dataframe()  # This already only queries
+            
         elif data_type == 'habitat':
             from data_processing.habitat_processing import get_habitat_dataframe
-            df = get_habitat_dataframe()
+            df = get_habitat_dataframe()  # This already only queries
+            
+        else:
+            raise ValueError(f"Unknown data type: {data_type}")
         
         if df.empty:
+            logger.warning(f"No {data_type} data found in database")
             return pd.DataFrame()
         
         # Handle different grouping logic based on data type
@@ -602,6 +590,13 @@ def create_site_map(param_type=None, param_name=None):
         )
         return fig
 
+# Load monitoring sites
+try:
+    MONITORING_SITES = load_sites_from_database()
+except Exception as e:
+    print(f"Warning: Could not load sites from database: {e}")
+    MONITORING_SITES = []  # Fallback to empty list
+    
 # Test function if run directly
 if __name__ == "__main__":
     fig = create_site_map()

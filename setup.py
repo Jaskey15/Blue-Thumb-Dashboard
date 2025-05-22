@@ -6,7 +6,8 @@ import sys
 import importlib.util
 import os
 import time
-from utils import setup_logging
+
+from data_processing.data_loader import setup_logging
 
 # Configure logging
 logger = setup_logging("setup")

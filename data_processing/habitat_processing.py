@@ -1,7 +1,7 @@
 import pandas as pd
 import sqlite3
 from database.database import get_connection, close_connection
-from data_processing.data_loader import load_csv_data, clean_column_names
+from data_processing.data_loader import load_csv_data, clean_column_names, save_processed_data
 from utils import setup_logging
 
 # Set up component-specific logging
@@ -132,20 +132,7 @@ def process_habitat_csv_data(site_name=None):
             from datetime import datetime
             habitat_df['year'] = datetime.now().year
         
-        # Filter by site name if provided
-        if site_name:
-            if 'site_name' in habitat_df.columns:
-                site_filter = habitat_df['site_name'].str.lower() == site_name.lower()
-                filtered_df = habitat_df[site_filter]
-                
-                if filtered_df.empty:
-                    logger.warning(f"No habitat data found for site: {site_name}")
-                    return pd.DataFrame()
-                
-                logger.info(f"Filtered to {len(filtered_df)} habitat records for site: {site_name}")
-                return filtered_df
-            else:
-                logger.warning("No 'site_name' column found in data")
+        save_processed_data(habitat_df, 'habitat_data')
         
         return habitat_df
         
@@ -176,19 +163,15 @@ def insert_habitat_assessments(cursor, habitat_df):
         unique_assessments = habitat_df.drop_duplicates(subset=['site_name', 'sample_id']).copy()
         
         for _, assessment in unique_assessments.iterrows():
-            # Get or create site_id
+            # Get site_id (assumes site already exists)
             cursor.execute("SELECT site_id FROM sites WHERE site_name = ?", (assessment['site_name'],))
             site_result = cursor.fetchone()
-            
+
             if site_result:
                 site_id = site_result[0]
             else:
-                # Insert minimal site data
-                cursor.execute(
-                    "INSERT INTO sites (site_name) VALUES (?)", 
-                    (assessment['site_name'],)
-                )
-                site_id = cursor.lastrowid
+                logger.error(f"Site '{assessment['site_name']}' not found in database. Run site processing first.")
+                continue  # Skip this assessment
             
             # Format date if available
             assessment_date = assessment.get('assessment_date_str', None)
