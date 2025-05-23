@@ -33,11 +33,6 @@ COLORS = {
     }
 }
 
-MARKER_SIZES = {
-    'outline': 12,
-    'inner': 9
-}
-
 # Parameter thresholds configuration
 PARAMETER_THRESHOLDS = {
     'do_percent': [
@@ -294,30 +289,16 @@ def add_site_marker(fig, lat, lon, color, site_name, hover_text=None):
     # TODO: Update from scattermapbox to scattermap in a future iteration
     # Currently using scattermapbox despite deprecation warnings because it correctly handles map centering
     # See: https://plotly.com/python/mapbox-to-maplibre/ for future migration
-    
-    # Add outline marker first
+        
+    # Add colored marker with outline
     fig.add_trace(go.Scattermapbox(
         lat=[lat],
         lon=[lon],
         mode='markers',
         marker=dict(
-            size=MARKER_SIZES['outline'],
-            color=COLORS['outline'],
-            opacity=1.0
-        ),
-        hoverinfo='none',
-        showlegend=False
-    ))
-    
-    # Add colored marker on top
-    fig.add_trace(go.Scattermapbox(
-        lat=[lat],
-        lon=[lon],
-        mode='markers',
-        marker=dict(
-            size=MARKER_SIZES['inner'],
+            size=10,
             color=color,
-            opacity=1.0
+            opacity=1.0,
         ),
         text=[hover_text if hover_text else site_name],
         name=site_name,
@@ -500,7 +481,7 @@ def create_site_map(param_type=None, param_name=None):
         else:
             # No parameter selected, use default blue markers with site info
             for site in MONITORING_SITES:
-                hover_text = (f"{site['name']}<br>"
+                hover_text = (f"Site: {site['name']}<br>"
                              f"County: {site['county']}<br>"
                              f"River Basin: {site['river_basin']}<br>"
                              f"Ecoregion: {site['ecoregion']}")
