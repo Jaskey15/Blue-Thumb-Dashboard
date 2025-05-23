@@ -7,10 +7,6 @@ import dash_bootstrap_components as dbc
 import os
 import traceback
 from dash import html, dcc
-from utils import setup_logging
-
-# Configure logging
-logger = setup_logging("utils", category="core")
 
 # Common style configurations
 CAPTION_STYLE = {
