@@ -2,7 +2,7 @@ import dash
 import dash_bootstrap_components as dbc
 
 from callbacks import register_callbacks
-from dash import html
+from dash import html, dcc
 from layouts import (
     create_overview_tab, create_chemical_tab, create_biological_tab,
     create_habitat_tab, create_protect_our_streams_tab, create_source_data_tab,
@@ -59,6 +59,14 @@ app.layout = dbc.Container([
         dbc.Tab(label="Protect Our Streams", children=create_protect_our_streams_tab(), tab_id="protect-tab"),
         dbc.Tab(label="Source Data", children=create_source_data_tab(), tab_id="source-tab"),
     ], id="main-tabs", active_tab="overview-tab"),
+
+    # Cache storage components 
+    html.Div([
+        dcc.Store(id='chemical-data-cache', storage_type='memory', data={}),
+        dcc.Store(id='biological-data-cache', storage_type='memory', data={}),
+        dcc.Store(id='habitat-data-cache', storage_type='memory', data={}),
+        dcc.Store(id='cache-metadata', storage_type='memory', data={})
+    ], style={'display': 'none'}),
 
     # Footer with improved credits and logo
     dbc.Row([

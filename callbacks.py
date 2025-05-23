@@ -11,7 +11,11 @@ from dash import html, dcc
 from dash.dependencies import Input, Output, State
 from utils import load_markdown_content, create_image_with_caption, setup_logging
 
-# Import data definitions
+from cache_utils import (
+    get_cache_key, is_cache_valid, get_cached_data, 
+    set_cache_data, clear_expired_cache
+)
+
 from data_definitions import (
     FISH_DATA, MACRO_DATA, CHEMICAL_DIAGRAMS, CHEMICAL_DIAGRAM_CAPTIONS,
     PARAMETER_DISPLAY_NAMES, PARAMETER_AXIS_LABELS, SEASON_MONTHS
@@ -429,11 +433,11 @@ def register_callbacks(app):
             return error_map, True, html.Div()
         
     @app.callback(
-    [Output('site-map-graph', 'figure', allow_duplicate=True),
-     Output('map-legend-container', 'children', allow_duplicate=True)],
-    [Input('parameter-dropdown', 'value')],
-    [State('site-map-graph', 'figure')],
-    prevent_initial_call=True
+        [Output('site-map-graph', 'figure', allow_duplicate=True),
+        Output('map-legend-container', 'children', allow_duplicate=True)],
+        [Input('parameter-dropdown', 'value')],
+        [State('site-map-graph', 'figure')],
+        prevent_initial_call=True
     )
     def update_map_with_parameter_selection(parameter_value, current_figure):
         """
@@ -487,74 +491,98 @@ def register_callbacks(app):
 
     @app.callback(
         [Output('chemical-graph-container', 'children'),
-         Output('chemical-explanation-container', 'children'),
-         Output('chemical-diagram-container', 'children')],
+        Output('chemical-explanation-container', 'children'),
+        Output('chemical-diagram-container', 'children'),
+        Output('chemical-data-cache', 'data')],  
         [Input('chemical-parameter-dropdown', 'value'),
-         Input('year-range-slider', 'value'),
-         Input('month-checklist', 'value'),
-         Input('highlight-thresholds-switch', 'value')]
+        Input('year-range-slider', 'value'),
+        Input('month-checklist', 'value'),
+        Input('highlight-thresholds-switch', 'value'),
+        Input('chemical-data-cache', 'data')]  
     )
-    def update_chemical_display(selected_parameter, year_range, selected_months, highlight_thresholds):
+    def update_chemical_display(selected_parameter, year_range, selected_months, highlight_thresholds, cache_data):
         """
         Update chemical parameter graph and explanations based on user selections.
-        
-        Args:
-            selected_parameter: Selected chemical parameter
-            year_range: Selected year range [min, max]
-            selected_months: List of selected months
-            highlight_thresholds: Boolean indicating whether to highlight threshold violations
-            
-        Returns:
-            Tuple of (graph, explanation, diagram) components
+        Now includes caching for improved performance.
         """
         try:
-            # Import functions for data processing
+
+            print(f"DEBUG CACHE: Received cache_data keys: {list(cache_data.keys()) if cache_data else 'None'}")
+            # Clean expired cache entries periodically
+            cache_data = clear_expired_cache(cache_data)
+            
+            # Generate cache key for this specific request
+            cache_key = get_cache_key("chemical", selected_parameter or "all_parameters")
+            
+            # Check if we have valid cached data for this parameter
+            cached_result = get_cached_data(cache_data, cache_key)
+            if cached_result is not None:
+                # Cache hit! Return cached components
+                graph_component = cached_result.get('graph')
+                explanation_component = cached_result.get('explanation') 
+                diagram_component = cached_result.get('diagram')
+                
+                if all([graph_component, explanation_component, diagram_component]):
+                    return graph_component, explanation_component, diagram_component, cache_data
+            
+            # Cache miss - need to fetch fresh data
             from data_processing.chemical_processing import process_chemical_data
             
-            # Get and filter chemical data
+            # Get and filter chemical data 
             df_clean, key_parameters, reference_values = process_chemical_data()
             
-            # Filter by year range
+            # Filter by year range 
             year_min, year_max = year_range
             df_filtered = df_clean[(df_clean['Year'] >= year_min) & (df_clean['Year'] <= year_max)]
             
-            # Filter by selected months (if not all months selected)
+            # Filter by selected months 
             if selected_months and len(selected_months) < 12:
                 df_filtered = df_filtered[df_filtered['Month'].isin(selected_months)]
             
-            # Check if we have data after filtering
+            # Check if we have data after filtering 
             if len(df_filtered) == 0:
                 no_data_message = html.Div(
                     "No data available for the selected time range.", 
                     className="alert alert-warning"
                 )
-                return no_data_message, html.Div(), html.Div()
+                return no_data_message, html.Div(), html.Div(), cache_data
             
-            # Handle "all parameters" view differently
+            # Handle "all parameters" view differently 
             if selected_parameter == 'all_parameters':
-                graph = create_all_parameters_view(
+                graph_component = create_all_parameters_view(
                     df_filtered, 
                     key_parameters, 
                     reference_values, 
                     highlight_thresholds
                 )
-                return graph, html.Div(), html.Div()
+                explanation_component = html.Div()
+                diagram_component = html.Div()
             else:
-                # Create components for single parameter view
-                return create_single_parameter_view(
+                # Create components for single parameter view 
+                graph_component, explanation_component, diagram_component = create_single_parameter_view(
                     df_filtered, 
                     selected_parameter, 
                     reference_values, 
                     highlight_thresholds
                 )
-                
+            
+            # Cache the results for future use
+            cache_result = {
+                'graph': graph_component,
+                'explanation': explanation_component,
+                'diagram': diagram_component
+            }
+            cache_data = set_cache_data(cache_data, cache_key, cache_result)
+            
+            return graph_component, explanation_component, diagram_component, cache_data
+            
         except Exception as e:
             print(f"Error updating chemical display: {e}")
             error_message = html.Div([
                 html.Div("Error updating chemical display", className="alert alert-danger"),
                 html.Pre(str(e), style={"fontSize": "12px"})
             ])
-            return error_message, html.Div(), html.Div()
+            return error_message, html.Div(), html.Div(), cache_data or {}
 
     @app.callback(
         Output('month-checklist', 'value'),

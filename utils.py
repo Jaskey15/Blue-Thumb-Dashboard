@@ -23,6 +23,9 @@ DEFAULT_IMAGE_STYLE = {
     'height': 'auto'
 }
 
+# Cache configuration constants
+CACHE_EXPIRATION_HOURS = 1
+
 def setup_logging(module_name, category="general"):
     """
     Configure logging to use the logs directory with component-specific log file.

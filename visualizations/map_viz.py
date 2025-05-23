@@ -351,10 +351,8 @@ def add_data_markers(fig, sites, data_type, parameter_name=None, season=None):
     # Get reference values if needed (for chemical data)
     reference_values = None
     if config['needs_reference_values']:
-        _, key_parameters, reference_values = get_latest_data_by_type('chemical')
-        # Check if parameter is valid
-        if parameter_name not in key_parameters:
-            return fig
+        from data_processing.chemical_processing import get_reference_values
+        reference_values = get_reference_values()
     
     for site in sites:
         site_name = site["name"]
@@ -538,11 +536,11 @@ def add_parameter_colors_to_map(fig, param_type, param_name):
     Returns:
         Updated plotly figure with color-coded markers
     """
-    try:
+    try:        
         # Clear existing traces (basic blue markers)
         fig.data = []
         
-        # Add parameter-specific markers using existing logic
+        # Add parameter-specific markers
         if param_type == 'chem':
             fig = add_data_markers(fig, MONITORING_SITES, 'chemical', parameter_name=param_name)
         elif param_type == 'bio':
@@ -555,20 +553,39 @@ def add_parameter_colors_to_map(fig, param_type, param_name):
         elif param_type == 'habitat':
             fig = add_data_markers(fig, MONITORING_SITES, 'habitat')
         
-        # Add title based on parameter
-        display_name = PARAMETER_LABELS.get(param_name, param_name)
+        # Update layout to ensure proper map display 
         fig.update_layout(
-            title=dict(
-                text=f"Monitoring Sites - {display_name} Status",
-                x=0.5,
-                y=0.98
-            )
+            mapbox=dict(
+                style="white-bg",
+                layers=[
+                    {
+                        "below": 'traces',
+                        "sourcetype": "raster",
+                        "sourceattribution": "Esri",
+                        "source": [
+                            "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}"
+                        ]
+                    }
+                ],
+                center=dict(lat=35.5, lon=-98.2),  # Center of Oklahoma
+                zoom=6.2
+            ),
+            margin=dict(l=0, r=0, t=0, b=0),
+            height=600,
+            showlegend=False
         )
         
+        # Add title based on parameter
+        display_name = PARAMETER_LABELS.get(param_name, param_name)
+        fig.update_layout(title=dict(text=f"Monitoring Sites - {display_name} Status", x=0.5, y=0.98))
+        
+        print(f"DEBUG: Completed add_parameter_colors_to_map successfully")
         return fig
-    
+        
     except Exception as e:
         print(f"Error adding parameter colors: {e}")
+        import traceback
+        traceback.print_exc()
         return fig  # Return original figure if coloring fails
 
 def create_site_map(param_type=None, param_name=None):
