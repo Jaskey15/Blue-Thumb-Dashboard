@@ -3,11 +3,14 @@ Utility functions for the Tenmile Creek Water Quality Dashboard.
 This module contains reusable helper functions used across the dashboard.
 """
 
+import dash_bootstrap_components as dbc
 import os
 import traceback
-import logging
 from dash import html, dcc
-import dash_bootstrap_components as dbc
+from utils import setup_logging
+
+# Configure logging
+logger = setup_logging("utils", category="core")
 
 # Common style configurations
 CAPTION_STYLE = {
@@ -24,13 +27,39 @@ DEFAULT_IMAGE_STYLE = {
     'height': 'auto'
 }
 
-def setup_logging(module_name):
-    """Configure logging to use the logs directory with component-specific log file."""
-    # Get the base directory of the project
-    base_dir = os.path.dirname(os.path.dirname(__file__))
+def setup_logging(module_name, category="general"):
+    """
+    Configure logging to use the logs directory with component-specific log file.
     
-    # Create logs directory (no subdirectories for now)
-    logs_dir = os.path.join(base_dir, 'logs')
+    Args:
+        module_name: Name of the module (used for log file name)
+        category: Category subfolder for organizing logs (default: "general")
+    """
+    import os
+    import logging
+    
+    # Find project root by looking for app.py
+    def find_project_root():
+        current_dir = os.getcwd()
+        max_levels = 5
+        
+        for _ in range(max_levels):
+            if os.path.exists(os.path.join(current_dir, 'app.py')):
+                return current_dir
+            
+            parent_dir = os.path.dirname(current_dir)
+            if parent_dir == current_dir:  # Reached system root
+                break
+            current_dir = parent_dir
+        
+        raise FileNotFoundError(
+            f"Could not find project root (app.py) within {max_levels} parent directories. "
+            f"Make sure app.py exists in your project root."
+        )
+    
+    # Get project root and create logs directory structure
+    project_root = find_project_root()
+    logs_dir = os.path.join(project_root, 'logs', category)
     os.makedirs(logs_dir, exist_ok=True)
     
     # Create log file path

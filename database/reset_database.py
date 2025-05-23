@@ -8,7 +8,7 @@ import time
 from utils import setup_logging
 
 # Setup logging
-logger = setup_logging("reset_database")
+logger = setup_logging("reset_database", category="database")
 
 def delete_database_file():
     """Delete the SQLite database file if it exists."""

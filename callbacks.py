@@ -8,13 +8,16 @@ import dash_bootstrap_components as dbc
 
 from dash import html, dcc
 from dash.dependencies import Input, Output, State
-from utils import load_markdown_content, create_image_with_caption
+from utils import load_markdown_content, create_image_with_caption, setup_logging
 
 # Import data definitions
 from data_definitions import (
     FISH_DATA, MACRO_DATA, CHEMICAL_DIAGRAMS, CHEMICAL_DIAGRAM_CAPTIONS,
     PARAMETER_DISPLAY_NAMES, PARAMETER_AXIS_LABELS, SEASON_MONTHS
 )
+
+# Configure logging
+logger = setup_logging("callbacks", category="app")
 
 # --------------------------------------------------------------------------------------
 # HELPER FUNCTIONS

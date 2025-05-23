@@ -5,10 +5,13 @@ This file contains functions that create and return the layouts for different da
 
 import dash_bootstrap_components as dbc
 from dash import dcc, html
-from utils import load_markdown_content, create_image_with_caption
+from utils import load_markdown_content, create_image_with_caption, setup_logging
 
 # Import from data_definitions to avoid duplication
 from data_definitions import CHEMICAL_DIAGRAMS
+
+# Configure logging
+logger = setup_logging("layouts", category="app")
 
 # --------------------------------------------------------------------------------------
 # LAYOUT CONSTANTS

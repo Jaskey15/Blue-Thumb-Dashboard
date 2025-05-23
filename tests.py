@@ -7,7 +7,7 @@ import sqlite3
 from unittest.mock import patch, MagicMock
 
 # Import your utils
-from utils import load_markdown_content, create_image_with_caption, safe_div, format_value
+from utils import load_markdown_content, create_image_with_caption, safe_div, format_value, setup_logging
 
 # Import data processing modules
 from data_processing.data_loader import clean_column_names, filter_data_by_site, convert_bdl_values
@@ -23,6 +23,8 @@ from visualizations.fish_viz import create_fish_viz
 from visualizations.macro_viz import create_macro_viz
 from visualizations.habitat_viz import create_habitat_viz
 
+# Configure logging
+logger = setup_logging("tests", category="setup")
 
 # New test classes for data processing modules
 class DataLoaderTests(unittest.TestCase):

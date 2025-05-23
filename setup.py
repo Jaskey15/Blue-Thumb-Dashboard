@@ -7,10 +7,10 @@ import importlib.util
 import os
 import time
 
-from data_processing.data_loader import setup_logging
+from utils import setup_logging
 
 # Configure logging
-logger = setup_logging("setup")
+logger = setup_logging("setup", category="setup")
 
 # Define processing steps as a configuration list for better maintainability
 SETUP_STEPS = [

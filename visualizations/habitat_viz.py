@@ -4,7 +4,9 @@ import plotly.graph_objects as go
 import pandas as pd
 
 from dash import html, dash_table
-from utils import create_metrics_accordion
+from utils import create_metrics_accordion, setup_logging
+
+logger = setup_logging("habitat_viz", category="visualization")
 
 # Styling constants
 COLORS = {

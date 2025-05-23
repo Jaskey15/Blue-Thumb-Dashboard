@@ -5,7 +5,7 @@ from data_processing.data_loader import load_csv_data, clean_column_names, save_
 from utils import setup_logging
 
 # Set up logging
-logger = setup_logging("macro_processing")
+logger = setup_logging("macro_processing", category="processing")
 
 def load_macroinvertebrate_data():
     """Load macroinvertebrate data into the database."""

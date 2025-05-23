@@ -3,7 +3,7 @@ import plotly.graph_objects as go
 from database.database import get_connection, close_connection
 from utils import setup_logging
 
-logger = setup_logging("map_viz")
+logger = setup_logging("map_viz", category="visualization")
 
 # Styling constants
 COLORS = {

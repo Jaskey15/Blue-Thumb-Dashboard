@@ -5,7 +5,7 @@ from data_processing.data_loader import load_csv_data, clean_column_names, save_
 from utils import setup_logging
 
 # Set up component-specific logging
-logger = setup_logging("habitat_processing")
+logger = setup_logging("habitat_processing", category="processing")
 
 def load_habitat_data(site_name=None):
     """

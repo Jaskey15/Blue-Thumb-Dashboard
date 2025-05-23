@@ -4,6 +4,9 @@ import pandas as pd
 
 from plotly.subplots import make_subplots
 from data_processing.chemical_processing import process_chemical_data
+from utils import setup_logging
+
+logger = setup_logging("chemical_viz", category="visualization")
 
 # Styling constants
 COLORS = {

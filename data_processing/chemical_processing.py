@@ -16,7 +16,7 @@ from database.database import get_connection, close_connection
 from utils import setup_logging
 
 # Use the shared logging setup
-logger = setup_logging("chemical_processing")
+logger = setup_logging("chemical_processing", category="processing")
 
 # Define constants for BDL values (Below Detection Limit)
 # Values obtained from Blue Thumb Coordinator

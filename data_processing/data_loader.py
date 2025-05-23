@@ -3,7 +3,7 @@ import pandas as pd
 from utils import setup_logging
 
 # Initialize logger
-logger = setup_logging("data_loader")
+logger = setup_logging("data_loader", category="processing")
 
 # Constants
 RAW_DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'raw')

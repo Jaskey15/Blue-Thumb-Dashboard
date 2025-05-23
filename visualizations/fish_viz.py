@@ -4,7 +4,9 @@ import pandas as pd
 
 from dash import dash_table, html
 from data_processing.fish_processing import get_fish_dataframe, get_fish_metrics_data_for_table
-from utils import create_metrics_accordion
+from utils import create_metrics_accordion, setup_logging
+
+logger = setup_logging("fish_viz", category="visualization")
 
 # Styling constants
 COLORS = {

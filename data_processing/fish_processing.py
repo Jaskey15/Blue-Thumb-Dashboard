@@ -4,7 +4,7 @@ from database.database import get_connection, close_connection
 from data_processing.data_loader import load_csv_data, clean_column_names, save_processed_data
 from utils import setup_logging
 
-logger = setup_logging("fish_processing")
+logger = setup_logging("fish_processing", category="processing")
 
 def load_fish_data(site_name=None):
     """

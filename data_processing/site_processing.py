@@ -7,7 +7,7 @@ from data_processing.data_loader import load_csv_data, clean_column_names, save_
 from utils import setup_logging
 
 # Initialize logger
-logger = setup_logging("site_processing")
+logger = setup_logging("site_processing", category="processing")
 
 def get_db_connection():
     """Create and return a database connection."""
