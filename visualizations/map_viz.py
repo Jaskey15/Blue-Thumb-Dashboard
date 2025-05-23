@@ -273,32 +273,27 @@ def format_parameter_value(parameter, value):
 
 def add_site_marker(fig, lat, lon, color, site_name, hover_text=None):
     """
-    Add a site marker with outline to the map.
+    Add a site marker to the map.
     
     Args:
         fig: The plotly figure to add the marker to
         lat: Latitude of the marker
         lon: Longitude of the marker
-        color: Color of the inner marker
+        color: Color of the marker
         site_name: Name of the site
         hover_text: Text to display on hover (defaults to site_name if None)
     
     Returns:
         The updated figure
     """
-    # TODO: Update from scattermapbox to scattermap in a future iteration
-    # Currently using scattermapbox despite deprecation warnings because it correctly handles map centering
-    # See: https://plotly.com/python/mapbox-to-maplibre/ for future migration
-        
-    # Add colored marker with outline
-    fig.add_trace(go.Scattermapbox(
+    fig.add_trace(go.Scattermap(  
         lat=[lat],
         lon=[lon],
         mode='markers',
         marker=dict(
             size=10,
             color=color,
-            opacity=1.0,
+            opacity=1.0
         ),
         text=[hover_text if hover_text else site_name],
         name=site_name,
@@ -497,7 +492,7 @@ def create_site_map(param_type=None, param_name=None):
         
         # Set up map layout
         fig.update_layout(
-            mapbox=dict(
+            map=dict(  
                 style="white-bg",
                 layers=[
                     {
