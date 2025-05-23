@@ -78,10 +78,15 @@ def reload_all_data():
         logger.info("Step 5: Loading habitat data...")
         habitat_result = load_habitat_data()
         habitat_success = not (hasattr(habitat_result, 'empty') and habitat_result.empty) if habitat_result is not None else False
+
+        logger.info("Step 6: Cleaning up unused sites...")
+        from data_processing.site_processing import cleanup_unused_sites
+        cleanup_result = cleanup_unused_sites()
+        cleanup_success = cleanup_result is not False and cleanup_result is not None
         
         elapsed_time = time.time() - start_time
         
-        if chemical_success and fish_success and macro_success and habitat_success:
+        if chemical_success and fish_success and macro_success and habitat_success and cleanup_success:
             logger.info(f"Successfully reloaded all data in {elapsed_time:.2f} seconds")
             return True
         else:

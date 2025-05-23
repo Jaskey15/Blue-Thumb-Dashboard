@@ -270,6 +270,13 @@ def create_tables():
     FOREIGN KEY (assessment_id) REFERENCES habitat_assessments (assessment_id)
     )
     ''')
+
+    # Create database indexes to optimize map queries by site, date, and season
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_chemical_site_date ON chemical_collection_events(site_id, collection_date)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_chemical_measurements ON chemical_measurements(event_id, parameter_id)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_macro_site_season ON macro_collection_events(site_id, season, year)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_fish_site_year ON fish_collection_events(site_id, year)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_habitat_site_year ON habitat_assessments(site_id, year)')
     
     # Run some initial population of common tables
     # Insert key chemical parameters

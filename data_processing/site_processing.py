@@ -463,6 +463,58 @@ def process_site_data():
     except Exception as e:
         logger.error(f"Error processing site data: {e}")
         return False
+    
+def cleanup_unused_sites():
+    """
+    Remove sites from the database that have no data in any monitoring tables.
+    
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        
+        # Get all sites that DO have data in any monitoring table
+        cursor.execute('''
+            SELECT DISTINCT site_id FROM (
+                SELECT site_id FROM chemical_collection_events
+                UNION
+                SELECT site_id FROM fish_collection_events  
+                UNION
+                SELECT site_id FROM macro_collection_events
+                UNION  
+                SELECT site_id FROM habitat_assessments
+            )
+        ''')
+        
+        sites_with_data = {row[0] for row in cursor.fetchall()}
+        
+        # Get all sites in the sites table
+        cursor.execute('SELECT site_id FROM sites')
+        all_sites = {row[0] for row in cursor.fetchall()}
+        
+        # Find sites with no data
+        unused_sites = all_sites - sites_with_data
+        
+        if unused_sites:
+            # Remove unused sites
+            placeholders = ','.join(['?' for _ in unused_sites])
+            cursor.execute(f'DELETE FROM sites WHERE site_id IN ({placeholders})', list(unused_sites))
+            conn.commit()
+            
+            logger.info(f"Removed {len(unused_sites)} unused sites from database")
+        else:
+            logger.info("No unused sites found - all sites have monitoring data")
+        
+        return True
+        
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Error cleaning up unused sites: {e}")
+        return False
+    finally:
+        close_db_connection(conn)
 
 if __name__ == "__main__":
     success = process_site_data()

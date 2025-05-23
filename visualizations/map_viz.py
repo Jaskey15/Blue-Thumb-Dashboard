@@ -10,7 +10,6 @@ COLORS = {
     'normal': '#1e8449',      # Green
     'caution': '#ff9800',     # Orange
     'poor': '#e74c3c',        # Red
-    'unknown': 'gray',        # Gray
     'fish': {
         'excellent': '#1e8449',  # Green
         'good': '#7cb342',       # Light green
@@ -219,7 +218,7 @@ def determine_status_by_type(data_type, value, parameter_name=None):
     """
     # Default status
     status = "Unknown"
-    color = COLORS['unknown']
+    color = 'gray'
     
     # Check for NaN values
     if pd.isna(value):
@@ -301,7 +300,7 @@ def add_site_marker(fig, lat, lon, color, site_name, hover_text=None):
     
     return fig
 
-def add_data_markers(fig, sites, data_type, parameter_name=None, season=None):
+def add_data_markers(fig, sites, data_type, parameter_name=None, season=None, filter_no_data=True):
     """
     Add markers to the map for any data type.
     
@@ -311,12 +310,18 @@ def add_data_markers(fig, sites, data_type, parameter_name=None, season=None):
         data_type: 'chemical', 'fish', 'macro', 'habitat'
         parameter_name: For chemical data (specific parameter like 'do_percent')
         season: For macro data ('Summer' or 'Winter')
+        filter_no_data: Whether to filter out sites with no data (default: True)
     
     Returns:
-        The updated figure
+        Tuple of (updated_figure, sites_with_data_count, total_sites_count)
     """
     # Get the latest data for this data type
     latest_data = get_latest_data_by_type(data_type)
+
+    # Handle empty data - ADD THIS SECTION
+    if latest_data.empty:
+        logger.warning(f"No {data_type} data available for mapping")
+        return fig, 0, len(sites)
     
     # Data type specific configurations
     data_config = {
@@ -354,6 +359,10 @@ def add_data_markers(fig, sites, data_type, parameter_name=None, season=None):
         from data_processing.chemical_processing import get_reference_values
         reference_values = get_reference_values()
     
+    # Track sites with data for counting
+    sites_with_data = 0
+    total_sites = len(sites)
+    
     for site in sites:
         site_name = site["name"]
         
@@ -364,7 +373,15 @@ def add_data_markers(fig, sites, data_type, parameter_name=None, season=None):
         if data_type == 'macro' and season:
             site_data = site_data[site_data['season'] == season]
         
-        if not site_data.empty and config['value_column'] in site_data.columns:
+        has_data = not site_data.empty and config['value_column'] in site_data.columns
+        
+        # If filtering is enabled and site has no data, skip it
+        if filter_no_data and not has_data:
+            continue
+            
+        if has_data:
+            sites_with_data += 1
+            
             # Get the value and determine status
             value = site_data[config['value_column']].iloc[0]
             
@@ -399,24 +416,8 @@ def add_data_markers(fig, sites, data_type, parameter_name=None, season=None):
                 site_name=site_name,
                 hover_text=hover_text
             )
-        else:
-            # No data available - add gray marker
-            if data_type == 'macro' and season:
-                no_data_text = f"{site_name}<br>No {season} macroinvertebrate data available"
-            else:
-                data_label = PARAMETER_LABELS.get(f"{data_type.title()}_{'_'.join(parameter_name.split('_')) if parameter_name else 'Data'}", f"{data_type} data")
-                no_data_text = f"{site_name}<br>No {data_label.lower()} available"
-            
-            fig = add_site_marker(
-                fig=fig,
-                lat=site["lat"],
-                lon=site["lon"],
-                color=COLORS['unknown'],
-                site_name=site_name,
-                hover_text=no_data_text
-            )
     
-    return fig
+    return fig, sites_with_data, total_sites
 
 def create_error_map(error_message):
     """
@@ -534,24 +535,34 @@ def add_parameter_colors_to_map(fig, param_type, param_name):
         param_name: Specific parameter name (e.g., 'do_percent', 'Fish_IBI')
     
     Returns:
-        Updated plotly figure with color-coded markers
+        Tuple of (updated_figure, sites_with_data_count, total_sites_count)
     """
     try:        
         # Clear existing traces (basic blue markers)
         fig.data = []
         
-        # Add parameter-specific markers
+        # Add parameter-specific markers with filtering enabled
         if param_type == 'chem':
-            fig = add_data_markers(fig, MONITORING_SITES, 'chemical', parameter_name=param_name)
+            fig, sites_with_data, total_sites = add_data_markers(
+                fig, MONITORING_SITES, 'chemical', parameter_name=param_name, filter_no_data=True
+            )
         elif param_type == 'bio':
             if param_name == 'Fish_IBI':
-                fig = add_data_markers(fig, MONITORING_SITES, 'fish')
+                fig, sites_with_data, total_sites = add_data_markers(
+                    fig, MONITORING_SITES, 'fish', filter_no_data=True
+                )
             elif param_name == 'Macro_Summer':
-                fig = add_data_markers(fig, MONITORING_SITES, 'macro', season='Summer')
+                fig, sites_with_data, total_sites = add_data_markers(
+                    fig, MONITORING_SITES, 'macro', season='Summer', filter_no_data=True
+                )
             elif param_name == 'Macro_Winter':
-                fig = add_data_markers(fig, MONITORING_SITES, 'macro', season='Winter')
+                fig, sites_with_data, total_sites = add_data_markers(
+                    fig, MONITORING_SITES, 'macro', season='Winter', filter_no_data=True
+                )
         elif param_type == 'habitat':
-            fig = add_data_markers(fig, MONITORING_SITES, 'habitat')
+            fig, sites_with_data, total_sites = add_data_markers(
+                fig, MONITORING_SITES, 'habitat', filter_no_data=True
+            )
         
         # Update layout to ensure proper map display 
         fig.update_layout(
@@ -579,14 +590,13 @@ def add_parameter_colors_to_map(fig, param_type, param_name):
         display_name = PARAMETER_LABELS.get(param_name, param_name)
         fig.update_layout(title=dict(text=f"Monitoring Sites - {display_name} Status", x=0.5, y=0.98))
         
-        print(f"DEBUG: Completed add_parameter_colors_to_map successfully")
-        return fig
+        return fig, sites_with_data, total_sites
         
     except Exception as e:
         print(f"Error adding parameter colors: {e}")
         import traceback
         traceback.print_exc()
-        return fig  # Return original figure if coloring fails
+        return fig, 0, len(MONITORING_SITES)  # Return original figure if coloring fails
 
 def create_site_map(param_type=None, param_name=None):
     """

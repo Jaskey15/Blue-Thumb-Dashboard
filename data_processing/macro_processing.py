@@ -31,14 +31,15 @@ def load_macroinvertebrate_data():
     except sqlite3.Error as e:
         conn.rollback()
         logger.error(f"SQLite error: {e}")
-        raise
+        # Don't raise - just log and continue
     except Exception as e:
         conn.rollback()
         logger.error(f"Error loading macroinvertebrate: {e}")
-        raise
+        # Don't raise - just log and continue
     finally:
         close_connection(conn)
 
+    # always return data from database
     return get_macroinvertebrate_dataframe()
 
 def process_macro_csv_data(site_name=None):
@@ -376,16 +377,19 @@ def get_macroinvertebrate_dataframe():
         conn = get_connection()
         macro_query = '''
         SELECT 
-            s.event_id,
+            m.event_id,
+            s.site_name,
             e.year,
             e.season,
-            s.total_score,
-            s.comparison_to_reference,
-            s.biological_condition
+            m.total_score,
+            m.comparison_to_reference,
+            m.biological_condition
         FROM 
-            macro_summary_scores s
+            macro_summary_scores m
         JOIN 
-            macro_collection_events e ON s.event_id = e.event_id
+            macro_collection_events e ON m.event_id = e.event_id
+        JOIN 
+            sites s ON e.site_id = s.site_id
         ORDER BY 
             e.season, e.year
         '''

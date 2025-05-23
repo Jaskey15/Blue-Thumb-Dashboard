@@ -55,6 +55,13 @@ SETUP_STEPS = [
         "function": "load_habitat_data",
         "args": [],
         "critical": True
+    },
+    {
+        "name": "unused site cleanup",
+        "module": "data_processing.site_processing",
+        "function": "cleanup_unused_sites",
+        "args": [],
+        "critical": False  # Non-critical so setup continues if this fails
     }
 ]
 

@@ -45,34 +45,29 @@ def get_parameter_legend(param_type, param_name):
             return [
                 {"color": "#1e8449", "label": "Normal (80-130%)"},
                 {"color": "#ff9800", "label": "Caution (50-80% or 130-150%)"},
-                {"color": "#e74c3c", "label": "Poor (<50% or >150%)"},
-                {"color": "gray", "label": "No data"}
+                {"color": "#e74c3c", "label": "Poor (<50% or >150%)"}
             ]
         elif param_name == 'pH':
             return [
                 {"color": "#1e8449", "label": "Normal (6.5-9.0)"},
-                {"color": "#ff9800", "label": "Outside Normal Range"},
-                {"color": "gray", "label": "No data"}
+                {"color": "#ff9800", "label": "Outside Normal Range"}
             ]
         elif param_name == 'soluble_nitrogen':
             return [
                 {"color": "#1e8449", "label": "Normal (<0.8 mg/L)"},
                 {"color": "#ff9800", "label": "Caution (0.8-1.5 mg/L)"},
-                {"color": "#e74c3c", "label": "Poor (>1.5 mg/L)"},
-                {"color": "gray", "label": "No data"}
+                {"color": "#e74c3c", "label": "Poor (>1.5 mg/L)"}
             ]
         elif param_name == 'Phosphorus':
             return [
                 {"color": "#1e8449", "label": "Normal (<0.05 mg/L)"},
                 {"color": "#ff9800", "label": "Caution (0.05-0.1 mg/L)"},
-                {"color": "#e74c3c", "label": "Poor (>0.1 mg/L)"},
-                {"color": "gray", "label": "No data"}
+                {"color": "#e74c3c", "label": "Poor (>0.1 mg/L)"}
             ]
         elif param_name == 'Chloride':
             return [
                 {"color": "#1e8449", "label": "Normal (<250 mg/L)"},
-                {"color": "#e74c3c", "label": "Poor (>250 mg/L)"},
-                {"color": "gray", "label": "No data"}
+                {"color": "#e74c3c", "label": "Poor (>250 mg/L)"}
             ]
     
     # Biological parameter legends
@@ -82,16 +77,14 @@ def get_parameter_legend(param_type, param_name):
                 {"color": "#1e8449", "label": "Excellent (>0.97)"},
                 {"color": "#7cb342", "label": "Good (0.80-0.97)"},
                 {"color": "#ff9800", "label": "Fair (0.67-0.80)"},
-                {"color": "#e74c3c", "label": "Poor (<0.67)"},
-                {"color": "gray", "label": "No data"}
+                {"color": "#e74c3c", "label": "Poor (<0.67)"}
             ]
         elif param_name.startswith('Macro'):
             return [
                 {"color": "#1e8449", "label": "Non-impaired (>0.83)"},
                 {"color": "#ff9800", "label": "Slightly Impaired (0.54-0.83)"},
                 {"color": "#f57c00", "label": "Moderately Impaired (0.17-0.54)"},
-                {"color": "#e74c3c", "label": "Severely Impaired (<0.17)"},
-                {"color": "gray", "label": "No data"}
+                {"color": "#e74c3c", "label": "Severely Impaired (<0.17)"}
             ]
     
     # Habitat parameter legends
@@ -101,8 +94,7 @@ def get_parameter_legend(param_type, param_name):
             {"color": "#7cb342", "label": "Grade B (80-89)"},
             {"color": "#ff9800", "label": "Grade C (70-79)"},
             {"color": "#e53e3e", "label": "Grade D (60-69)"},
-            {"color": "#e74c3c", "label": "Grade F (<60)"},
-            {"color": "gray", "label": "No data"}
+            {"color": "#e74c3c", "label": "Grade F (<60)"}
         ]
     
     # Default legend if parameter type/name not recognized
@@ -461,21 +453,34 @@ def register_callbacks(app):
             else:
                 fig = create_basic_site_map()
             
-            # Add parameter-specific colors
-            updated_map = add_parameter_colors_to_map(fig, param_type, param_name)
+            # Add parameter-specific colors and get site counts
+            updated_map, sites_with_data, total_sites = add_parameter_colors_to_map(fig, param_type, param_name)
             
-            # Create appropriate legend based on parameter type and name
+            # Create appropriate legend based on parameter type and name (excluding "No data")
             legend_items = get_parameter_legend(param_type, param_name)
+            # Remove "No data" entries from legend
+            legend_items = [item for item in legend_items if "No data" not in item["label"]]
             
-            # Build the legend HTML
-            legend_html = html.Div([
+            # Build the legend HTML with site count
+            legend_content = [
+                # Site count display
+                html.Div(
+                    f"Showing {sites_with_data} of {total_sites} sites with {param_name.replace('_', ' ').lower()} data",
+                    className="text-center mb-2",
+                    style={"font-weight": "bold", "color": "#666"}
+                ),
+                # Legend items wrapper
                 html.Div([
-                    html.Span("● ", style={"color": item["color"], "font-size": "20px"}),
-                    html.Span(item["label"], className="mr-3")
-                ], style={"display": "inline-block", "margin-right": "15px"})
-                for item in legend_items
-            ], className="text-center mt-2 mb-4")
-            
+                    html.Div([
+                        html.Span("● ", style={"color": item["color"], "font-size": "20px"}),
+                        html.Span(item["label"], className="mr-3")
+                    ], style={"display": "inline-block", "margin-right": "15px"})
+                    for item in legend_items
+                ])
+            ]
+
+            legend_html = html.Div(legend_content, className="text-center mt-2 mb-4")
+
             return updated_map, legend_html
             
         except Exception as e:
