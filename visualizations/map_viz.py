@@ -3,7 +3,7 @@ import plotly.graph_objects as go
 from database.database import get_connection, close_connection
 from utils import setup_logging
 
-logger = setup_logging("map_viz", category="visualization")
+logger = setup_logging("map_viz")
 
 # Styling constants
 COLORS = {
@@ -11,7 +11,6 @@ COLORS = {
     'caution': '#ff9800',     # Orange
     'poor': '#e74c3c',        # Red
     'unknown': 'gray',        # Gray
-    'outline': '#777777',     # Medium-light gray
     'fish': {
         'excellent': '#1e8449',  # Green
         'good': '#7cb342',       # Light green
@@ -286,7 +285,7 @@ def add_site_marker(fig, lat, lon, color, site_name, hover_text=None):
     Returns:
         The updated figure
     """
-    fig.add_trace(go.Scattermap(  
+    fig.add_trace(go.Scattermap(
         lat=[lat],
         lon=[lon],
         mode='markers',
@@ -421,16 +420,46 @@ def add_data_markers(fig, sites, data_type, parameter_name=None, season=None):
     
     return fig
 
-def create_site_map(param_type=None, param_name=None):
+def create_error_map(error_message):
     """
-    Create an interactive map of monitoring sites with color-coded status markers.
+    Create a basic map with an error message.
     
     Args:
-        param_type: Type of parameter ('chem', 'bio', or 'habitat')
-        param_name: Specific parameter name (e.g., 'do_percent', 'Fish_IBI', 'Habitat_Grade')
+        error_message: Error message to display
     
     Returns:
-        Plotly figure with the interactive map
+        Plotly figure with error message
+    """
+    fig = go.Figure()
+    fig.update_layout(
+        map=dict(
+            style="white-bg",
+            center=dict(lat=35.5, lon=-98.2),
+            zoom=6.2
+        ),
+        margin=dict(l=0, r=0, t=0, b=0),
+        height=600,
+        annotations=[
+            dict(
+                text=error_message,
+                showarrow=False,
+                xref="paper",
+                yref="paper",
+                x=0.5,
+                y=0.5,
+                font=dict(size=14, color="red")
+            )
+        ]
+    )
+    return fig
+
+def create_basic_site_map():
+    """
+    Create a basic interactive map with all monitoring sites shown as blue markers.
+    This loads quickly and shows site locations without parameter-specific data.
+    
+    Returns:
+        Plotly figure with basic site markers
     """
     try:
         # Create the base map
@@ -438,61 +467,27 @@ def create_site_map(param_type=None, param_name=None):
         
         # Check if we have sites loaded
         if not MONITORING_SITES:
-            fig.update_layout(
-                mapbox=dict(
-                    style="white-bg",
-                    center=dict(lat=35.5, lon=-98.2),
-                    zoom=6.2
-                ),
-                margin=dict(l=0, r=0, t=0, b=0),
-                height=600,
-                annotations=[
-                    dict(
-                        text="Error: No monitoring sites available",
-                        showarrow=False,
-                        xref="paper",
-                        yref="paper",
-                        x=0.5,
-                        y=0.5,
-                        font=dict(size=14, color="red")
-                    )
-                ]
-            )
-            return fig
+            return create_error_map("Error: No monitoring sites available")
         
-        # If parameter type and name are provided, determine marker colors based on status
-        if param_type and param_name:
-            if param_type == 'chem':
-                fig = add_data_markers(fig, MONITORING_SITES, 'chemical', parameter_name=param_name)
-            elif param_type == 'bio':
-                if param_name == 'Fish_IBI':
-                    fig = add_data_markers(fig, MONITORING_SITES, 'fish')
-                elif param_name == 'Macro_Summer':
-                    fig = add_data_markers(fig, MONITORING_SITES, 'macro', season='Summer')
-                elif param_name == 'Macro_Winter':
-                    fig = add_data_markers(fig, MONITORING_SITES, 'macro', season='Winter')
-            elif param_type == 'habitat':
-                fig = add_data_markers(fig, MONITORING_SITES, 'habitat')
-        else:
-            # No parameter selected, use default blue markers with site info
-            for site in MONITORING_SITES:
-                hover_text = (f"Site: {site['name']}<br>"
-                             f"County: {site['county']}<br>"
-                             f"River Basin: {site['river_basin']}<br>"
-                             f"Ecoregion: {site['ecoregion']}")
-                
-                fig = add_site_marker(
-                    fig=fig,
-                    lat=site["lat"],
-                    lon=site["lon"],
-                    color='#3366CC',  # Blue for neutral/default state
-                    site_name=site["name"],
-                    hover_text=hover_text
-                )
+        # Add all sites as basic blue markers
+        for site in MONITORING_SITES:
+            hover_text = (f"{site['name']}<br>"
+                         f"County: {site['county']}<br>"
+                         f"River Basin: {site['river_basin']}<br>"
+                         f"Ecoregion: {site['ecoregion']}")
+            
+            fig = add_site_marker(
+                fig=fig,
+                lat=site["lat"],
+                lon=site["lon"],
+                color='#3366CC',  # Blue for all basic markers
+                site_name=site["name"],
+                hover_text=hover_text
+            )
         
         # Set up map layout
         fig.update_layout(
-            map=dict(  
+            map=dict(
                 style="white-bg",
                 layers=[
                     {
@@ -504,7 +499,7 @@ def create_site_map(param_type=None, param_name=None):
                         ]
                     }
                 ],
-                center=dict(lat=35.5, lon=-98.2),  # Center of Oklahoma
+                center=dict(lat=35.5, lon=-98.2),
                 zoom=6.2
             ),
             margin=dict(l=0, r=0, t=0, b=0),
@@ -525,46 +520,77 @@ def create_site_map(param_type=None, param_name=None):
             ]
         )
         
-        # Add title based on parameter type and name
-        if param_type and param_name:
-            display_name = PARAMETER_LABELS.get(param_name, param_name)
-            title = f"Monitoring Sites - {display_name} Status"
-            
-            fig.update_layout(
-                title=dict(
-                    text=title,
-                    x=0.5,
-                    y=0.98
-                )
+        return fig
+    
+    except Exception as e:
+        print(f"Error creating basic site map: {e}")
+        return create_error_map(f"Error creating map: {str(e)}")
+
+def add_parameter_colors_to_map(fig, param_type, param_name):
+    """
+    Update an existing map figure with parameter-specific color coding.
+    
+    Args:
+        fig: Existing plotly figure with basic markers
+        param_type: Type of parameter ('chem', 'bio', or 'habitat')
+        param_name: Specific parameter name (e.g., 'do_percent', 'Fish_IBI')
+    
+    Returns:
+        Updated plotly figure with color-coded markers
+    """
+    try:
+        # Clear existing traces (basic blue markers)
+        fig.data = []
+        
+        # Add parameter-specific markers using existing logic
+        if param_type == 'chem':
+            fig = add_data_markers(fig, MONITORING_SITES, 'chemical', parameter_name=param_name)
+        elif param_type == 'bio':
+            if param_name == 'Fish_IBI':
+                fig = add_data_markers(fig, MONITORING_SITES, 'fish')
+            elif param_name == 'Macro_Summer':
+                fig = add_data_markers(fig, MONITORING_SITES, 'macro', season='Summer')
+            elif param_name == 'Macro_Winter':
+                fig = add_data_markers(fig, MONITORING_SITES, 'macro', season='Winter')
+        elif param_type == 'habitat':
+            fig = add_data_markers(fig, MONITORING_SITES, 'habitat')
+        
+        # Add title based on parameter
+        display_name = PARAMETER_LABELS.get(param_name, param_name)
+        fig.update_layout(
+            title=dict(
+                text=f"Monitoring Sites - {display_name} Status",
+                x=0.5,
+                y=0.98
             )
+        )
         
         return fig
     
     except Exception as e:
-        print(f"Error creating site map: {e}")
-        # Return a basic map with an error message
-        fig = go.Figure()
-        fig.update_layout(
-            mapbox=dict(
-                style="white-bg",
-                center=dict(lat=35.5, lon=-98.2),
-                zoom=6.2
-            ),
-            margin=dict(l=0, r=0, t=0, b=0),
-            height=600,
-            annotations=[
-                dict(
-                    text=f"Error creating map: {str(e)}",
-                    showarrow=False,
-                    xref="paper",
-                    yref="paper",
-                    x=0.5,
-                    y=0.5,
-                    font=dict(size=14, color="red")
-                )
-            ]
-        )
-        return fig
+        print(f"Error adding parameter colors: {e}")
+        return fig  # Return original figure if coloring fails
+
+def create_site_map(param_type=None, param_name=None):
+    """
+    Create an interactive map of monitoring sites.
+    If no parameters provided, shows basic blue markers.
+    If parameters provided, shows color-coded status markers.
+    
+    Args:
+        param_type: Type of parameter ('chem', 'bio', or 'habitat')
+        param_name: Specific parameter name
+    
+    Returns:
+        Plotly figure with the interactive map
+    """
+    # If no parameters specified, return basic map
+    if not param_type or not param_name:
+        return create_basic_site_map()
+    
+    # Otherwise, start with basic map and add parameter colors
+    fig = create_basic_site_map()
+    return add_parameter_colors_to_map(fig, param_type, param_name)
 
 # Load monitoring sites
 try:

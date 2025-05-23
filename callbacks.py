@@ -5,6 +5,7 @@ This file contains all the callbacks that handle user interactions.
 
 import dash
 import dash_bootstrap_components as dbc
+import plotly.graph_objects as go
 
 from dash import html, dcc
 from dash.dependencies import Input, Output, State
@@ -28,7 +29,7 @@ def get_parameter_legend(param_type, param_name):
     Return legend items specific to the selected parameter type and name.
     
     Args:
-        param_type: Type of parameter ('chem' or 'bio')
+        param_type: Type of parameter ('chem', 'bio', or 'habitat')
         param_name: Specific parameter name
         
     Returns:
@@ -88,6 +89,17 @@ def get_parameter_legend(param_type, param_name):
                 {"color": "#e74c3c", "label": "Severely Impaired (<0.17)"},
                 {"color": "gray", "label": "No data"}
             ]
+    
+    # Habitat parameter legends
+    elif param_type == 'habitat':
+        return [
+            {"color": "#1e8449", "label": "Grade A (> 90)"},
+            {"color": "#7cb342", "label": "Grade B (80-89)"},
+            {"color": "#ff9800", "label": "Grade C (70-79)"},
+            {"color": "#e53e3e", "label": "Grade D (60-69)"},
+            {"color": "#e74c3c", "label": "Grade F (<60)"},
+            {"color": "gray", "label": "No data"}
+        ]
     
     # Default legend if parameter type/name not recognized
     return [{"color": "red", "label": "Monitoring Site"}]
@@ -380,28 +392,73 @@ def register_callbacks(app):
 
     @app.callback(
         [Output('site-map-graph', 'figure'),
-         Output('map-legend-container', 'children')],
-        [Input('parameter-dropdown', 'value')]
+        Output('parameter-dropdown', 'disabled'),
+        Output('map-legend-container', 'children')],
+        [Input('main-tabs', 'active_tab')]
     )
-    def update_map_and_legend(parameter_value):
+    def load_basic_map_on_tab_open(active_tab):
         """
-        Update the site map and legend based on the selected parameter.
+        Load the basic map when the Overview tab is opened.
+        This shows blue dots immediately without parameter-specific data.
+        """
+        # Only load map when Overview tab is active
+        if active_tab != 'overview-tab':
+            return dash.no_update, dash.no_update, dash.no_update
         
-        Args:
-            parameter_value: Selected parameter value (e.g., 'chem:do_percent')
+        try:
+            from visualizations.map_viz import create_basic_site_map
             
-        Returns:
-            Tuple of (map_figure, legend_html)
+            # Create basic map with blue markers
+            basic_map = create_basic_site_map()
+            
+            # Enable the parameter dropdown now that map is loaded
+            dropdown_disabled = False
+            
+            # No legend needed for basic map
+            legend_html = html.Div()
+            
+            return basic_map, dropdown_disabled, legend_html
+            
+        except Exception as e:
+            print(f"Error loading basic map: {e}")
+            
+            # Return error map and keep dropdown disabled
+            from visualizations.map_viz import create_error_map
+            error_map = create_error_map(f"Error loading monitoring sites: {str(e)}")
+            
+            return error_map, True, html.Div()
+        
+    @app.callback(
+    [Output('site-map-graph', 'figure', allow_duplicate=True),
+     Output('map-legend-container', 'children', allow_duplicate=True)],
+    [Input('parameter-dropdown', 'value')],
+    [State('site-map-graph', 'figure')],
+    prevent_initial_call=True
+    )
+    def update_map_with_parameter_selection(parameter_value, current_figure):
+        """
+        Update the map with parameter-specific color coding when user selects a parameter.
         """
         try:
-            from visualizations.map_viz import create_site_map
+            from visualizations.map_viz import create_basic_site_map, add_parameter_colors_to_map
             
-            # Default case: no parameter selected
+            # If no parameter selected, show basic map
             if not parameter_value:
-                return create_site_map(), html.Div()
+                basic_map = create_basic_site_map()
+                return basic_map, html.Div()
             
             # Split the parameter value to get type and parameter
             param_type, param_name = parameter_value.split(':')
+            
+            # Start with current figure or create basic map
+            if current_figure and current_figure.get('data'):
+                # Use plotly's graph_objects to recreate the figure
+                fig = go.Figure(current_figure)
+            else:
+                fig = create_basic_site_map()
+            
+            # Add parameter-specific colors
+            updated_map = add_parameter_colors_to_map(fig, param_type, param_name)
             
             # Create appropriate legend based on parameter type and name
             legend_items = get_parameter_legend(param_type, param_name)
@@ -415,18 +472,14 @@ def register_callbacks(app):
                 for item in legend_items
             ], className="text-center mt-2 mb-4")
             
-            # Return the updated map and legend
-            return create_site_map(param_type, param_name), legend_html
+            return updated_map, legend_html
             
         except Exception as e:
-            print(f"Error updating map and legend: {e}")
-            # Return default map with error message
-            from visualizations.map_viz import create_site_map
-            error_legend = html.Div(
+            print(f"Error updating map with parameter selection: {e}")
+            return dash.no_update, html.Div(
                 html.Div("Error updating map. Please try again.", className="text-danger"),
                 className="text-center mt-2 mb-4"
             )
-            return create_site_map(), error_legend
 
     # --------------------------------------------------------------------------------------
     # CHEMICAL TAB CALLBACKS

@@ -313,13 +313,7 @@ def create_overview_tab():
         HTML layout for the Overview tab
     """
     try:
-        # Import visualization function
-        from visualizations.map_viz import create_site_map
-        
-        # Get the site map figure
-        site_map_fig = create_site_map()
-        
-        # Create the layout
+        # Create the layout WITHOUT creating the map
         tab_content = html.Div([
             # First row: Overview text and image
             dbc.Row([
@@ -352,6 +346,7 @@ def create_overview_tab():
                         options=PARAMETER_OPTIONS,
                         value=None,
                         placeholder="Select a parameter...",
+                        disabled=True,  # Start disabled
                         clearable=True,
                         style={"width": "100%"}
                     ),
@@ -362,12 +357,12 @@ def create_overview_tab():
                 ], width=12)
             ], className="mt-3 mb-3"),
             
-            # Fourth row: Map
+            # Fourth row: Map (empty initially, filled by callback)
             dbc.Row([
                 dbc.Col([
                     dcc.Graph(
                         id='site-map-graph',
-                        figure=site_map_fig,
+                        figure={},  # Empty figure - callback will populate
                         config={
                             'scrollZoom': True,
                             'displayModeBar': True,

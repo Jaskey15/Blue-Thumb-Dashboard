@@ -52,13 +52,13 @@ app.layout = dbc.Container([
     
     # Tabs with modular layout functions
     dbc.Tabs([
-        dbc.Tab(label="Overview", children=create_overview_tab()),
-        dbc.Tab(label="Chemical Data", children=create_chemical_tab()),
-        dbc.Tab(label="Biological Data", children=create_biological_tab()),
-        dbc.Tab(label="Habitat Data", children=create_habitat_tab()),
-        dbc.Tab(label="Protect Our Streams", children=create_protect_our_streams_tab()),
-        dbc.Tab(label="Source Data", children=create_source_data_tab()),
-    ]),
+        dbc.Tab(label="Overview", children=create_overview_tab(), tab_id="overview-tab"),
+        dbc.Tab(label="Chemical Data", children=create_chemical_tab(), tab_id="chemical-tab"),
+        dbc.Tab(label="Biological Data", children=create_biological_tab(), tab_id="biological-tab"),
+        dbc.Tab(label="Habitat Data", children=create_habitat_tab(), tab_id="habitat-tab"),
+        dbc.Tab(label="Protect Our Streams", children=create_protect_our_streams_tab(), tab_id="protect-tab"),
+        dbc.Tab(label="Source Data", children=create_source_data_tab(), tab_id="source-tab"),
+    ], id="main-tabs", active_tab="overview-tab"),
 
     # Footer with improved credits and logo
     dbc.Row([
