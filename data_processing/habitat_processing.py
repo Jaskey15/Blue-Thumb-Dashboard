@@ -20,12 +20,7 @@ def load_habitat_data(site_name=None):
     conn = get_connection()
     cursor = conn.cursor()
   
-    try:
-        # Check if database structure is valid
-        if not verify_habitat_database_structure():
-            logger.error("Database structure verification failed. Please check the schema.")
-            return pd.DataFrame()
-        
+    try: 
         # Check if data already exists
         cursor.execute('SELECT COUNT(*) FROM habitat_summary_scores')
         data_exists = cursor.fetchone()[0] > 0
@@ -531,45 +526,10 @@ def get_habitat_metrics_data_for_table(site_name=None):
         if conn:
             close_connection(conn)
 
-def verify_habitat_database_structure():
-    """
-    Verify that the database has the required tables and structure for habitat data.
-    
-    Returns:
-        bool: True if structure is valid, False otherwise
-    """
-    conn = None
-    try:
-        conn = get_connection()
-        cursor = conn.cursor()
-        
-        # Check for required tables
-        required_tables = [
-            'sites',
-            'habitat_assessments',
-            'habitat_metrics',
-            'habitat_summary_scores'
-        ]
-        
-        for table in required_tables:
-            cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table}'")
-            if cursor.fetchone() is None:
-                logger.error(f"Missing required table: {table}")
-                return False
-    
-        logger.info("Habitat database structure verified successfully")
-        return True
-    except Exception as e:
-        logger.error(f"Error verifying database structure: {e}")
-        return False
-    finally:
-        if conn:
-            close_connection(conn)
-
 if __name__ == "__main__":
-    if verify_habitat_database_structure():
-        habitat_df = load_habitat_data()
+    habitat_df = load_habitat_data()
+    if not habitat_df.empty:
         logger.info("Habitat data summary:")
         logger.info(f"Number of records: {len(habitat_df)}")
     else:
-        logger.error("Database verification failed. Please check the database structure.")
+        logger.error("No habitat data loaded. Check database setup.")

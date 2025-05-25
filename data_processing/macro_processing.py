@@ -473,41 +473,10 @@ def get_macro_metrics_data_for_table():
         if conn:
             close_connection(conn)
             
-def verify_macro_database_structure():
-    """Verify that the database has the required tables and structure for macroinvertebrate data."""
-    conn = None
-    try:
-        conn = get_connection()
-        cursor = conn.cursor()
-
-        # Check for required tables
-        required_tables = [
-            'sites',
-            'macro_collection_events',
-            'macro_metrics',
-            'macro_summary_scores'
-        ]
-
-        for table in required_tables:
-            cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table}'")
-            if cursor.fetchone() is None:
-                logger.error(f"Missing required table: {table}")
-                return False
-    
-        logger.info("Macroinvertebrate database structure verified successfully")
-        return True
-    except Exception as e:
-        logger.error(f"Error verifying macroinvertebrate database structure: {e}")
-        return False
-    finally:
-        if conn:
-            close_connection(conn)
-
-
 if __name__ == "__main__":
-    if verify_macro_database_structure():
-        macro_df = load_macroinvertebrate_data()
+    macro_df = load_macroinvertebrate_data()
+    if not macro_df.empty:
         logger.info("Macroinvertebrate data summary:")
         logger.info(f"Number of records: {len(macro_df)}")
     else:
-        logger.error("Database verification failed. Please check the database structure.")
+        logger.error("No macroinvertebrate data loaded. Check database setup.")

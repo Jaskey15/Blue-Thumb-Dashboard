@@ -697,196 +697,29 @@ def get_chemical_data_from_db(site_name=None):
     finally:
         close_connection(conn)
 
-def verify_parameters():
-    """
-    Verify that the chemical_parameters table contains expected parameters.
-    If not, populate it with default values.
-    
-    Returns:
-        bool: True if successful, False otherwise
-    """
-    conn = get_connection()
-    cursor = conn.cursor()
-    
-    try:
-        # Check if table exists
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='chemical_parameters'")
-        if cursor.fetchone() is None:
-            logger.error("chemical_parameters table does not exist")
-            return False
-            
-        # Check if table has data
-        cursor.execute("SELECT COUNT(*) FROM chemical_parameters")
-        count = cursor.fetchone()[0]
-        
-        if count > 0:
-            logger.info(f"chemical_parameters table has {count} entries")
-            return True
-            
-        # If no values, import the function to insert defaults
-        from database.db_schema import insert_default_parameters
-        insert_default_parameters(cursor)
-        
-        conn.commit()
-        
-        # Verify insertion
-        cursor.execute("SELECT COUNT(*) FROM chemical_parameters")
-        new_count = cursor.fetchone()[0]
-        
-        logger.info(f"Inserted {new_count} parameters")
-        return new_count > 0
-        
-    except Exception as e:
-        conn.rollback()
-        logger.error(f"Error verifying parameters: {e}")
-        return False
-    finally:
-        close_connection(conn)
-
-def verify_reference_values():
-    """
-    Verify that the chemical_reference_values table contains expected values.
-    If not, populate it with default values.
-    
-    Returns:
-        bool: True if successful, False otherwise
-    """
-    conn = get_connection()
-    cursor = conn.cursor()
-    
-    try:
-        # Check if table exists
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='chemical_reference_values'")
-        if cursor.fetchone() is None:
-            logger.error("chemical_reference_values table does not exist")
-            return False
-            
-        # Check if table has data
-        cursor.execute("SELECT COUNT(*) FROM chemical_reference_values")
-        count = cursor.fetchone()[0]
-        
-        if count > 0:
-            logger.info(f"chemical_reference_values table has {count} entries")
-            return True
-            
-        # If no values, import the function to insert defaults
-        from database.db_schema import insert_default_reference_values
-        insert_default_reference_values(cursor)
-        
-        conn.commit()
-        
-        # Verify insertion
-        cursor.execute("SELECT COUNT(*) FROM chemical_reference_values")
-        new_count = cursor.fetchone()[0]
-        
-        logger.info(f"Inserted {new_count} reference values")
-        return new_count > 0
-        
-    except Exception as e:
-        conn.rollback()
-        logger.error(f"Error verifying reference values: {e}")
-        return False
-    finally:
-        close_connection(conn)
-
-def verify_db_structure():
-   """
-   Verify that the database structure is set up correctly for chemical data.
-   
-   Returns:
-       bool: True if structure is valid, False otherwise
-   """
-   conn = get_connection()
-   cursor = conn.cursor()
-   
-   try:
-       # Check for required tables
-       required_tables = [
-           'sites',
-           'chemical_collection_events',
-           'chemical_parameters',
-           'chemical_reference_values',
-           'chemical_measurements'
-       ]
-       
-       for table in required_tables:
-           cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table}'")
-           if cursor.fetchone() is None:
-               logger.error(f"Missing required table: {table}")
-               return False
-       
-       # Verify parameters and reference values
-       if not verify_parameters():
-           logger.warning("Failed to verify chemical parameters")
-           return False
-           
-       if not verify_reference_values():
-           logger.warning("Failed to verify reference values")
-           return False
-       
-       logger.info("Chemical database structure verified successfully")
-       return True
-       
-   except Exception as e:
-       logger.error(f"Error verifying database structure: {e}")
-       return False
-       
-   finally:
-       close_connection(conn)
-
-def run_initial_db_setup():
-   """
-   Perform initial database setup for chemical data.
-   
-   Returns:
-       bool: True if setup successful, False otherwise
-   """
-   if not verify_db_structure():
-       logger.error("Database verification failed. Schema may need to be updated.")
-       return False
-       
-   # Load data for all sites
-   success = load_chemical_data_to_db()
-   
-   if success:
-       logger.info("Initial database setup completed successfully")
-   else:
-       logger.error("Failed to load chemical data into database")
-       
-   return success
-
 if __name__ == "__main__":
-   try:
-       logger.info("Testing chemical data processing")
-       
-       # Verify database structure
-       if verify_db_structure():
-           logger.info("Database structure is valid")
-           
-           # Get list of sites with chemical data
-           sites = get_sites_with_chemical_data()
-           logger.info(f"Found {len(sites)} sites with chemical data")
-           
-           if sites:
-               # Process data for the first site as a test
-               test_site = sites[0]
-               logger.info(f"Processing data for test site: {test_site}")
-               
-               # Try to get from database first
-               df_clean, key_parameters, reference_values = process_chemical_data(test_site, use_db=True)
-               
-               if not df_clean.empty:
-                   logger.info(f"Successfully processed {len(df_clean)} records for {test_site}")
-                   
-                   # Test date range function
-                   min_date, max_date = get_date_range_for_site(test_site)
-                   if min_date and max_date:
-                       logger.info(f"Date range for {test_site}: {min_date} to {max_date}")
-               else:
-                   logger.warning(f"No data found for test site: {test_site}")
-       else:
-           logger.error("Database verification failed, running initial setup")
-           run_initial_db_setup()
-       
-   except Exception as e:
-       logger.error(f"Error in chemical data processing test: {e}")
+    logger.info("Testing chemical data processing")
+    
+    # Get list of sites with chemical data
+    sites = get_sites_with_chemical_data()
+    if sites:
+        logger.info(f"Found {len(sites)} sites with chemical data")
+        
+        # Process data for the first site as a test
+        test_site = sites[0]
+        logger.info(f"Processing data for test site: {test_site}")
+        
+        # Try to get from database first
+        df_clean, key_parameters, reference_values = process_chemical_data(test_site, use_db=True)
+        
+        if not df_clean.empty:
+            logger.info(f"Successfully processed {len(df_clean)} records for {test_site}")
+            
+            # Test date range function
+            min_date, max_date = get_date_range_for_site(test_site)
+            if min_date and max_date:
+                logger.info(f"Date range for {test_site}: {min_date} to {max_date}")
+        else:
+            logger.warning(f"No data found for test site: {test_site}")
+    else:
+        logger.error("No sites with chemical data found. Check database setup.")

@@ -20,11 +20,6 @@ def load_fish_data(site_name=None):
     cursor = conn.cursor()
   
     try:
-        # Check if database structure is valid
-        if not verify_database_structure():
-            logger.error("Database structure verification failed. Please check the schema.")
-            return pd.DataFrame()
-        
         # Check if data already exists
         cursor.execute('SELECT COUNT(*) FROM fish_summary_scores')
         data_exists = cursor.fetchone()[0] > 0
@@ -560,50 +555,13 @@ def get_sites_with_fish_data():
         if conn:
             close_connection(conn)
 
-def verify_database_structure():
-    """
-    Verify that the database has the required tables and structure for fish data.
-    
-    Returns:
-        bool: True if structure is valid, False otherwise
-    """
-    conn = None
-    try:
-        conn = get_connection()
-        cursor = conn.cursor()
-        
-        # Check for required tables
-        required_tables = [
-            'sites',
-            'fish_collection_events',
-            'fish_metrics',
-            'fish_summary_scores'
-        ]
-        
-        for table in required_tables:
-            cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table}'")
-            if cursor.fetchone() is None:
-                logger.error(f"Missing required table: {table}")
-                return False
-    
-        logger.info("Fish database structure verified successfully")
-        return True
-    except Exception as e:
-        logger.error(f"Error verifying database structure: {e}")
-        return False
-    finally:
-        if conn:
-            close_connection(conn)
-
-
 if __name__ == "__main__":
-    if verify_database_structure():
-        fish_df = load_fish_data()
+    # Skip verification, just try to load and see what happens
+    fish_df = load_fish_data()
+    if not fish_df.empty:
         logger.info("Fish data summary:")
         logger.info(f"Number of records: {len(fish_df)}")
-        
-        # Get list of sites
         sites = get_sites_with_fish_data()
         logger.info(f"Sites with fish data: {', '.join(sites)}")
     else:
-        logger.error("Database verification failed. Please check the database structure.")
+        logger.error("No fish data loaded. Check database setup.")
