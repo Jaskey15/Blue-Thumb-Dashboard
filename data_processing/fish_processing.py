@@ -23,7 +23,7 @@ def load_fish_data(site_name=None):
         # Check if database structure is valid
         if not verify_database_structure():
             logger.error("Database structure verification failed. Please check the schema.")
-            return get_fish_dataframe(site_name) if site_name else get_fish_dataframe()
+            return pd.DataFrame()
         
         # Check if data already exists
         cursor.execute('SELECT COUNT(*) FROM fish_summary_scores')
@@ -46,18 +46,20 @@ def load_fish_data(site_name=None):
             conn.commit()
             logger.info("Fish data loaded successfully")
         else:
-            logger.info("Fish data already exists in the database")
+            logger.info("Fish data already exists in the database - skipping processing")
 
     except sqlite3.Error as e:
         conn.rollback()
         logger.error(f"SQLite error: {e}")
+        raise
     except Exception as e:
         conn.rollback()
         logger.error(f"Error loading fish data: {e}")
+        raise
     finally:
         close_connection(conn)
 
-    # Always return data from database, regardless of what happened above
+    # Always return current data state
     if site_name:
         return get_fish_dataframe(site_name)
     else:

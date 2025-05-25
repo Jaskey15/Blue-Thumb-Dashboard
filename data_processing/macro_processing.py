@@ -14,7 +14,7 @@ def load_macroinvertebrate_data():
 
     try:
         # Check if data already exists
-        cursor.execute('Select COUNT(*) FROM macro_summary_scores')
+        cursor.execute('SELECT COUNT(*) FROM macro_summary_scores')
         data_exists = cursor.fetchone()[0] > 0
 
         if not data_exists:
@@ -26,20 +26,20 @@ def load_macroinvertebrate_data():
             conn.commit()   
             logger.info("Macroinvertebrate data loaded successfully")
         else:
-            logger.info("Macroinvertebrate data already exists in the database")
+            logger.info("Macroinvertebrate data already exists in the database - skipping processing")
 
     except sqlite3.Error as e:
         conn.rollback()
         logger.error(f"SQLite error: {e}")
-        # Don't raise - just log and continue
+        raise
     except Exception as e:
         conn.rollback()
         logger.error(f"Error loading macroinvertebrate: {e}")
-        # Don't raise - just log and continue
+        raise
     finally:
         close_connection(conn)
 
-    # always return data from database
+    # Always return current data state
     return get_macroinvertebrate_dataframe()
 
 def process_macro_csv_data(site_name=None):

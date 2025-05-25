@@ -48,7 +48,7 @@ def load_habitat_data(site_name=None):
             conn.commit()
             logger.info("Habitat data loaded successfully")
         else:
-            logger.info("Habitat data already exists in the database")
+            logger.info("Habitat data already exists in the database - skipping processing")
 
     except sqlite3.Error as e:
         conn.rollback()
@@ -61,7 +61,7 @@ def load_habitat_data(site_name=None):
     finally:
         close_connection(conn)
 
-    # If site_name was provided, return data only for that site
+    # Always return current data state
     if site_name:
         return get_habitat_dataframe(site_name)
     else:
