@@ -291,8 +291,10 @@ def determine_status(parameter, value, reference_values):
                 
     elif parameter == 'pH':
         if 'normal min' in ref and 'normal max' in ref:
-            if value < ref['normal min'] or value > ref['normal max']:
-                return "Outside Normal"
+            if value < ref['normal min']:
+                return "Below Normal"
+            elif value > ref['normal max']:
+                return "Above Normal"
             else:
                 return "Normal"
                 

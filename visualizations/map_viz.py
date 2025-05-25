@@ -10,6 +10,8 @@ COLORS = {
     'normal': '#1e8449',      # Green
     'caution': '#ff9800',     # Orange
     'poor': '#e74c3c',        # Red
+    'above_normal': '#5e35b1', # Purple-blue (Basic/Alkaline)
+    'below_normal': '#f57c00', # Dark orange-red (Acidic)
     'fish': {
         'excellent': '#1e8449',  # Green
         'good': '#7cb342',       # Light green
@@ -42,8 +44,8 @@ PARAMETER_THRESHOLDS = {
     ],
     'pH': [
         {'min': 6.5, 'max': 9.0, 'status': 'Normal', 'color': COLORS['normal']},
-        {'min': -float('inf'), 'max': 6.5, 'status': 'Outside Normal', 'color': COLORS['caution']},
-        {'min': 9.0, 'max': float('inf'), 'status': 'Outside Normal', 'color': COLORS['caution']}
+        {'min': -float('inf'), 'max': 6.5, 'status': 'Below Normal', 'color': COLORS['below_normal']},
+        {'min': 9.0, 'max': float('inf'), 'status': 'Above Normal', 'color': COLORS['above_normal']}
     ],
     'soluble_nitrogen': [
         {'min': -float('inf'), 'max': 0.8, 'status': 'Normal', 'color': COLORS['normal']},

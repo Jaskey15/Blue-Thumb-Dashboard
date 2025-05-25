@@ -50,7 +50,8 @@ def get_parameter_legend(param_type, param_name):
         elif param_name == 'pH':
             return [
                 {"color": "#1e8449", "label": "Normal (6.5-9.0)"},
-                {"color": "#ff9800", "label": "Outside Normal Range"}
+                {"color": "#f57c00", "label": "Below Normal (<6.5: Acidic)"},
+                {"color": "#5e35b1", "label": "Above Normal (>9.0: Basic/Alkaline)"}
             ]
         elif param_name == 'soluble_nitrogen':
             return [

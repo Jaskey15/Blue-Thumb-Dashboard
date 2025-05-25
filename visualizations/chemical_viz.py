@@ -12,9 +12,9 @@ logger = setup_logging("chemical_viz", category="visualization")
 COLORS = {
     'Normal': '#1e8449',      # Darker green
     'Caution': '#ff9800',     # Orange
-    'Above Normal': '#ff9800',# Orange
-    'Below Normal': '#ff9800',# Orange
-    'Outside Normal': '#ff9800', # Orange
+    'Above Normal': '#5e35b1', # Purple-blue (Basic/Alkaline)
+    'Below Normal': '#f57c00', # Dark orange-red (Acidic)
+    'Outside Normal': '#ff9800', # Orange (can remove this later)
     'Poor': '#e74c3c',        # Softer red
     'Unknown': '#95a5a6'      # Gray
 }
@@ -44,8 +44,8 @@ PARAMETER_THRESHOLDS = {
     'pH': {
         'ranges': [
             {'min': 6.5, 'max': 9.0, 'status': 'Normal'},
-            {'min': -float('inf'), 'max': 6.5, 'status': 'Outside Normal'},
-            {'min': 9.0, 'max': float('inf'), 'status': 'Outside Normal'}
+            {'min': -float('inf'), 'max': 6.5, 'status': 'Below Normal'},
+            {'min': 9.0, 'max': float('inf'), 'status': 'Above Normal'}
         ]
     },
     'soluble_nitrogen': {
