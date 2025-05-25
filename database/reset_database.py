@@ -47,7 +47,7 @@ def reload_all_data():
     try:        
         # Import all processing modules
         from data_processing.site_processing import process_site_data
-        from data_processing.chemical_processing import run_initial_db_setup as load_chemical_data
+        from data_processing.chemical_processing import load_chemical_data_to_db
         from data_processing.fish_processing import load_fish_data
         from data_processing.macro_processing import load_macroinvertebrate_data
         from data_processing.habitat_processing import load_habitat_data
@@ -64,7 +64,7 @@ def reload_all_data():
         
         # Only proceed with other data processing if sites were loaded successfully
         logger.info("Step 2: Loading chemical data...")
-        chemical_result = load_chemical_data()
+        chemical_result = load_chemical_data_to_db()
         chemical_success = chemical_result is not False and chemical_result is not None
         
         logger.info("Step 3: Loading fish data...")
