@@ -135,6 +135,73 @@ def load_markdown_content(filename, fallback_message=None):
             className="alert alert-danger"
         )
     
+def get_sites_with_data(data_type):
+    """
+    Get a list of site names that have data for the specified data type.
+    
+    Args:
+        data_type: 'chemical', 'fish', 'macro', or 'habitat'
+    
+    Returns:
+        List of site names that have data for the specified type
+    """
+    from database.database import get_connection, close_connection
+    
+    conn = None
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        
+        # Define queries for each data type
+        queries = {
+            'chemical': """
+                SELECT DISTINCT s.site_name 
+                FROM sites s
+                JOIN chemical_collection_events c ON s.site_id = c.site_id
+                JOIN chemical_measurements m ON c.event_id = m.event_id
+                ORDER BY s.site_name
+            """,
+            'fish': """
+                SELECT DISTINCT s.site_name 
+                FROM sites s
+                JOIN fish_collection_events f ON s.site_id = f.site_id
+                JOIN fish_summary_scores fs ON f.event_id = fs.event_id
+                ORDER BY s.site_name
+            """,
+            'macro': """
+                SELECT DISTINCT s.site_name 
+                FROM sites s
+                JOIN macro_collection_events m ON s.site_id = m.site_id
+                JOIN macro_summary_scores ms ON m.event_id = ms.event_id
+                ORDER BY s.site_name
+            """,
+            'habitat': """
+                SELECT DISTINCT s.site_name 
+                FROM sites s
+                JOIN habitat_assessments h ON s.site_id = h.site_id
+                JOIN habitat_summary_scores hs ON h.assessment_id = hs.assessment_id
+                ORDER BY s.site_name
+            """
+        }
+        
+        if data_type not in queries:
+            logger.error(f"Unknown data type: {data_type}")
+            return []
+        
+        cursor.execute(queries[data_type])
+        sites = [row[0] for row in cursor.fetchall()]
+        
+        logger.debug(f"Found {len(sites)} sites with {data_type} data")
+        return sites
+        
+    except Exception as e:
+        logger.error(f"Error getting sites with {data_type} data: {e}")
+        return []
+        
+    finally:
+        if conn:
+            close_connection(conn)
+    
 def create_metrics_accordion(table_component, title, accordion_id):
     """
     Create an accordion layout for a metrics table.

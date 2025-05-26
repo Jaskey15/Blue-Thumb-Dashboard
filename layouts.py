@@ -145,6 +145,91 @@ def create_action_card(icon, title, why_text, tips_list, category=None):
         ])
     ], className=f"action-card mb-4 h-100 {category if category else ''}")
 
+def create_site_selector(selector_id_prefix, data_type):
+    """
+    Create a searchable site selector component.
+    
+    Args:
+        selector_id_prefix: Prefix for component IDs (e.g., "chemical-", "fish-")
+        data_type: Type of data to get sites for ('chemical', 'fish', 'macro', 'habitat')
+    
+    Returns:
+        HTML Div containing the site selector components
+    """
+    return html.Div([
+        # Label
+        html.Label("Select Site:", className="form-label mb-2", style={'fontWeight': 'bold'}),
+        
+        # Search input container
+        html.Div([
+            dcc.Input(
+                id=f"{selector_id_prefix}site-search-input",
+                type="text",
+                placeholder="Type to search for a site...",
+                className="form-control",
+                style={'width': '100%'},
+                debounce=True,  # Prevents too many callbacks while typing
+                value=""
+            ),
+            # Clear button (initially hidden)
+            html.Button(
+                "×",
+                id=f"{selector_id_prefix}site-clear-button",
+                className="btn btn-outline-secondary",
+                style={
+                    'position': 'absolute',
+                    'right': '5px',
+                    'top': '50%',
+                    'transform': 'translateY(-50%)',
+                    'border': 'none',
+                    'background': 'transparent',
+                    'fontSize': '20px',
+                    'display': 'none'  # Initially hidden
+                }
+            )
+        ], style={'position': 'relative', 'marginBottom': '10px'}),
+        
+        # Autocomplete dropdown (initially hidden)
+        html.Div(
+            id=f"{selector_id_prefix}site-dropdown",
+            children=[],
+            style={
+                'display': 'none',
+                'position': 'absolute',
+                'top': '100%',
+                'left': '0',
+                'right': '0',
+                'backgroundColor': 'white',
+                'border': '1px solid #ccc',
+                'borderTop': 'none',
+                'maxHeight': '200px',
+                'overflowY': 'auto',
+                'zIndex': '1000',
+                'boxShadow': '0 2px 4px rgba(0,0,0,0.1)'
+            }
+        ),
+        
+        # Selected site display (initially hidden)
+        html.Div(
+            id=f"{selector_id_prefix}selected-site-display",
+            children=[],
+            style={'display': 'none', 'marginTop': '10px'}
+        ),
+        
+        # Hidden stores for state management
+        dcc.Store(id=f"{selector_id_prefix}selected-site-data", data=None),
+        dcc.Store(id=f"{selector_id_prefix}available-sites", data=data_type),  # Store the data type
+        
+        # Default message when no site is selected
+        html.Div(
+            "Please select a site to view data.",
+            id=f"{selector_id_prefix}no-site-message",
+            className="alert alert-info",
+            style={'textAlign': 'center', 'marginTop': '20px'}
+        )
+        
+    ], style={'position': 'relative', 'marginBottom': '20px'})
+
 def create_dropdown_row(id_value, label_text, options, default_value=None, clearable=False, placeholder=None):
     """
     Create a consistent row layout with a dropdown.
@@ -396,210 +481,176 @@ def create_overview_tab():
         ])
 
 def create_chemical_tab():
-    """
-    Create the layout for the Chemical Data tab.
-    
-    Returns:
-        HTML layout for the Chemical Data tab
-    """
-    try:
-        # Import data processing function
-        from data_processing.chemical_processing import process_chemical_data
-        
-        # Load data for visualizations
-        df_clean, key_parameters, reference_values = process_chemical_data()
-        
-        # Get min/max years for range slider
-        min_year = df_clean['Year'].min()
-        max_year = df_clean['Year'].max()
-        
-        # Create the layout
-        tab_content = html.Div([
-            # Intro text
-            dbc.Row([
-                dbc.Col([
-                    load_markdown_content('chemical/chemical_intro.md')
-                ], width=12)
-            ], className="mb-2 mt-3"),
-            
-            # Parameter dropdown
-            create_dropdown_row(
-                id_value='chemical-parameter-dropdown',
-                label_text='Select Chemical Parameter:',
-                options=CHEMICAL_OPTIONS,
-                default_value='do_percent'  # Default value
-            ),
-            
-            # Year slider
-            dbc.Row([
-                dbc.Col([
-                    html.Label("Select Year Range:"),
-                    dcc.RangeSlider(
-                        id='year-range-slider',
-                        min=min_year,
-                        max=max_year,
-                        value=[min_year, max_year],  # Default to full range
-                        marks={year: str(year) for year in range(min_year, max_year + 1)},
-                        step=None  # Only allow selecting years in marks
-                    )
-                ], width=12)
-            ], className="mb-3"),
-            
-            # Season and month selection
-            create_season_month_selectors(),
-            
-            # Highlight thresholds toggle
-            dbc.Row([
-                dbc.Col([
-                    html.Label(
-                        "Highlight Threshold Violations:", 
-                        style={
-                            "display": "inline-block", 
-                            "vertical-align": "middle", 
-                            "margin-right": "10px"
-                        }
-                    ),
-                    dbc.Switch(
-                        id='highlight-thresholds-switch',
-                        value=True,  # Default to enabled
-                        label="",
-                        style={"display": "inline-block", "vertical-align": "middle"}, 
-                        className="ml-2"
-                    )
-                ], width=12)
-            ], className="mb-4"),
-            
-            # Graph container 
-            dbc.Row([
-                dbc.Col(
-                    html.Div(id='chemical-graph-container'), 
-                    width=12
-                )
-            ], className="mb-2"),
-            
-            # Description/Analysis and Image containers
-            dbc.Row([
-                # Description and Analysis (left column)
-                dbc.Col(
-                    html.Div(id='chemical-explanation-container'),
-                    width=6
-                ),
-                # Image (right column)
-                dbc.Col(
-                    html.Div(
-                        id='chemical-diagram-container', 
-                        className="d-flex align-items-center justify-content-center h-100"
-                    ),
-                    width=6
-                )
-            ])
-        ])
-        
-        return tab_content
-        
-    except Exception as e:
-        print(f"Error creating chemical tab: {e}")
-        return html.Div([
-            html.Div("Error loading chemical tab content", className="alert alert-danger"),
-            html.Pre(str(e), style={"fontSize": "12px"})
-        ])
-
-def create_biological_tab():
-    """
-    Create the layout for the Biological Data tab.
-    
-    Returns:
-        HTML layout for the Biological Data tab
-    """
-    try:
-        # Create the layout
-        tab_content = html.Div([
-            # Intro text
-            dbc.Row([
-                dbc.Col([
-                    load_markdown_content('biological/biological_intro.md')
-                ], width=12)
+    """Create the chemical data tab layout with site selector."""
+    return html.Div([
+        # Description - always visible
+        html.Div([
+            html.H3("Chemical Water Quality", className="mb-3"),
+            html.P([
+                "Chemical monitoring provides valuable insights into the health of aquatic ecosystems, acting as an early warning system for environmental stressors that may not be immediately visible. While chemical data alone cannot fully determine if a stream is healthy, it plays a crucial role in detecting the source of problems that may impact the biological inhabitants of the stream. Chemical parameters can reveal human influences like agricultural runoff, urban development, industrial discharges, and other pollution sources before they cause widespread damage to aquatic communities. The key parameters that Blue Thumb monitors are Dissolved Oxygen, pH, Nitrogen, Phosphorus, and Chloride - each serving as an indicator of different aspects of water quality and potential environmental challenges. By tracking these parameters over time, we can identify trends, detect emerging issues, and guide restoration efforts to maintain or improve the overall health of streams."
             ]),
-            
-            # Dropdown for parameter selection
-            create_dropdown_row(
-                id_value='biological-community-dropdown',
-                label_text='Select Biological Community:',
-                options=BIOLOGICAL_OPTIONS,
-                default_value='fish'  # Default value
-            ),
-            
-            # Container for the biological content - will be updated by callback
-            html.Div(id='biological-content-container')
-            
-        ], className=TAB_STYLES["standard_margin"])
+            html.P("Select a parameter from the dropdown for a description and graph showing the changes over time.")
+        ], className="mb-4"),
         
-        return tab_content
+        # Site selector - always visible
+        create_site_selector("chemical-", "chemical"),
         
-    except Exception as e:
-        print(f"Error creating biological tab: {e}")
-        return html.Div([
-            html.Div("Error loading biological tab content", className="alert alert-danger"),
-            html.Pre(str(e), style={"fontSize": "12px"})
-        ])
-
-def create_habitat_tab():
-    """
-    Create the layout for the Habitat Data tab.
-    
-    Returns:
-        HTML layout for the Habitat Data tab
-    """
-    try:
-        # Import visualization functions
-        from visualizations.habitat_viz import create_habitat_viz, create_habitat_metrics_accordion
-        
-        # Create the layout
-        tab_content = html.Div([
+        # Controls and content - hidden until site is selected
+        html.Div([
+            # Parameter selection and controls
             dbc.Row([
-                # Left column for description
                 dbc.Col([
-                    load_markdown_content('habitat/habitat_intro.md')
+                    html.Label("Select Chemical Parameter:", className="form-label mb-2", style={'fontWeight': 'bold'}),
+                    dcc.Dropdown(
+                        id='chemical-parameter-dropdown',
+                        options=[
+                            {'label': 'All Parameters', 'value': 'all_parameters'},
+                            {'label': 'Dissolved Oxygen', 'value': 'do_percent'},
+                            {'label': 'pH', 'value': 'pH'},
+                            {'label': 'Nitrogen', 'value': 'soluble_nitrogen'},
+                            {'label': 'Phosphorus', 'value': 'Phosphorus'},
+                            {'label': 'Chloride', 'value': 'Chloride'}
+                        ],
+                        value='all_parameters',
+                        className="mb-3"
+                    )
                 ], width=6),
                 
-                # Right column for image
-                create_habitat_image_section()
-            ], className=TAB_STYLES["standard_margin"]),
-            
-            # Graph 
-            dbc.Row([
                 dbc.Col([
-                    dcc.Graph(
-                        id='habitat-graph', 
-                        figure=create_habitat_viz(),
-                        style={'height': '480px'}
+                    html.Label("Select Year Range:", className="form-label mb-2", style={'fontWeight': 'bold'}),
+                    dcc.RangeSlider(
+                        id='year-range-slider',
+                        min=2005,
+                        max=2020,
+                        step=1,
+                        marks={year: str(year) for year in range(2005, 2021, 2)},
+                        value=[2005, 2020],
+                        className="mb-3"
                     )
-                ], width=12)
-            ], className=TAB_STYLES["small_margin"]),
+                ], width=6)
+            ]),
             
-            # Accordion metrics table 
+            # Season and month selection
             dbc.Row([
                 dbc.Col([
-                    create_habitat_metrics_accordion()
-                ], width=12)
-            ], className=TAB_STYLES["small_margin"]),
+                    html.Label("Select Season:", className="form-label mb-2", style={'fontWeight': 'bold'}),
+                    html.Div([
+                        dbc.Button("ALL", id="select-all-months", color="secondary", size="sm", className="me-2 mb-2"),
+                        dbc.Button("SPRING", id="select-spring", color="success", size="sm", className="me-2 mb-2"),
+                        dbc.Button("SUMMER", id="select-summer", color="warning", size="sm", className="me-2 mb-2"),
+                        dbc.Button("FALL", id="select-fall", color="danger", size="sm", className="me-2 mb-2"),
+                        dbc.Button("WINTER", id="select-winter", color="info", size="sm", className="me-2 mb-2")
+                    ])
+                ], width=6),
+                
+                dbc.Col([
+                    html.Label("Select Months:", className="form-label mb-2", style={'fontWeight': 'bold'}),
+                    dcc.Checklist(
+                        id='month-checklist',
+                        options=[
+                            {'label': 'Jan', 'value': 1}, {'label': 'Feb', 'value': 2}, {'label': 'Mar', 'value': 3},
+                            {'label': 'Apr', 'value': 4}, {'label': 'May', 'value': 5}, {'label': 'Jun', 'value': 6},
+                            {'label': 'Jul', 'value': 7}, {'label': 'Aug', 'value': 8}, {'label': 'Sep', 'value': 9},
+                            {'label': 'Oct', 'value': 10}, {'label': 'Nov', 'value': 11}, {'label': 'Dec', 'value': 12}
+                        ],
+                        value=list(range(1, 13)),
+                        inline=True,
+                        className="mb-3"
+                    )
+                ], width=6)
+            ]),
             
-            # Analysis section
+            # Highlight switch
             dbc.Row([
                 dbc.Col([
-                    load_markdown_content('habitat/habitat_analysis.md')
-                ], width=12)
-            ], className=TAB_STYLES["small_margin"])
-        ], className=TAB_STYLES["small_margin"])
+                    html.Label("Highlight Threshold Violations:", className="form-label mb-2", style={'fontWeight': 'bold'}),
+                    dbc.Switch(
+                        id="highlight-thresholds-switch",
+                        value=True,
+                        className="mb-3"
+                    )
+                ], width=6)
+            ]),
+            
+            # Content area
+            dbc.Row([
+                dbc.Col([
+                    html.Div(id='chemical-graph-container')
+                ], width=8),
+                dbc.Col([
+                    html.Div(id='chemical-explanation-container'),
+                    html.Div(id='chemical-diagram-container')
+                ], width=4)
+            ])
+        ], id="chemical-controls-content", style={'display': 'none'})
+    ])
+
+def create_biological_tab():
+    """Create the biological data tab layout with site selector."""
+    return html.Div([
+        # Description - always visible
+        html.Div([
+            html.H3("Biological Assessment", className="mb-3"),
+            html.P([
+                "Biological monitoring provides direct evidence of stream health by examining the living organisms that call these aquatic ecosystems home. Fish and macroinvertebrate communities serve as excellent indicators of overall ecosystem health because they integrate the effects of multiple environmental stressors over time. These communities respond to changes in water quality, habitat structure, and flow patterns, making them sensitive barometers of ecological condition. Blue Thumb's biological assessments include fish community surveys and macroinvertebrate sampling, both of which provide unique insights into different aspects of stream health. Fish communities reflect longer-term conditions and habitat quality, while macroinvertebrates respond more quickly to pollution events and water quality changes."
+            ]),
+            html.P("Select a biological community to explore the assessment data and learn about the species found in Oklahoma streams.")
+        ], className="mb-4"),
         
-        return tab_content
+        # Site selector - always visible
+        create_site_selector("biological-", "fish"),  # Default to fish, but this might need adjustment
         
-    except Exception as e:
-        print(f"Error creating habitat tab: {e}")
-        return html.Div([
-            html.Div("Error loading habitat tab content", className="alert alert-danger"),
-            html.Pre(str(e), style={"fontSize": "12px"})
-        ])
+        # Controls and content - hidden until site is selected
+        html.Div([
+            # Community selection
+            dbc.Row([
+                dbc.Col([
+                    html.Label("Select Biological Community:", className="form-label mb-2", style={'fontWeight': 'bold'}),
+                    dcc.Dropdown(
+                        id='biological-community-dropdown',
+                        options=[
+                            {'label': 'Fish Community', 'value': 'fish'},
+                            {'label': 'Macroinvertebrate Community', 'value': 'macro'}
+                        ],
+                        value='fish',
+                        className="mb-3"
+                    )
+                ], width=6)
+            ]),
+            
+            # Content container
+            html.Div(id='biological-content-container')
+            
+        ], id="biological-controls-content", style={'display': 'none'})
+    ])
+
+def create_habitat_tab():
+    """Create the habitat data tab layout with site selector."""
+    return html.Div([
+        # Description - always visible
+        html.Div([
+            html.H3("Physical Habitat Assessment", className="mb-3"),
+            html.P([
+                "Physical habitat assessment evaluates the structural components of stream ecosystems that provide the foundation for healthy aquatic communities. Habitat quality directly influences the types and abundance of organisms that can survive in a stream environment. Blue Thumb's habitat assessments examine multiple components including streambank stability, riparian vegetation, substrate composition, flow characteristics, and in-stream cover. These physical features determine whether streams can support diverse biological communities and maintain important ecological functions like nutrient cycling, sediment transport, and flood control."
+            ]),
+            html.P("Habitat assessment scores reflect the overall quality of physical stream conditions and their ability to support aquatic life.")
+        ], className="mb-4"),
+        
+        # Site selector - always visible
+        create_site_selector("habitat-", "habitat"),
+        
+        # Content - hidden until site is selected
+        html.Div([
+            dbc.Row([
+                dbc.Col([
+                    html.Div(id='habitat-graph-container')
+                ], width=8),
+                dbc.Col([
+                    html.Div(id='habitat-table-container')
+                ], width=4)
+            ])
+        ], id="habitat-controls-content", style={'display': 'none'})
+    ])
 
 def create_protect_our_streams_tab():
     """
