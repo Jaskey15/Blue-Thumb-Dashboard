@@ -1,5 +1,7 @@
 import pandas as pd
 import plotly.graph_objects as go
+
+from callbacks import get_parameter_name
 from database.database import get_connection, close_connection
 from utils import setup_logging
 
@@ -99,6 +101,15 @@ PARAMETER_LABELS = {
     'Macro_Summer': 'Macroinvertebrate Community (Summer)',
     'Macro_Winter': 'Macroinvertebrate Community (Winter)',
     'Habitat_Grade': 'Habitat Assessment Grade'
+}
+
+# Parameter display names for map hover text
+MAP_PARAMETER_LABELS = {
+    'do_percent': 'Dissolved Oxygen Saturation',
+    'pH': 'pH',
+    'soluble_nitrogen': 'Soluble Nitrogen',
+    'Phosphorus': 'Phosphorus',
+    'Chloride': 'Chloride'
 }
 
 def load_sites_from_database():
@@ -263,11 +274,15 @@ def format_parameter_value(parameter, value):
         return "No data"
         
     if parameter == 'do_percent':
-        return f"{value:.1f}%"
+        return f"{value:.0f}%"  
     elif parameter == 'pH':
-        return f"{value:.1f}"
-    elif parameter in ['soluble_nitrogen', 'Phosphorus', 'Chloride']:
-        return f"{value:.3f} mg/L"
+        return f"{value:.1f}"  
+    elif parameter == 'soluble_nitrogen':
+        return f"{value:.2f} mg/L"  
+    elif parameter == 'Phosphorus':
+        return f"{value:.3f} mg/L"  
+    elif parameter == 'Chloride':
+        return f"{value:.0f} mg/L"  
     else:
         return f"{value}"
 
@@ -390,8 +405,9 @@ def add_data_markers(fig, sites, data_type, parameter_name=None, season=None, fi
             if data_type == 'chemical':
                 status, color = determine_status_by_type('chemical', value, parameter_name)
                 formatted_value = format_parameter_value(parameter_name, value)
+                friendly_name = MAP_PARAMETER_LABELS.get(parameter_name, parameter_name)  # Use custom mapping
                 date_str = pd.to_datetime(site_data[config['date_column']].iloc[0]).strftime('%B %d, %Y')
-                hover_text = f"Site: {site_name}<br>{parameter_name}: {formatted_value}<br>Status: {status}<br>Last reading: {date_str}"
+                hover_text = f"Site: {site_name}<br>{friendly_name}: {formatted_value}<br>Status: {status}<br>Last reading: {date_str}"
             
             elif data_type == 'fish':
                 status, color = determine_status_by_type('fish', value)

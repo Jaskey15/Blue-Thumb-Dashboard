@@ -191,7 +191,7 @@ def create_overview_image_section():
                 caption="The key elements of a healthy stream ecosystem include riparian vegetation, diverse aquatic life, and clean water flow."
             )
         ], className="d-flex align-items-center justify-content-center h-100 flex-column")
-    ], width=6)
+    ], width=6, style={"display": "flex", "align-items": "center"}) 
 
 def create_habitat_image_section():
     """

@@ -125,6 +125,20 @@ def get_parameter_name(parameter):
     """
     return PARAMETER_DISPLAY_NAMES.get(parameter, parameter)
 
+def get_site_count_message(param_type, param_name, sites_with_data, total_sites):
+    """Create custom site count message based on parameter type."""
+    if param_type == 'chem':
+        return f"Showing {sites_with_data} of {total_sites} sites with chemical data"
+    elif param_type == 'bio':
+        if param_name == 'Fish_IBI':
+            return f"Showing {sites_with_data} of {total_sites} sites with fish community data"
+        elif param_name == 'Macro_Summer':
+            return f"Showing {sites_with_data} of {total_sites} sites with macroinvertebrate summer data"
+        elif param_name == 'Macro_Winter':
+            return f"Showing {sites_with_data} of {total_sites} sites with macroinvertebrate winter data"
+    elif param_type == 'habitat':
+        return f"Showing {sites_with_data} of {total_sites} sites with habitat data"
+
 def create_species_display(item):
     """
     Create HTML layout for displaying a species.
@@ -466,7 +480,7 @@ def register_callbacks(app):
             legend_content = [
                 # Site count display
                 html.Div(
-                    f"Showing {sites_with_data} of {total_sites} sites with {param_name.replace('_', ' ').lower()} data",
+                    get_site_count_message(param_type, param_name, sites_with_data, total_sites),
                     className="text-center mb-2",
                     style={"font-weight": "bold", "color": "#666"}
                 ),
