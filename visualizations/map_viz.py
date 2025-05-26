@@ -79,13 +79,13 @@ MACRO_THRESHOLDS = [
     {'min': -float('inf'), 'max': 0.17, 'status': 'Severely Impaired', 'color': COLORS['macro']['severely_impaired']}
 ]
 
-# Habitat assessment thresholds (based on total score)
+# Habitat assessment thresholds (based on total score ranges)
 HABITAT_THRESHOLDS = [
-    {'min': 90, 'max': float('inf'), 'status': 'A', 'color': COLORS['habitat']['a']},
-    {'min': 80, 'max': 90, 'status': 'B', 'color': COLORS['habitat']['b']},
-    {'min': 70, 'max': 80, 'status': 'C', 'color': COLORS['habitat']['c']},
-    {'min': 60, 'max': 70, 'status': 'D', 'color': COLORS['habitat']['d']},
-    {'min': -float('inf'), 'max': 60, 'status': 'F', 'color': COLORS['habitat']['f']}
+    {'min': 0.9, 'max': float('inf'), 'status': 'A', 'color': COLORS['habitat']['a']},
+    {'min': 0.8, 'max': 0.9, 'status': 'B', 'color': COLORS['habitat']['b']},
+    {'min': 0.7, 'max': 0.8, 'status': 'C', 'color': COLORS['habitat']['c']},
+    {'min': 0.6, 'max': 0.7, 'status': 'D', 'color': COLORS['habitat']['d']},
+    {'min': -float('inf'), 'max': 0.6, 'status': 'F', 'color': COLORS['habitat']['f']}
 ]
 
 # Parameter display names
@@ -391,23 +391,23 @@ def add_data_markers(fig, sites, data_type, parameter_name=None, season=None, fi
                 status, color = determine_status_by_type('chemical', value, parameter_name)
                 formatted_value = format_parameter_value(parameter_name, value)
                 date_str = pd.to_datetime(site_data[config['date_column']].iloc[0]).strftime('%B %d, %Y')
-                hover_text = f"{site_name}<br>{parameter_name}: {formatted_value}<br>Status: {status}<br>Last reading: {date_str}"
+                hover_text = f"Site: {site_name}<br>{parameter_name}: {formatted_value}<br>Status: {status}<br>Last reading: {date_str}"
             
             elif data_type == 'fish':
                 status, color = determine_status_by_type('fish', value)
                 year = site_data[config['date_column']].iloc[0]
-                hover_text = f"{site_name}<br>IBI Score: {value:.2f}<br>Status: {status}<br>Last survey: {year}"
+                hover_text = f"Site: {site_name}<br>IBI Score: {value:.2f}<br>Status: {status}<br>Last survey: {year}"
             
             elif data_type == 'macro':
                 status, color = determine_status_by_type('macro', value)
                 year = site_data[config['date_column']].iloc[0]
                 date_str = f"{season} {year}"
-                hover_text = f"{site_name}<br>Bioassessment Score: {value:.2f}<br>Status: {status}<br>Last survey: {date_str}"
+                hover_text = f"Site: {site_name}<br>Bioassessment Score: {value:.2f}<br>Status: {status}<br>Last survey: {date_str}"
             
             elif data_type == 'habitat':
                 status, color = determine_status_by_type('habitat', value)
-                year = site_data[config['date_column']].iloc[0]
-                hover_text = f"{site_name}<br>Habitat Score: {value:.1f}<br>Grade: {status}<br>Last assessment: {year}"
+                year = site_data[config['date_column']].iloc[0]  
+                hover_text = f"Site: {site_name}<br>Habitat Score: {value:.3f}<br>Grade: {status}<br>Last assessment: {year}"
             
             # Add marker with determined color
             fig = add_site_marker(

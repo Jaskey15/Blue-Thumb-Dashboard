@@ -91,11 +91,11 @@ def get_parameter_legend(param_type, param_name):
     # Habitat parameter legends
     elif param_type == 'habitat':
         return [
-            {"color": "#1e8449", "label": "Grade A (> 90)"},
-            {"color": "#7cb342", "label": "Grade B (80-89)"},
-            {"color": "#ff9800", "label": "Grade C (70-79)"},
-            {"color": "#e53e3e", "label": "Grade D (60-69)"},
-            {"color": "#e74c3c", "label": "Grade F (<60)"}
+            {"color": "#1e8449", "label": "Grade A (>0.90)"},
+            {"color": "#7cb342", "label": "Grade B (0.80-0.89)"},
+            {"color": "#ff9800", "label": "Grade C (0.70-0.79)"},
+            {"color": "#e53e3e", "label": "Grade D (0.60-0.69)"},
+            {"color": "#e74c3c", "label": "Grade F (<0.60)"}
         ]
     
     # Default legend if parameter type/name not recognized

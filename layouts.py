@@ -26,7 +26,8 @@ PARAMETER_OPTIONS = [
     {'label': 'Chemical: Chloride', 'value': 'chem:Chloride'},
     {'label': 'Biological: Fish Community', 'value': 'bio:Fish_IBI'},
     {'label': 'Biological: Macroinvertebrate Community (Summer)', 'value': 'bio:Macro_Summer'},
-    {'label': 'Biological: Macroinvertebrate Community (Winter)', 'value': 'bio:Macro_Winter'}
+    {'label': 'Biological: Macroinvertebrate Community (Winter)', 'value': 'bio:Macro_Winter'},
+    {'label': 'Physical: Habitat Scores', 'value': 'habitat:Habitat_Score'}
 ]
 
 # Chemical tab parameter options
@@ -43,6 +44,11 @@ CHEMICAL_OPTIONS = [
 BIOLOGICAL_OPTIONS = [
     {'label': 'Fish Community', 'value': 'fish'},
     {'label': 'Macroinvertebrate Community', 'value': 'macro'},
+]
+
+# Habitat tab parameter options
+HABITAT_OPTIONS = [
+    {'label': 'Habitat', 'value': 'habitat'}
 ]
 
 # Tab styles
