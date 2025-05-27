@@ -1,7 +1,7 @@
 import dash
 import dash_bootstrap_components as dbc
 
-from callbacks import register_callbacks
+from callbacks import register_all_callbacks as register_callbacks
 from dash import html, dcc
 from layouts import (
     create_overview_tab, create_chemical_tab, create_biological_tab,

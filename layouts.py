@@ -600,7 +600,7 @@ def create_biological_tab():
         ], className="mb-4"),
         
         # Site selector - always visible
-        create_site_selector("biological-", "fish"),  # Default to fish, but this might need adjustment
+        create_site_selector("biological-", "biological"),
         
         # Controls and content - hidden until site is selected
         html.Div([

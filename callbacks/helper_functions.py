@@ -1,0 +1,572 @@
+"""
+Helper functions for the Tenmile Creek Water Quality Dashboard callbacks.
+This file contains reusable helper functions used across different callback modules.
+"""
+
+import dash
+import dash_bootstrap_components as dbc
+import plotly.graph_objects as go
+import json
+
+from dash import html, dcc
+from utils import load_markdown_content, create_image_with_caption, get_sites_with_data
+
+from data_definitions import (
+    FISH_DATA, MACRO_DATA, CHEMICAL_DIAGRAMS, CHEMICAL_DIAGRAM_CAPTIONS,
+    PARAMETER_DISPLAY_NAMES, PARAMETER_AXIS_LABELS
+)
+
+# --------------------------------------------------------------------------------------
+# LEGEND AND PARAMETER FUNCTIONS
+# --------------------------------------------------------------------------------------
+
+def get_parameter_legend(param_type, param_name):
+    """
+    Return legend items specific to the selected parameter type and name.
+    
+    Args:
+        param_type: Type of parameter ('chem', 'bio', or 'habitat')
+        param_name: Specific parameter name
+        
+    Returns:
+        List of dictionaries with color and label for each legend item
+    """
+    # Chemical parameter legends
+    if param_type == 'chem':
+        if param_name == 'do_percent':
+            return [
+                {"color": "#1e8449", "label": "Normal (80-130%)"},
+                {"color": "#ff9800", "label": "Caution (50-80% or 130-150%)"},
+                {"color": "#e74c3c", "label": "Poor (<50% or >150%)"}
+            ]
+        elif param_name == 'pH':
+            return [
+                {"color": "#1e8449", "label": "Normal (6.5-9.0)"},
+                {"color": "#f57c00", "label": "Below Normal (<6.5: Acidic)"},
+                {"color": "#5e35b1", "label": "Above Normal (>9.0: Basic/Alkaline)"}
+            ]
+        elif param_name == 'soluble_nitrogen':
+            return [
+                {"color": "#1e8449", "label": "Normal (<0.8 mg/L)"},
+                {"color": "#ff9800", "label": "Caution (0.8-1.5 mg/L)"},
+                {"color": "#e74c3c", "label": "Poor (>1.5 mg/L)"}
+            ]
+        elif param_name == 'Phosphorus':
+            return [
+                {"color": "#1e8449", "label": "Normal (<0.05 mg/L)"},
+                {"color": "#ff9800", "label": "Caution (0.05-0.1 mg/L)"},
+                {"color": "#e74c3c", "label": "Poor (>0.1 mg/L)"}
+            ]
+        elif param_name == 'Chloride':
+            return [
+                {"color": "#1e8449", "label": "Normal (<250 mg/L)"},
+                {"color": "#e74c3c", "label": "Poor (>250 mg/L)"}
+            ]
+    
+    # Biological parameter legends
+    elif param_type == 'bio':
+        if param_name == 'Fish_IBI':
+            return [
+                {"color": "#1e8449", "label": "Excellent (>0.97)"},
+                {"color": "#7cb342", "label": "Good (0.80-0.97)"},
+                {"color": "#ff9800", "label": "Fair (0.67-0.80)"},
+                {"color": "#e74c3c", "label": "Poor (<0.67)"}
+            ]
+        elif param_name.startswith('Macro'):
+            return [
+                {"color": "#1e8449", "label": "Non-impaired (>0.83)"},
+                {"color": "#ff9800", "label": "Slightly Impaired (0.54-0.83)"},
+                {"color": "#f57c00", "label": "Moderately Impaired (0.17-0.54)"},
+                {"color": "#e74c3c", "label": "Severely Impaired (<0.17)"}
+            ]
+    
+    # Habitat parameter legends
+    elif param_type == 'habitat':
+        return [
+            {"color": "#1e8449", "label": "Grade A (>0.90)"},
+            {"color": "#7cb342", "label": "Grade B (0.80-0.89)"},
+            {"color": "#ff9800", "label": "Grade C (0.70-0.79)"},
+            {"color": "#e53e3e", "label": "Grade D (0.60-0.69)"},
+            {"color": "#e74c3c", "label": "Grade F (<0.60)"}
+        ]
+    
+    # Default legend if parameter type/name not recognized
+    return [{"color": "red", "label": "Monitoring Site"}]
+
+def get_parameter_label(parameter):
+    """
+    Return appropriate Y-axis label for a given parameter.
+    
+    Args:
+        parameter: Parameter code
+        
+    Returns:
+        String with formatted label for the y-axis
+    """
+    return PARAMETER_AXIS_LABELS.get(parameter, parameter)
+
+def get_parameter_name(parameter):
+    """
+    Convert parameter code to human-readable name for explanations lookup.
+    
+    Args:
+        parameter: Parameter code
+        
+    Returns:
+        Human-readable name for the parameter
+    """
+    return PARAMETER_DISPLAY_NAMES.get(parameter, parameter)
+
+def get_site_count_message(param_type, param_name, sites_with_data, total_sites):
+    """Create custom site count message based on parameter type."""
+    if param_type == 'chem':
+        return f"Showing {sites_with_data} of {total_sites} sites with chemical data"
+    elif param_type == 'bio':
+        if param_name == 'Fish_IBI':
+            return f"Showing {sites_with_data} of {total_sites} sites with fish community data"
+        elif param_name == 'Macro_Summer':
+            return f"Showing {sites_with_data} of {total_sites} sites with macroinvertebrate summer data"
+        elif param_name == 'Macro_Winter':
+            return f"Showing {sites_with_data} of {total_sites} sites with macroinvertebrate winter data"
+    elif param_type == 'habitat':
+        return f"Showing {sites_with_data} of {total_sites} sites with habitat data"
+
+# --------------------------------------------------------------------------------------
+# SITE DROPDOWN FUNCTIONS
+# --------------------------------------------------------------------------------------
+
+def update_site_dropdown(search_value, data_type, selected_site_data):
+    """
+    Helper function to update site dropdown for any tab.
+    
+    Args:
+        search_value: Current search input value
+        data_type: Type of data ('chemical', 'fish', 'macro', 'habitat')
+        selected_site_data: Currently selected site (None if no selection)
+    
+    Returns:
+        Tuple of (dropdown_children, dropdown_style)
+    """
+    # If search is empty or too short, hide dropdown
+    if not search_value or len(search_value) < 1:
+        return [], _get_dropdown_style(display='none')
+    
+    # If user has selected a site and the search value matches exactly, don't show dropdown
+    if selected_site_data and search_value.strip() == selected_site_data.strip():
+        return [], _get_dropdown_style(display='none')
+    
+    # Get available sites for this data type
+    available_sites = get_sites_with_data(data_type)
+    
+    # Filter and sort sites
+    matching_sites = _filter_and_sort_sites(search_value, available_sites)
+    
+    # If no matches, show "no results"
+    if not matching_sites:
+        return [_create_no_results_item()], _get_dropdown_style(display='block')
+    
+    # Create dropdown items
+    dropdown_items = [
+        _create_dropdown_item(site, data_type) for site in matching_sites
+    ]
+    
+    return dropdown_items, _get_dropdown_style(display='block')
+
+def update_site_dropdown_with_sites(search_value, available_sites, selected_site_data, tab_name='biological'):
+    """
+    Helper function to update site dropdown when you have a custom list of sites.
+    
+    Args:
+        search_value: Current search input value
+        available_sites: List of site names to search through
+        selected_site_data: Currently selected site (None if no selection)
+        tab_name: Tab name for the dropdown items (default: 'biological')
+    
+    Returns:
+        Tuple of (dropdown_children, dropdown_style)
+    """
+    # If search is empty or too short, hide dropdown
+    if not search_value or len(search_value) < 1:
+        return [], _get_dropdown_style(display='none')
+    
+    # If user has selected a site and the search value matches exactly, don't show dropdown
+    if selected_site_data and search_value.strip() == selected_site_data.strip():
+        return [], _get_dropdown_style(display='none')
+    
+    # Filter and sort sites
+    matching_sites = _filter_and_sort_sites(search_value, available_sites)
+    
+    # If no matches, show "no results"
+    if not matching_sites:
+        return [_create_no_results_item()], _get_dropdown_style(display='block')
+    
+    # Create dropdown items
+    dropdown_items = [
+        _create_dropdown_item(site, tab_name) for site in matching_sites
+    ]
+    
+    return dropdown_items, _get_dropdown_style(display='block')
+
+def handle_site_selection(site_clicks, clear_clicks, current_site, tab_prefix):
+    """
+    Helper function to handle site selection for any tab.
+    
+    Args:
+        site_clicks: List of click counts for site options
+        clear_clicks: Number of clicks on clear button
+        current_site: Currently selected site
+        tab_prefix: Prefix for the tab (e.g., 'chemical', 'biological')
+    
+    Returns:
+        Tuple of (selected_site_data, search_input_value, clear_button_style, 
+                 no_site_message_style, controls_content_style)
+    """
+    ctx = dash.callback_context
+    
+    # If clear button was clicked
+    if ctx.triggered and f'{tab_prefix}-site-clear-button' in ctx.triggered[0]['prop_id']:
+        return (
+            None,  # selected-site-data (clear it)
+            "",    # search input value (clear it)
+            {'display': 'none'},  # clear button style (hide it)
+            {'display': 'block', 'textAlign': 'center', 'marginTop': '20px'}, # no-site-message style (show it)
+            {'display': 'none'}   # controls-content style (hide it)
+        )
+    
+    # If a site option was clicked
+    if ctx.triggered and 'site-option' in str(ctx.triggered[0]['prop_id']):
+        # Find which site was clicked
+        triggered_id = ctx.triggered[0]['prop_id']
+        site_id = json.loads(triggered_id.split('.')[0])
+        selected_site = site_id['index']
+        
+        return (
+            selected_site,  # selected-site-data
+            selected_site,  # search input value (show selected site name)
+            {'display': 'block', 'position': 'absolute', 'right': '5px', 'top': '50%', 'transform': 'translateY(-50%)', 'border': 'none', 'background': 'transparent', 'fontSize': '20px'},  # clear button style (show it)
+            {'display': 'none'},   # no-site-message style (hide it)
+            {'display': 'block'}   # controls-content style (show controls)
+        )
+    
+    # No change
+    return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
+
+# --------------------------------------------------------------------------------------
+# CONTENT DISPLAY FUNCTIONS
+# --------------------------------------------------------------------------------------
+
+def create_species_display(item):
+    """
+    Create HTML layout for displaying a species.
+    
+    Args:
+        item: Dictionary with species information (name, image, description)
+        
+    Returns:
+        Dash HTML component for displaying the species
+    """
+    return html.Div([
+        # Image container with fixed height
+        html.Div(
+            html.Img(
+                src=item['image'],
+                style={'max-height': '300px', 'object-fit': 'contain', 'max-width': '100%'}
+            ),
+            style={
+                'height': '300px',  
+                'display': 'flex',
+                'align-items': 'center',
+                'justify-content': 'center'
+            }
+        ),
+        # Text container with fixed height
+        html.Div([
+            html.H5(item['name'], className="mt-3"),
+            html.P(item['description'], className="mt-2")
+        ], style={'min-height': '80px'})
+    ], style={'min-height': '400px'})
+
+def create_gallery_navigation_callback(gallery_type):
+    """
+    Create a callback function for species gallery navigation.
+    
+    Args:
+        gallery_type: Gallery type ('fish' or 'macro')
+        
+    Returns:
+        Function that handles gallery navigation for the specified type
+    """
+    # Get the appropriate data based on gallery type
+    data = FISH_DATA if gallery_type == 'fish' else MACRO_DATA
+    
+    def update_gallery(prev_clicks, next_clicks, current_index):
+        """
+        Update gallery based on previous/next button clicks.
+        
+        Args:
+            prev_clicks: Number of clicks on previous button
+            next_clicks: Number of clicks on next button
+            current_index: Current index in the gallery
+            
+        Returns:
+            Tuple of (gallery_display, new_index)
+        """
+        ctx = dash.callback_context
+        
+        # If no buttons clicked yet, show the first item
+        if not ctx.triggered:
+            return create_species_display(data[0]), 0
+        
+        # Determine which button was clicked
+        button_id = ctx.triggered[0]['prop_id'].split('.')[0]
+        
+        # Calculate new index based on which button was clicked
+        if f'prev-{gallery_type}-button' in button_id:
+            new_index = (current_index - 1) % len(data)
+        else:  # next button
+            new_index = (current_index + 1) % len(data)
+        
+        # Get the data for the new index
+        item = data[new_index]
+        
+        # Create the display for the current item
+        return create_species_display(item), new_index
+    
+    return update_gallery
+
+def create_all_parameters_view(df_filtered, key_parameters, reference_values, highlight_thresholds):
+    """
+    Create a dashboard view showing all chemical parameters.
+    
+    Args:
+        df_filtered: Filtered dataframe with chemical data
+        key_parameters: List of key parameters to display
+        reference_values: Dictionary of reference values for parameters
+        highlight_thresholds: Boolean indicating whether to highlight threshold violations
+        
+    Returns:
+        Dash HTML component with the dashboard graph
+    """
+    from visualizations.chemical_viz import create_parameter_dashboard
+    
+    try:
+        fig = create_parameter_dashboard(
+            df_filtered, 
+            key_parameters, 
+            reference_values, 
+            highlight_thresholds, 
+            get_parameter_name
+        )
+        
+        return html.Div([
+            dcc.Graph(
+                figure=fig,
+                style={'width': '100%', 'height': '100%'}
+            )
+        ], className="mb-4")
+        
+    except Exception as e:
+        print(f"Error creating parameter dashboard: {e}")
+        return html.Div([
+            html.Div("Error creating parameter dashboard", className="alert alert-danger"),
+            html.Pre(str(e), style={"fontSize": "12px"})
+        ])
+
+def create_single_parameter_view(df_filtered, parameter, reference_values, highlight_thresholds):
+    """
+    Create a view for a single chemical parameter with graph, explanation, and diagram.
+    
+    Args:
+        df_filtered: Filtered dataframe with chemical data
+        parameter: Parameter code to display
+        reference_values: Dictionary of reference values for parameters
+        highlight_thresholds: Boolean indicating whether to highlight threshold violations
+        
+    Returns:
+        Tuple of (graph, explanation, diagram) components
+    """
+    from visualizations.chemical_viz import create_time_series_plot
+    
+    try:
+        # Get parameter name and prepare components
+        parameter_name = get_parameter_name(parameter)
+        
+        # Create graph component
+        graph = html.Div([
+            dcc.Graph(
+                figure=create_time_series_plot(
+                    df_filtered, 
+                    parameter, 
+                    reference_values,
+                    title=f"{parameter_name} Over Time",
+                    y_label=get_parameter_label(parameter),
+                    highlight_thresholds=highlight_thresholds
+                ),
+                style={'height': '450px'}
+            )
+        ])
+        
+        # Get description and analysis text from markdown file
+        file_path = f"chemical/{parameter_name.lower().replace(' ', '_')}.md"
+        explanation_component = load_markdown_content(file_path)
+        
+        # Create diagram component if available
+        if parameter in CHEMICAL_DIAGRAMS:
+            diagram_component = html.Div([
+                create_image_with_caption(
+                    src=CHEMICAL_DIAGRAMS[parameter],
+                    caption=CHEMICAL_DIAGRAM_CAPTIONS.get(parameter, "")
+                )
+            ], className="d-flex h-100 align-items-center justify-content-center")
+        else:
+            diagram_component = html.Div(
+                "No diagram available for this parameter.", 
+                className="d-flex h-100 align-items-center justify-content-center"
+            )
+        
+        return graph, explanation_component, diagram_component
+        
+    except Exception as e:
+        print(f"Error creating single parameter view for {parameter}: {e}")
+        error_component = html.Div([
+            html.Div(f"Error creating view for {parameter}", className="alert alert-danger"),
+            html.Pre(str(e), style={"fontSize": "12px"})
+        ])
+        return error_component, html.Div(), html.Div()
+
+def create_biological_community_display(selected_community, selected_site):
+    """
+    Create a display for biological community data with description, gallery, and metrics.
+    
+    Args:
+        selected_community: Community type ('fish' or 'macro')
+        selected_site: Selected site name
+        
+    Returns:
+        Dash HTML component with the complete community display
+    """
+    try:
+        # Import required functions for visualization
+        if selected_community == 'fish':
+            from visualizations.fish_viz import create_fish_viz, create_fish_metrics_accordion
+            viz_function = lambda: create_fish_viz()  # You'll need to modify these to accept site parameter
+            metrics_function = lambda: create_fish_metrics_accordion()
+        elif selected_community == 'macro':
+            from visualizations.macro_viz import create_macro_viz, create_macro_metrics_accordion
+            viz_function = lambda: create_macro_viz()
+            metrics_function = lambda: create_macro_metrics_accordion()
+        else:
+            return html.Div("Please select a valid biological community from the dropdown.")
+        
+        # Import gallery creation function
+        from layouts import create_species_gallery
+            
+        # Create unified layout for the community
+        content = html.Div([
+            # First row: Description on left, gallery on right
+            dbc.Row([
+                # Left column: Description
+                dbc.Col([
+                    load_markdown_content(f"biological/{selected_community}_description.md")
+                ], width=6),
+                
+                # Right column: Species gallery
+                dbc.Col([
+                    create_species_gallery(selected_community)
+                ], width=6, className="d-flex align-items-center"),
+            ]),
+            
+            # Second row: Graph (full width)
+            dbc.Row([
+                dbc.Col([
+                    dcc.Graph(figure=viz_function())
+                ], width=12)
+            ], className="mt-4"),
+            
+            # Third row: Accordion section for metrics tables
+            dbc.Row([
+                dbc.Col([
+                    metrics_function()
+                ], width=12)
+            ], className="mt-4"),
+            
+            # Fourth row: Analysis section
+            dbc.Row([
+                dbc.Col([
+                    load_markdown_content(f"biological/{selected_community}_analysis.md")
+                ], width=12)
+            ], className="mt-4"),
+        ])
+        
+        return content
+        
+    except Exception as e:
+        print(f"Error creating biological display for {selected_community}: {e}")
+        return html.Div([
+            html.Div(f"Error creating biological display", className="alert alert-danger"),
+            html.Pre(str(e), style={"fontSize": "12px"})
+        ])
+
+# --------------------------------------------------------------------------------------
+# PRIVATE HELPER FUNCTIONS
+# --------------------------------------------------------------------------------------
+
+def _get_dropdown_style(display='block'):
+    """Get consistent dropdown styling."""
+    return {
+        'display': display, 
+        'position': 'absolute', 
+        'top': '100%', 
+        'left': '0', 
+        'right': '0', 
+        'backgroundColor': 'white', 
+        'border': '1px solid #ccc', 
+        'borderTop': 'none', 
+        'maxHeight': '200px', 
+        'overflowY': 'auto', 
+        'zIndex': '1000', 
+        'boxShadow': '0 2px 4px rgba(0,0,0,0.1)'
+    }
+
+def _filter_and_sort_sites(search_value, available_sites):
+    """Filter and sort sites based on search value."""
+    search_lower = search_value.lower()
+    matching_sites = [
+        site for site in available_sites 
+        if search_lower in site.lower()
+    ]
+    
+    # Sort by relevance: sites that start with the search term first
+    def sort_key(site):
+        site_lower = site.lower()
+        if site_lower.startswith(search_lower):
+            return (0, site)  # Starts with - highest priority
+        else:
+            return (1, site)  # Contains - lower priority
+    
+    matching_sites.sort(key=sort_key)
+    
+    # Limit to 10 results
+    return matching_sites[:10]
+
+def _create_no_results_item():
+    """Create a 'no results' dropdown item."""
+    return html.Div(
+        "No sites found",
+        className="dropdown-item disabled",
+        style={'padding': '8px 12px', 'color': '#6c757d'}
+    )
+
+def _create_dropdown_item(site, tab_name):
+    """Create a dropdown item for a site."""
+    return html.Div(
+        site,
+        className="dropdown-item",
+        id={'type': 'site-option', 'index': site, 'tab': tab_name},
+        style={
+            'padding': '8px 12px',
+            'cursor': 'pointer',
+            'borderBottom': '1px solid #eee'
+        },
+        n_clicks=0
+    )
