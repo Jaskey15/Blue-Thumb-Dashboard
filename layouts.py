@@ -168,7 +168,7 @@ def create_site_selector(selector_id_prefix, data_type):
                 placeholder="Type to search for a site...",
                 className="form-control",
                 style={'width': '100%'},
-                debounce=True,  # Prevents too many callbacks while typing
+                debounce=False,
                 value=""
             ),
             # Clear button (initially hidden)
@@ -184,7 +184,7 @@ def create_site_selector(selector_id_prefix, data_type):
                     'border': 'none',
                     'background': 'transparent',
                     'fontSize': '20px',
-                    'display': 'none'  # Initially hidden
+                    'display': 'none'
                 }
             )
         ], style={'position': 'relative', 'marginBottom': '10px'}),
@@ -209,16 +209,9 @@ def create_site_selector(selector_id_prefix, data_type):
             }
         ),
         
-        # Selected site display (initially hidden)
-        html.Div(
-            id=f"{selector_id_prefix}selected-site-display",
-            children=[],
-            style={'display': 'none', 'marginTop': '10px'}
-        ),
-        
         # Hidden stores for state management
         dcc.Store(id=f"{selector_id_prefix}selected-site-data", data=None),
-        dcc.Store(id=f"{selector_id_prefix}available-sites", data=data_type),  # Store the data type
+        dcc.Store(id=f"{selector_id_prefix}available-sites", data=data_type),
         
         # Default message when no site is selected
         html.Div(
@@ -489,7 +482,7 @@ def create_chemical_tab():
             html.P([
                 "Chemical monitoring provides valuable insights into the health of aquatic ecosystems, acting as an early warning system for environmental stressors that may not be immediately visible. While chemical data alone cannot fully determine if a stream is healthy, it plays a crucial role in detecting the source of problems that may impact the biological inhabitants of the stream. Chemical parameters can reveal human influences like agricultural runoff, urban development, industrial discharges, and other pollution sources before they cause widespread damage to aquatic communities. The key parameters that Blue Thumb monitors are Dissolved Oxygen, pH, Nitrogen, Phosphorus, and Chloride - each serving as an indicator of different aspects of water quality and potential environmental challenges. By tracking these parameters over time, we can identify trends, detect emerging issues, and guide restoration efforts to maintain or improve the overall health of streams."
             ]),
-            html.P("Select a parameter from the dropdown for a description and graph showing the changes over time.")
+            html.P("Select a site and parameter from the dropdowns for a description and graph showing the changes over time.")
         ], className="mb-4"),
         
         # Site selector - always visible
@@ -497,25 +490,28 @@ def create_chemical_tab():
         
         # Controls and content - hidden until site is selected
         html.Div([
-            # Parameter selection and controls
+            # Parameter selection - full row
             dbc.Row([
                 dbc.Col([
                     html.Label("Select Chemical Parameter:", className="form-label mb-2", style={'fontWeight': 'bold'}),
                     dcc.Dropdown(
                         id='chemical-parameter-dropdown',
                         options=[
-                            {'label': 'All Parameters', 'value': 'all_parameters'},
                             {'label': 'Dissolved Oxygen', 'value': 'do_percent'},
                             {'label': 'pH', 'value': 'pH'},
                             {'label': 'Nitrogen', 'value': 'soluble_nitrogen'},
                             {'label': 'Phosphorus', 'value': 'Phosphorus'},
-                            {'label': 'Chloride', 'value': 'Chloride'}
+                            {'label': 'Chloride', 'value': 'Chloride'},
+                            {'label': 'All Parameters', 'value': 'all_parameters'}
                         ],
-                        value='all_parameters',
+                        value='do_percent',
                         className="mb-3"
                     )
-                ], width=6),
-                
+                ], width=12)
+            ]),
+            
+            # Year range 
+            dbc.Row([
                 dbc.Col([
                     html.Label("Select Year Range:", className="form-label mb-2", style={'fontWeight': 'bold'}),
                     dcc.RangeSlider(
@@ -527,7 +523,7 @@ def create_chemical_tab():
                         value=[2005, 2020],
                         className="mb-3"
                     )
-                ], width=6)
+                ], width=12)  
             ]),
             
             # Season and month selection
@@ -572,15 +568,21 @@ def create_chemical_tab():
                 ], width=6)
             ]),
             
-            # Content area
+            # Graph 
             dbc.Row([
                 dbc.Col([
                     html.Div(id='chemical-graph-container')
-                ], width=8),
+                ], width=12)
+            ], className="mb-4"),
+            
+            # Description and diagram 
+            dbc.Row([
                 dbc.Col([
-                    html.Div(id='chemical-explanation-container'),
+                    html.Div(id='chemical-explanation-container')
+                ], width=6),  
+                dbc.Col([
                     html.Div(id='chemical-diagram-container')
-                ], width=4)
+                ], width=6)  
             ])
         ], id="chemical-controls-content", style={'display': 'none'})
     ])

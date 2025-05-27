@@ -146,6 +146,9 @@ def get_sites_with_data(data_type):
         List of site names that have data for the specified type
     """
     from database.database import get_connection, close_connection
+
+    # Set up logger for this function
+    logger = setup_logging("get_sites_with_data", category="utils")
     
     conn = None
     try:
