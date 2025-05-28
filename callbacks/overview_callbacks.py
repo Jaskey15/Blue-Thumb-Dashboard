@@ -8,8 +8,11 @@ import plotly.graph_objects as go
 from dash import html
 from dash.dependencies import Input, Output, State
 
-from .helper_functions import get_parameter_legend, get_site_count_message
+from utils import setup_logging
+from .helper_functions import get_parameter_name, get_parameter_legend, get_site_count_message
 
+# Configure logging
+logger = setup_logging("overview_callbacks", category="callbacks")
 
 def register_overview_callbacks(app):
     """Register all callbacks for the overview tab."""

@@ -1,16 +1,20 @@
 """
-Callbacks package for the Tenmile Creek Water Quality Dashboard.
+Main callback registration for the Tenmile Creek Water Quality Dashboard.
+This file orchestrates all callbacks from different modules.
 """
 
-from .callbacks import register_callbacks
 from .overview_callbacks import register_overview_callbacks
-from .helper_functions import (
-    get_parameter_name, get_parameter_label, get_parameter_legend,
-    get_site_count_message
-)
+from .chemical_callbacks import register_chemical_callbacks
+from .biological_callbacks import register_biological_callbacks
+from .habitat_callbacks import register_habitat_callbacks
+from .shared_callbacks import register_shared_callbacks
 
-# This is the main function that app.py will call
-def register_all_callbacks(app):
+def register_callbacks(app):
     """Register all callbacks for the dashboard."""
-    register_callbacks(app)
+    
+    # Register callbacks from all modules
     register_overview_callbacks(app)
+    register_chemical_callbacks(app)
+    register_biological_callbacks(app)
+    register_habitat_callbacks(app)
+    register_shared_callbacks(app)

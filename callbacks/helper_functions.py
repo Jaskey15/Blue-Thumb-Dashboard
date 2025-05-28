@@ -9,12 +9,15 @@ import plotly.graph_objects as go
 import json
 
 from dash import html, dcc
-from utils import load_markdown_content, create_image_with_caption, get_sites_with_data
+from utils import load_markdown_content, create_image_with_caption, get_sites_with_data, setup_logging
 
 from data_definitions import (
     FISH_DATA, MACRO_DATA, CHEMICAL_DIAGRAMS, CHEMICAL_DIAGRAM_CAPTIONS,
     PARAMETER_DISPLAY_NAMES, PARAMETER_AXIS_LABELS
 )
+
+# Configure logging
+logger = setup_logging("helper_callbacks", category="callbacks")
 
 # --------------------------------------------------------------------------------------
 # LEGEND AND PARAMETER FUNCTIONS
