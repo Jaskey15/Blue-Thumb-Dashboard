@@ -488,7 +488,7 @@ def create_basic_site_map():
         
         # Add all sites as basic blue markers
         for site in MONITORING_SITES:
-            hover_text = (f"{site['name']}<br>"
+            hover_text = (f"Site: {site['name']}<br>"
                          f"County: {site['county']}<br>"
                          f"River Basin: {site['river_basin']}<br>"
                          f"Ecoregion: {site['ecoregion']}")
@@ -536,6 +536,9 @@ def create_basic_site_map():
                 )
             ]
         )
+
+        # Add title 
+        fig.update_layout(title=dict(text="Monitoring Sites", x=0.5, y=0.98))
         
         return fig
     

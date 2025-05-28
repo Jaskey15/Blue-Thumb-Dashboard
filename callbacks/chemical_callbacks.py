@@ -7,9 +7,7 @@ import json
 import dash
 from dash import html, Input, Output, State, ALL
 from utils import setup_logging
-from cache_utils import (
-    get_cache_key, get_cached_data, set_cache_data, clear_expired_cache
-)
+# REMOVED: cache_utils_future imports - caching disabled for now
 from data_definitions import SEASON_MONTHS
 from .helper_functions import (
     create_all_parameters_view, create_single_parameter_view
@@ -110,23 +108,21 @@ def register_chemical_callbacks(app):
             {'display': 'block'}  # Show controls
         )
 
-    # Main display callback (update the Input to use the new selected site store)
+    # Main display callback - SIMPLIFIED: No caching, direct data processing
     @app.callback(
         [Output('chemical-graph-container', 'children'),
          Output('chemical-explanation-container', 'children'),
-         Output('chemical-diagram-container', 'children'),
-         Output('chemical-data-cache', 'data')],  
+         Output('chemical-diagram-container', 'children')],
         [Input('chemical-parameter-dropdown', 'value'),
          Input('year-range-slider', 'value'),
          Input('month-checklist', 'value'),
          Input('highlight-thresholds-switch', 'value'),
-         Input('chemical-selected-site', 'data')],  # Changed to use the store
-        [State('chemical-data-cache', 'data')]
+         Input('chemical-selected-site', 'data')]
     )
-    def update_chemical_display(selected_parameter, year_range, selected_months, highlight_thresholds, selected_site, cache_data):
+    def update_chemical_display(selected_parameter, year_range, selected_months, highlight_thresholds, selected_site):
         """
         Update chemical parameter graph and explanations based on user selections.
-        Now includes site filtering and caching for improved performance.
+        SIMPLIFIED: Direct data processing without caching.
         """
         try:
             # If no site selected, return empty
@@ -134,29 +130,11 @@ def register_chemical_callbacks(app):
                return html.Div([
                    html.Div("Please search for and select a site to view data.", 
                            className="alert alert-info")
-               ]), html.Div(), html.Div(), cache_data or {}
+               ]), html.Div(), html.Div()
 
             logger.info(f"Processing chemical data for site: {selected_site}")
             
-            # Clean expired cache entries periodically
-            cache_data = clear_expired_cache(cache_data)
-            
-            # Generate cache key for this specific request (include site)
-            cache_key = get_cache_key("chemical", f"{selected_site}_{selected_parameter or 'all_parameters'}")
-            
-            # Check if we have valid cached data for this parameter and site
-            cached_result = get_cached_data(cache_data, cache_key)
-            if cached_result is not None:
-                # Cache hit! Return cached components
-                graph_component = cached_result.get('graph')
-                explanation_component = cached_result.get('explanation') 
-                diagram_component = cached_result.get('diagram')
-                
-                if all([graph_component, explanation_component, diagram_component]):
-                    logger.info(f"Using cached data for {selected_site}")
-                    return graph_component, explanation_component, diagram_component, cache_data
-            
-            # Cache miss - need to fetch fresh data
+            # DIRECT DATA PROCESSING - no cache checking
             from data_processing.chemical_processing import process_chemical_data
             
             # Get and filter chemical data by site
@@ -168,7 +146,7 @@ def register_chemical_callbacks(app):
                     html.Div(f"No chemical data available for site: {selected_site}", 
                             className="alert alert-warning")
                 ])
-                return no_data_message, html.Div(), html.Div(), cache_data or {}
+                return no_data_message, html.Div(), html.Div()
             
             # Filter by year range 
             year_min, year_max = year_range
@@ -184,7 +162,7 @@ def register_chemical_callbacks(app):
                     html.Div("No data available for the selected time range.", 
                             className="alert alert-warning")
                 ])
-                return no_data_message, html.Div(), html.Div(), cache_data
+                return no_data_message, html.Div(), html.Div()
             
             # Handle "all parameters" view differently 
             if selected_parameter == 'all_parameters':
@@ -205,16 +183,9 @@ def register_chemical_callbacks(app):
                     highlight_thresholds
                 )
             
-            # Cache the results for future use
-            cache_result = {
-                'graph': graph_component,
-                'explanation': explanation_component,
-                'diagram': diagram_component
-            }
-            cache_data = set_cache_data(cache_data, cache_key, cache_result)
-            
+            # DIRECT RETURN - no cache storage
             logger.info(f"Successfully processed chemical data for {selected_site}")
-            return graph_component, explanation_component, diagram_component, cache_data
+            return graph_component, explanation_component, diagram_component
             
         except Exception as e:
             logger.error(f"Error updating chemical display: {e}")
@@ -222,7 +193,7 @@ def register_chemical_callbacks(app):
                 html.Div("Error updating chemical display", className="alert alert-danger"),
                 html.Pre(str(e), style={"fontSize": "12px"})
             ])
-            return error_message, html.Div(), html.Div(), cache_data or {}
+            return error_message, html.Div(), html.Div()
 
     # Month selection callback
     @app.callback(

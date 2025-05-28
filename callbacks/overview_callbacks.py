@@ -34,7 +34,7 @@ def register_overview_callbacks(app):
         try:
             from visualizations.map_viz import create_basic_site_map
             
-            # Create basic map with blue markers
+            # Create basic map with blue markers - NO CACHING, direct call
             basic_map = create_basic_site_map()
             
             # Enable the parameter dropdown now that map is loaded
@@ -46,7 +46,7 @@ def register_overview_callbacks(app):
             return basic_map, dropdown_disabled, legend_html
             
         except Exception as e:
-            print(f"Error loading basic map: {e}")
+            logger.error(f"Error loading basic map: {e}")  # Using logger instead of print
             
             # Return empty map and keep dropdown disabled
             empty_map = {
@@ -89,7 +89,7 @@ def register_overview_callbacks(app):
             else:
                 fig = create_basic_site_map()
             
-            # Add parameter-specific colors and get site counts
+            # Add parameter-specific colors and get site counts - NO CACHING, direct call
             updated_map, sites_with_data, total_sites = add_parameter_colors_to_map(fig, param_type, param_name)
             
             # Create appropriate legend based on parameter type and name (excluding "No data")
@@ -120,7 +120,7 @@ def register_overview_callbacks(app):
             return updated_map, legend_html
             
         except Exception as e:
-            print(f"Error updating map with parameter selection: {e}")
+            logger.error(f"Error updating map with parameter selection: {e}")  # Using logger instead of print
             return dash.no_update, html.Div(
                 html.Div("Error updating map. Please try again.", className="text-danger"),
                 className="text-center mt-2 mb-4"
