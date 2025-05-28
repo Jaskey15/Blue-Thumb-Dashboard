@@ -646,79 +646,64 @@ def create_biological_tab():
     ])
 
 def create_habitat_tab():
-    """Create the habitat data tab layout with simple search functionality."""
+    """Create the habitat assessment tab with site search functionality."""
     return html.Div([
-        # Description - always visible
-        html.Div([
-            html.H3("Physical Habitat Assessment", className="mb-3"),
-            html.P([
-                "Physical habitat assessment evaluates the structural components of stream ecosystems that provide the foundation for healthy aquatic communities. Habitat quality directly influences the types and abundance of organisms that can survive in a stream environment. Blue Thumb's habitat assessments examine multiple components including streambank stability, riparian vegetation, substrate composition, flow characteristics, and in-stream cover. These physical features determine whether streams can support diverse biological communities and maintain important ecological functions like nutrient cycling, sediment transport, and flood control."
-            ]),
-            html.P([
-                "You can find site names and locations on the ",
-                html.A("Overview tab", href="#", style={"text-decoration": "underline"}),
-                ". Search for a site below to begin analysis."
-            ])
+        # Description section with two-column layout
+        dbc.Row([
+            # Left column - intro text
+            dbc.Col([
+                load_markdown_content("habitat/habitat_intro.md", 
+                                    fallback_message="Habitat assessment information is currently unavailable.")
+            ], width=6),
+            
+            # Right column - image
+            dbc.Col([
+                html.Img(
+                    src="/assets/images/stream_habitat_diagram.jpg",
+                    className="img-fluid",
+                    style={'width': '100%', 'height': 'auto'},
+                    alt="Stream habitat diagram showing riffle, run, and pool features"
+                )
+            ], width=6)
         ], className="mb-4"),
         
-        # Site search section
-        html.Div([
-            html.Label("Select Site:", className="form-label mb-2", style={'fontWeight': 'bold'}),
-            
-            # Search input with button
-            html.Div([
+        # Site search section (clean, no card wrapper)
+        dbc.Row([
+            dbc.Col([
+                html.H5("Select a Site", className="mb-3"),
+                
+                # Search input and button
                 dbc.InputGroup([
                     dbc.Input(
-                        id='habitat-search-input',
-                        placeholder="Type to search for a site...",
+                        id="habitat-search-input",
+                        placeholder="Enter site name (e.g., Tenmile, Boggy, Blue)",
                         type="text",
-                        value=""
+                        className="me-2"
                     ),
                     dbc.Button(
-                        "Search",
-                        id='habitat-search-button',
+                        "Search Sites",
+                        id="habitat-search-button",
                         color="primary",
                         n_clicks=0
                     )
+                ], className="mb-3"),
+                
+                # Search results container
+                html.Div(id="habitat-search-results", children=[
+                    html.P("Enter a search term and click 'Search Sites' to find monitoring locations.", 
+                           className="text-muted")
                 ])
-            ], style={'position': 'relative', 'marginBottom': '10px'}),
-            
-            # Search results list (initially hidden)
-            html.Div(
-                id='habitat-search-results',
-                children=[],
-                style={
-                    'display': 'none',
-                    'position': 'absolute',
-                    'top': '100%',
-                    'left': '0',
-                    'right': '0',
-                    'backgroundColor': 'white',
-                    'border': '1px solid #ccc',
-                    'borderTop': 'none',
-                    'maxHeight': '200px',
-                    'overflowY': 'auto',
-                    'zIndex': '1000',
-                    'boxShadow': '0 2px 4px rgba(0,0,0,0.1)'
-                }
-            ),
-            
-            # Hidden store for selected site
-            dcc.Store(id='habitat-selected-site', data=None)
-            
-        ], style={'position': 'relative', 'marginBottom': '20px'}),
+            ], width=12)
+        ], className="mb-4"),
         
-        # Controls and content - hidden until site is selected
-        html.Div([
-            dbc.Row([
-                dbc.Col([
-                    html.Div(id='habitat-graph-container')
-                ], width=8),
-                dbc.Col([
-                    html.Div(id='habitat-table-container')
-                ], width=4)
-            ])
-        ], id="habitat-controls-content", style={'display': 'none'})
+        # Content container (shows visualization when site is selected)
+        html.Div(id="habitat-content-container", children=[
+            html.P("Select a site above to view habitat assessment data.", 
+                   className="text-center text-muted mt-5")
+        ]),
+        
+        # Hidden store for selected site
+        dcc.Store(id="habitat-selected-site", data=None)
     ])
 
 def create_protect_our_streams_tab():

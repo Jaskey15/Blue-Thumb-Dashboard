@@ -42,9 +42,12 @@ def get_habitat_data_path():
     base_dir = os.path.dirname(os.path.dirname(__file__))
     return os.path.join(base_dir, 'data', 'processed', 'habitat_assessment_data.csv')
 
-def create_habitat_viz():
+def create_habitat_viz(site_name=None):
     """
     Create habitat assessment visualization for the app.
+    
+    Args:
+        site_name: Optional site name to filter data for
     
     Returns:
         Plotly figure: Line plot showing habitat scores over time.
@@ -68,19 +71,32 @@ def create_habitat_viz():
             
         except Exception as e:
             print(f"Error reading habitat data from file: {e}")
-            # Fall back to hardcoded data if file read fails
-            data = pd.DataFrame({
-                'Year': [2012, 2016, 2022],
-                'Total_Points': [118.2, 88.5, 96.1]
-            })
+            # Fall back to database data with site filtering
+            from data_processing.habitat_processing import get_habitat_dataframe
+            
+            if site_name:
+                data = get_habitat_dataframe(site_name)
+            else:
+                data = get_habitat_dataframe()
+            
+            if data.empty:
+                # Fall back to hardcoded data if database is also empty
+                data = pd.DataFrame({
+                    'Year': [2012, 2016, 2022],
+                    'Total_Points': [118.2, 88.5, 96.1]
+                })
+            else:
+                # Rename columns to match expected format
+                data = data.rename(columns={'year': 'Year', 'total_score': 'Total_Points'})
 
         # Create the line chart
+        title = f'Habitat Assessment Scores Over Time - {site_name}' if site_name else 'Habitat Assessment Scores Over Time'
         fig = px.line(
             data, 
             x='Year', 
             y='Total_Points',
             markers=True,
-            title='Habitat Assessment Scores Over Time',
+            title=title,
             labels={'Total_Points': 'Habitat Assessment Score', 'Year': 'Year'}
         )
 
@@ -138,9 +154,12 @@ def create_habitat_viz():
         )
         return fig
 
-def create_habitat_table():
+def create_habitat_table(site_name=None):
     """
     Create a table showing habitat assessment scores from CSV file.
+    
+    Args:
+        site_name: Optional site name to filter data for
     
     Returns:
         HTML Div containing the habitat metrics table
@@ -202,17 +221,61 @@ def create_habitat_table():
     
     except Exception as e:
         print(f"Error creating habitat table: {e}")
-        return html.Div(f"Error loading habitat assessment data: {str(e)}")
-    
-def create_habitat_metrics_accordion():
+        # Fall back to database data with site filtering
+        try:
+            from data_processing.habitat_processing import get_habitat_metrics_data_for_table
+            
+            # Get data from database with site filtering
+            df = get_habitat_metrics_data_for_table(site_name)
+            
+            if df.empty:
+                return html.Div(f"No habitat assessment data available{' for ' + site_name if site_name else ''}.")
+            
+            # Create table from database data
+            table = dash_table.DataTable(
+                id='habitat-metrics-table',
+                columns=[{"name": col, "id": col} for col in df.columns],
+                data=df.to_dict('records'),
+                style_table={
+                    'maxWidth': '100%',
+                    'overflowX': 'auto',
+                    'height': '500px'
+                },
+                style_header={
+                    'backgroundColor': 'rgb(230, 230, 230)',
+                    'fontWeight': 'bold',
+                    'textAlign': 'center',
+                    'fontSize': FONT_SIZES['header']
+                },
+                style_cell={
+                    'textAlign': 'center',
+                    'padding': '5px',
+                    'fontFamily': 'Arial',
+                    'fontSize': FONT_SIZES['cell'],
+                    'minWidth': '50px',
+                    'maxWidth': '150px'
+                }
+            )
+            
+            return html.Div([table])
+            
+        except Exception as db_error:
+            print(f"Error loading habitat data from database: {db_error}")
+            return html.Div(f"Error loading habitat assessment data: {str(e)}")
+
+
+def create_habitat_metrics_accordion(site_name=None):
     """
     Create an accordion layout for habitat metrics table.
+    
+    Args:
+        site_name: Optional site name to filter data for
     
     Returns:
         HTML Div containing accordion component with habitat metrics table
     """
     try:
-        table = create_habitat_table()
+        table = create_habitat_table(site_name)
         return create_metrics_accordion(table, "Habitat Assessment Scores", "habitat-accordion")
     except Exception as e:
         print(f"Error creating habitat metrics accordion: {e}")

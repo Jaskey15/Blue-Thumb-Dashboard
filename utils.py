@@ -104,6 +104,9 @@ def load_markdown_content(filename, fallback_message=None):
     Returns:
         Dash component with the markdown content
     """
+    # Setup Logging
+    logger = setup_logging("load_markdown_content", category="utils")
+
     try:
         base_dir = os.path.dirname(__file__) 
         file_path = os.path.join(base_dir, 'text', filename)  

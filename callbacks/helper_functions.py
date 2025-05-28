@@ -438,3 +438,77 @@ def create_biological_community_display(selected_community, selected_site):
                 html.Pre(str(e), style={"fontSize": "12px", "color": "#666"})
             ])
         ])
+    
+def create_habitat_display(selected_site):
+    """
+    Create a display for habitat assessment data with visualization and metrics.
+    
+    Args:
+        selected_site: Selected site name
+        
+    Returns:
+        Dash HTML component with the complete habitat display
+    """
+    try:
+        # Import required functions for habitat visualization
+        from visualizations.habitat_viz import create_habitat_viz, create_habitat_metrics_accordion
+        from data_processing.habitat_processing import get_habitat_dataframe
+        
+        # Get site-specific data to check if it exists
+        site_data = get_habitat_dataframe(selected_site)
+        
+        if site_data.empty:
+            return html.Div([
+                html.H4(f"Habitat Assessment Data for {selected_site}", className="mb-4"),
+                html.Div(f"No habitat data available for {selected_site}", 
+                        className="alert alert-warning mt-3")
+            ])
+        
+        # Create site-specific visualizations
+        viz_figure = create_habitat_viz(selected_site)  # Pass site parameter
+        metrics_accordion = create_habitat_metrics_accordion(selected_site)  # Pass site parameter
+        
+        # Create unified layout for habitat assessment
+        content = html.Div([
+            # Site header
+            html.H4(f"Habitat Assessment Data for {selected_site}", 
+                   className="mb-4"),
+            
+            # First row: Graph (full width)
+            dbc.Row([
+                dbc.Col([
+                    html.H5("Habitat Assessment Scores Over Time", className="mb-3"),
+                    dcc.Graph(figure=viz_figure)
+                ], width=12)
+            ], className="mb-4"),
+            
+            # Second row: Accordion section for metrics tables
+            dbc.Row([
+                dbc.Col([
+                    metrics_accordion
+                ], width=12)
+            ], className="mb-4"),
+            
+            # Third row: Analysis section
+            dbc.Row([
+                dbc.Col([
+                    html.H5("Analysis", className="mb-3"),
+                    load_markdown_content("habitat/habitat_analysis.md")
+                ], width=12)
+            ], className="mb-4"),
+        ])
+        
+        return content
+        
+    except Exception as e:
+        logger.error(f"Error creating habitat display for {selected_site}: {e}")
+        return html.Div([
+            html.H4(f"Error Loading Habitat Data", className="mb-4"),
+            html.Div(f"Error loading habitat data for {selected_site}", 
+                    className="alert alert-danger mt-3"),
+            html.P("Please try selecting a different site or refresh the page."),
+            html.Details([
+                html.Summary("Error Details"),
+                html.Pre(str(e), style={"fontSize": "12px", "color": "#666"})
+            ])
+        ])
