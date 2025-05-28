@@ -126,10 +126,8 @@ def get_site_count_message(param_type, param_name, sites_with_data, total_sites)
     elif param_type == 'bio':
         if param_name == 'Fish_IBI':
             return f"Showing {sites_with_data} of {total_sites} sites with fish community data"
-        elif param_name == 'Macro_Summer':
-            return f"Showing {sites_with_data} of {total_sites} sites with macroinvertebrate summer data"
-        elif param_name == 'Macro_Winter':
-            return f"Showing {sites_with_data} of {total_sites} sites with macroinvertebrate winter data"
+        elif param_name == 'Macro_Combined':
+            return f"Showing {sites_with_data} of {total_sites} sites with macroinvertebrate data"
     elif param_type == 'habitat':
         return f"Showing {sites_with_data} of {total_sites} sites with habitat data"
 

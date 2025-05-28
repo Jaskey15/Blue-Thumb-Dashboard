@@ -98,8 +98,7 @@ PARAMETER_LABELS = {
     'Phosphorus': 'Phosphorus',
     'Chloride': 'Chloride',
     'Fish_IBI': 'Fish Community Health',
-    'Macro_Summer': 'Macroinvertebrate Community (Summer)',
-    'Macro_Winter': 'Macroinvertebrate Community (Winter)',
+    'Macro_Combined': 'Biological: Macroinvertebrate Community',
     'Habitat_Grade': 'Habitat Assessment Grade'
 }
 
@@ -203,9 +202,9 @@ def get_latest_data_by_type(data_type):
             # Chemical data uses 'Date' column and 'Site_Name'
             latest_data = df.sort_values('Date').groupby('Site_Name').last().reset_index()
         elif data_type == 'macro':
-            # Macro data needs grouping by both site and season
-            # Assumes columns are 'site_name', 'season', 'year'
-            latest_data = df.sort_values(['season', 'year']).groupby(['site_name', 'season']).last().reset_index()
+            # For combined macro data, get the most recent survey regardless of season
+            # Sort by year to get the most recent data
+            latest_data = df.sort_values('year').groupby('site_name').last().reset_index()
         else:
             # Fish and habitat data use 'year' column and 'site_name'
             latest_data = df.sort_values('year').groupby('site_name').last().reset_index()
@@ -386,7 +385,7 @@ def add_data_markers(fig, sites, data_type, parameter_name=None, season=None, fi
         # Find data for this site
         site_data = latest_data[latest_data[config['site_column']] == site_name]
         
-        # Handle season filtering for macro data
+        # Handle season filtering for macro data (only when season is specified)
         if data_type == 'macro' and season:
             site_data = site_data[site_data['season'] == season]
         
@@ -417,7 +416,8 @@ def add_data_markers(fig, sites, data_type, parameter_name=None, season=None, fi
             elif data_type == 'macro':
                 status, color = determine_status_by_type('macro', value)
                 year = site_data[config['date_column']].iloc[0]
-                date_str = f"{season} {year}"
+                season_from_data = site_data['season'].iloc[0]
+                date_str = f"{season_from_data} {year}"
                 hover_text = f"Site: {site_name}<br>Bioassessment Score: {value:.2f}<br>Status: {status}<br>Last survey: {date_str}"
             
             elif data_type == 'habitat':
@@ -572,13 +572,9 @@ def add_parameter_colors_to_map(fig, param_type, param_name):
                 fig, sites_with_data, total_sites = add_data_markers(
                     fig, MONITORING_SITES, 'fish', filter_no_data=True
                 )
-            elif param_name == 'Macro_Summer':
+            elif param_name == 'Macro_Combined':
                 fig, sites_with_data, total_sites = add_data_markers(
-                    fig, MONITORING_SITES, 'macro', season='Summer', filter_no_data=True
-                )
-            elif param_name == 'Macro_Winter':
-                fig, sites_with_data, total_sites = add_data_markers(
-                    fig, MONITORING_SITES, 'macro', season='Winter', filter_no_data=True
+                    fig, MONITORING_SITES, 'macro', filter_no_data=True
                 )
         elif param_type == 'habitat':
             fig, sites_with_data, total_sites = add_data_markers(

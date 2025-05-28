@@ -25,8 +25,7 @@ PARAMETER_OPTIONS = [
     {'label': 'Chemical: Phosphorus', 'value': 'chem:Phosphorus'},
     {'label': 'Chemical: Chloride', 'value': 'chem:Chloride'},
     {'label': 'Biological: Fish Community', 'value': 'bio:Fish_IBI'},
-    {'label': 'Biological: Macroinvertebrate Community (Summer)', 'value': 'bio:Macro_Summer'},
-    {'label': 'Biological: Macroinvertebrate Community (Winter)', 'value': 'bio:Macro_Winter'},
+    {'label': 'Biological: Macroinvertebrate Community', 'value': 'bio:Macro_Combined'},
     {'label': 'Physical: Habitat Scores', 'value': 'habitat:Habitat_Score'}
 ]
 
