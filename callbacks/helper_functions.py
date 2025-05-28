@@ -331,12 +331,50 @@ def create_biological_community_display(selected_community, selected_site):
         # Import required functions for visualization
         if selected_community == 'fish':
             from visualizations.fish_viz import create_fish_viz, create_fish_metrics_accordion
-            viz_function = lambda: create_fish_viz()  # You'll need to modify these to accept site parameter
-            metrics_function = lambda: create_fish_metrics_accordion()
+            from data_processing.fish_processing import get_fish_dataframe
+            
+            # Get site-specific data to check if it exists
+            site_data = get_fish_dataframe(selected_site)
+            
+            if site_data.empty:
+                return html.Div([
+                    html.H4(f"Fish Community Data for {selected_site}", className="mb-4"),
+                    html.Div(f"No fish data available for {selected_site}", 
+                            className="alert alert-warning mt-3")
+                ])
+            
+            # Create site-specific visualizations
+            viz_figure = create_fish_viz(selected_site)  # Pass site parameter
+            metrics_accordion = create_fish_metrics_accordion(selected_site)  # Pass site parameter
+            
         elif selected_community == 'macro':
             from visualizations.macro_viz import create_macro_viz, create_macro_metrics_accordion
-            viz_function = lambda: create_macro_viz()
-            metrics_function = lambda: create_macro_metrics_accordion()
+            from data_processing.macro_processing import get_macroinvertebrate_dataframe
+            
+            # Get all macro data first
+            all_macro_data = get_macroinvertebrate_dataframe()
+            
+            if all_macro_data.empty:
+                return html.Div([
+                    html.H4(f"Macroinvertebrate Community Data for {selected_site}", className="mb-4"),
+                    html.Div("No macroinvertebrate data available in database", 
+                            className="alert alert-warning mt-3")
+                ])
+            
+            # Filter for the selected site
+            site_data = all_macro_data[all_macro_data['site_name'] == selected_site]
+            
+            if site_data.empty:
+                return html.Div([
+                    html.H4(f"Macroinvertebrate Community Data for {selected_site}", className="mb-4"),
+                    html.Div(f"No macroinvertebrate data available for {selected_site}", 
+                            className="alert alert-warning mt-3")
+                ])
+            
+            # Create site-specific visualizations
+            viz_figure = create_macro_viz(selected_site)  # Pass site parameter
+            metrics_accordion = create_macro_metrics_accordion(selected_site)  # Pass site parameter
+            
         else:
             return html.Div("Please select a valid biological community from the dropdown.")
         
@@ -345,6 +383,10 @@ def create_biological_community_display(selected_community, selected_site):
             
         # Create unified layout for the community
         content = html.Div([
+            # Site header
+            html.H4(f"{selected_community.title()} Community Data for {selected_site}", 
+                   className="mb-4"),
+            
             # First row: Description on left, gallery on right
             dbc.Row([
                 # Left column: Description
@@ -356,35 +398,43 @@ def create_biological_community_display(selected_community, selected_site):
                 dbc.Col([
                     create_species_gallery(selected_community)
                 ], width=6, className="d-flex align-items-center"),
-            ]),
+            ], className="mb-4"),
             
             # Second row: Graph (full width)
             dbc.Row([
                 dbc.Col([
-                    dcc.Graph(figure=viz_function())
+                    html.H5(f"{selected_community.title()} Assessment Over Time", className="mb-3"),
+                    dcc.Graph(figure=viz_figure)
                 ], width=12)
-            ], className="mt-4"),
+            ], className="mb-4"),
             
             # Third row: Accordion section for metrics tables
             dbc.Row([
                 dbc.Col([
-                    metrics_function()
+                    metrics_accordion
                 ], width=12)
-            ], className="mt-4"),
+            ], className="mb-4"),
             
             # Fourth row: Analysis section
             dbc.Row([
                 dbc.Col([
+                    html.H5("Analysis", className="mb-3"),
                     load_markdown_content(f"biological/{selected_community}_analysis.md")
                 ], width=12)
-            ], className="mt-4"),
+            ], className="mb-4"),
         ])
         
         return content
         
     except Exception as e:
-        print(f"Error creating biological display for {selected_community}: {e}")
+        logger.error(f"Error creating biological display for {selected_community} at {selected_site}: {e}")
         return html.Div([
-            html.Div(f"Error creating biological display", className="alert alert-danger"),
-            html.Pre(str(e), style={"fontSize": "12px"})
+            html.H4(f"Error Loading {selected_community.title()} Data", className="mb-4"),
+            html.Div(f"Error loading {selected_community} data for {selected_site}", 
+                    className="alert alert-danger mt-3"),
+            html.P("Please try selecting a different site or refresh the page."),
+            html.Details([
+                html.Summary("Error Details"),
+                html.Pre(str(e), style={"fontSize": "12px", "color": "#666"})
+            ])
         ])

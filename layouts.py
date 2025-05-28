@@ -558,7 +558,7 @@ def create_chemical_tab():
     ])
 
 def create_biological_tab():
-    """Create the biological data tab layout with simple search functionality."""
+    """Create the biological data tab layout with community-first selection."""
     return html.Div([
         # Description - always visible
         html.Div([
@@ -569,11 +569,27 @@ def create_biological_tab():
             html.P([
                 "You can find site names and locations on the ",
                 html.A("Overview tab", href="#", style={"text-decoration": "underline"}),
-                ". Search for a site below to begin analysis."
+                ". Select a community type and search for a site below to begin analysis."
             ])
         ], className="mb-4"),
         
-        # Site search section
+        # Community selection - always visible
+        html.Div([
+            html.Label("Select Biological Community:", className="form-label mb-2", style={'fontWeight': 'bold'}),
+            dcc.Dropdown(
+                id='biological-community-dropdown',
+                options=[
+                    {'label': 'Select a community type...', 'value': '', 'disabled': True},
+                    {'label': 'Fish Community', 'value': 'fish'},
+                    {'label': 'Macroinvertebrate Community', 'value': 'macro'}
+                ],
+                value='',  # Start with no selection
+                placeholder="Choose a biological community",
+                className="mb-3"
+            )
+        ], className="mb-4"),
+        
+        # Site search section - hidden until community is selected
         html.Div([
             html.Label("Select Site:", className="form-label mb-2", style={'fontWeight': 'bold'}),
             
@@ -584,13 +600,15 @@ def create_biological_tab():
                         id='biological-search-input',
                         placeholder="Type to search for a site...",
                         type="text",
-                        value=""
+                        value="",
+                        disabled=True  # Start disabled
                     ),
                     dbc.Button(
                         "Search",
                         id='biological-search-button',
                         color="primary",
-                        n_clicks=0
+                        n_clicks=0,
+                        disabled=True  # Start disabled
                     )
                 ])
             ], style={'position': 'relative', 'marginBottom': '10px'}),
@@ -618,30 +636,13 @@ def create_biological_tab():
             # Hidden store for selected site
             dcc.Store(id='biological-selected-site', data=None)
             
-        ], style={'position': 'relative', 'marginBottom': '20px'}),
+        ], id='biological-site-search-section', style={'display': 'none', 'position': 'relative', 'marginBottom': '20px'}),
         
-        # Controls and content - hidden until site is selected
-        html.Div([
-            # Community selection
-            dbc.Row([
-                dbc.Col([
-                    html.Label("Select Biological Community:", className="form-label mb-2", style={'fontWeight': 'bold'}),
-                    dcc.Dropdown(
-                        id='biological-community-dropdown',
-                        options=[
-                            {'label': 'Fish Community', 'value': 'fish'},
-                            {'label': 'Macroinvertebrate Community', 'value': 'macro'}
-                        ],
-                        value='fish',
-                        className="mb-3"
-                    )
-                ], width=6)
-            ]),
-            
-            # Content container
-            html.Div(id='biological-content-container')
-            
-        ], id="biological-controls-content", style={'display': 'none'})
+        # Content container - shows biological data after both selections are made
+        html.Div(id='biological-content-container', className="mt-4"),
+        
+        # Legacy controls content section - keeping for compatibility with existing callbacks
+        html.Div(id="biological-controls-content", style={'display': 'none'})
     ])
 
 def create_habitat_tab():

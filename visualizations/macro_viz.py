@@ -64,9 +64,12 @@ METRIC_ORDER = [
     'Shannon-Weaver'
 ]
 
-def create_macro_viz():
+def create_macro_viz(site_name=None):
     """
     Create macroinvertebrate visualization for the app.
+    
+    Args:
+        site_name: Optional site name to filter data for
     
     Returns:
         Plotly figure: Line plot showing bioassessment scores over time for both seasons.
@@ -75,11 +78,16 @@ def create_macro_viz():
         # Get macroinvertebrate data from the database
         macro_df = get_macroinvertebrate_dataframe()
         
+        # Filter by site if specified
+        if site_name:
+            macro_df = macro_df[macro_df['site_name'] == site_name]
+        
         if macro_df.empty:
             # Return an empty figure with a message if no data
             fig = go.Figure()
+            site_msg = f" for {site_name}" if site_name else ""
             fig.update_layout(
-                title="No macroinvertebrate data available",
+                title=f"No macroinvertebrate data available{site_msg}",
                 annotations=[dict(
                     text="No data available",
                     showarrow=False,
@@ -92,13 +100,14 @@ def create_macro_viz():
             return fig
 
         # Create a line plot for macroinvertebrate data
+        title = f"Bioassessment Scores Over Time - {site_name}" if site_name else "Bioassessment Scores Over Time"
         fig_macro = px.line(
             macro_df, 
             x='year', 
             y='comparison_to_reference',
             color='season',  
             markers=True,
-            title='Bioassessment Scores Over Time',
+            title=title,
             labels={
                 'year': 'Year',
                 'season': 'Season'
@@ -140,7 +149,7 @@ def create_macro_viz():
         return fig_macro
     
     except Exception as e:
-        print(f"Error creating macroinvertebrate visualization: {e}")
+        logger.error(f"Error creating macroinvertebrate visualization for {site_name}: {e}")
         # Return empty figure with error message
         fig = go.Figure()
         fig.update_layout(
@@ -167,6 +176,9 @@ def add_condition_reference_lines(fig, df):
     Returns:
         Updated figure with reference lines
     """
+    if df.empty:
+        return fig
+        
     # Get min and max year for reference lines
     x_min = df['year'].min() - 1
     x_max = df['year'].max() + 1
@@ -209,12 +221,15 @@ def format_macro_metrics_table(metrics_df, summary_df, season):
         Tuple of (metrics_table, summary_rows) DataFrames
     """
     try:
+        if metrics_df.empty or summary_df.empty:
+            return pd.DataFrame({'Metric': METRIC_ORDER}), pd.DataFrame({'Metric': ['No Data']})
+            
         # Filter data for the selected season
         season_metrics = metrics_df[metrics_df['season'] == season]
         season_summary = summary_df[summary_df['season'] == season]
         
         # Get unique years for this season
-        years = sorted(season_metrics['year'].unique())
+        years = sorted(season_metrics['year'].unique()) if not season_metrics.empty else []
         
         # Get reference scores for this season
         reference_scores = REFERENCE_SCORES[season]
@@ -234,7 +249,12 @@ def format_macro_metrics_table(metrics_df, summary_df, season):
             for metric in METRIC_ORDER:
                 metric_row = year_metrics[year_metrics['metric_name'] == metric]
                 if not metric_row.empty:
-                    scores.append(int(metric_row['metric_score'].values[0]))
+                    try:
+                        score_value = metric_row['metric_score'].values[0]
+                        scores.append(int(score_value))
+                    except (ValueError, TypeError) as e:
+                        logger.warning(f"Could not convert metric score to int: {score_value}, error: {e}")
+                        scores.append('-')
                 else:
                     scores.append('-')
             
@@ -255,11 +275,14 @@ def format_macro_metrics_table(metrics_df, summary_df, season):
         for year in years:
             year_summary = season_summary[season_summary['year'] == year]
             if not year_summary.empty:
-                summary_rows[str(year)] = [
-                    int(year_summary['total_score'].values[0]),
-                    f"{year_summary['comparison_to_reference'].values[0]:.2f}",
-                    year_summary['biological_condition'].values[0]
-                ]
+                try:
+                    total_score = int(year_summary['total_score'].values[0])
+                    comparison = f"{year_summary['comparison_to_reference'].values[0]:.2f}"
+                    condition = year_summary['biological_condition'].values[0]
+                    summary_rows[str(year)] = [total_score, comparison, condition]
+                except (ValueError, TypeError) as e:
+                    logger.warning(f"Error processing summary data for {season} year {year}: {e}")
+                    summary_rows[str(year)] = ['-', '-', '-']
             else:
                 summary_rows[str(year)] = ['-', '-', '-']
 
@@ -270,7 +293,7 @@ def format_macro_metrics_table(metrics_df, summary_df, season):
         return metrics_table, summary_rows
     
     except Exception as e:
-        print(f"Error formatting {season} metrics table: {e}")
+        logger.error(f"Error formatting {season} metrics table: {e}")
         # Return empty DataFrames
         return pd.DataFrame({'Metric': METRIC_ORDER}), pd.DataFrame({'Metric': ['Error']})
 
@@ -358,20 +381,28 @@ def create_macro_metrics_table_for_season(metrics_df, summary_df, season):
         return table
     
     except Exception as e:
-        print(f"Error creating {season} metrics table: {e}")
+        logger.error(f"Error creating {season} metrics table: {e}")
         # Return a simple error message if table creation fails
         return html.Div(f"Error creating {season} metrics table")
 
-def create_macro_metrics_accordion():
+def create_macro_metrics_accordion(site_name=None):
     """
     Create an accordion layout for macroinvertebrate metrics tables.
+    
+    Args:
+        site_name: Optional site name to filter data for
     
     Returns:
         HTML Div containing accordion components for each season's metrics
     """
     try:
-        # Get the data
+        # Get the data with site filtering
         metrics_df, summary_df = get_macro_metrics_data_for_table()
+        
+        # Filter by site if specified
+        if site_name:
+            metrics_df = metrics_df[metrics_df['site_name'] == site_name] if 'site_name' in metrics_df.columns else metrics_df
+            summary_df = summary_df[summary_df['site_name'] == site_name] if 'site_name' in summary_df.columns else summary_df
         
         if metrics_df.empty or summary_df.empty:
             return html.Div("No data available")
@@ -388,72 +419,22 @@ def create_macro_metrics_accordion():
         return html.Div([summer_accordion, winter_accordion])
     
     except Exception as e:
-        print(f"Error creating metrics accordion: {e}")
+        logger.error(f"Error creating metrics accordion: {e}")
         return html.Div(f"Error creating metrics accordion: {str(e)}")
 
-def create_macro_metrics_table():
-    """
-    Create tables showing macroinvertebrate metrics scores for both seasons (legacy function).
-    
-    Returns:
-        HTML Div containing side-by-side tables for Summer and Winter metrics
-    """
-    try:
-        # Get the data
-        metrics_df, summary_df = get_macro_metrics_data_for_table()
-        
-        if metrics_df.empty or summary_df.empty:
-            return html.Div("No data available")
-        
-        # Create tables for each season
-        winter_table = create_macro_metrics_table_for_season(metrics_df, summary_df, 'Winter')
-        summer_table = create_macro_metrics_table_for_season(metrics_df, summary_df, 'Summer')
-        
-        # Create a side-by-side layout 
-        macro_tables = html.Div([
-            dbc.Row([
-                dbc.Col([
-                    html.H5("Macroinvertebrate Metrics Scores", className="text-center mb-3")
-                ], width=12) 
-            ]),
-            dbc.Row([
-                dbc.Col([
-                    html.H6("Winter Collections", className="text-center"),
-                    winter_table
-                ], width=6),  
-                dbc.Col([
-                    html.H6("Summer Collections", className="text-center"),
-                    summer_table
-                ], width=6) 
-            ])
-        ])
-        
-        return macro_tables
-    
-    except Exception as e:
-        print(f"Error creating metrics tables: {e}")
-        return html.Div(f"Error creating metrics tables: {str(e)}")
+# Legacy functions maintained for compatibility
+def create_macro_metrics_table(site_name=None):
+    """Create tables showing macroinvertebrate metrics scores for both seasons (legacy function)."""
+    return create_macro_metrics_accordion(site_name)
 
-def create_macro_viz_with_table():
-    """
-    Create macroinvertebrate community visualization with metrics tables for the app.
-    
-    Returns:
-        Tuple of (figure, metrics_tables) for inclusion in the app layout
-    """
+def create_macro_viz_with_table(site_name=None):
+    """Create macroinvertebrate community visualization with metrics tables for the app."""
     try:
-        # Get the line chart
-        fig_macro = create_macro_viz()
-        
-        # Get the metrics tables
-        metrics_tables = create_macro_metrics_table()
-        
-        # Return both components for inclusion in the app layout
+        fig_macro = create_macro_viz(site_name)
+        metrics_tables = create_macro_metrics_table(site_name)
         return fig_macro, metrics_tables
-    
     except Exception as e:
-        print(f"Error creating macroinvertebrate visualization with tables: {e}")
-        # Return simple placeholders if error occurs
+        logger.error(f"Error creating macroinvertebrate visualization with tables: {e}")
         fig = go.Figure()
         fig.update_layout(title="Error creating visualization")
         return fig, html.Div("Error loading metrics data")

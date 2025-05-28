@@ -55,22 +55,26 @@ REFERENCE_SCORES = {
 
 REFERENCE_TOTAL_SCORE = 25  # Ouachita Mountains reference score
 
-def create_fish_viz():
+def create_fish_viz(site_name=None):
     """
     Create fish community visualization for the app.
+    
+    Args:
+        site_name: Optional site name to filter data for
     
     Returns:
         Plotly figure: Line plot showing IBI scores over time.
     """
     try:
-        # Get fish data from the database
-        fish_df = get_fish_dataframe()
+        # Get fish data from the database - now with site filtering
+        fish_df = get_fish_dataframe(site_name)
         
         if fish_df.empty:
             # Return an empty figure with a message if no data
             fig = go.Figure()
+            site_msg = f" for {site_name}" if site_name else ""
             fig.update_layout(
-                title="No fish data available",
+                title=f"No fish data available{site_msg}",
                 annotations=[dict(
                     text="No data available",
                     showarrow=False,
@@ -83,12 +87,13 @@ def create_fish_viz():
             return fig
 
         # Create a line plot for fish data
+        title = f"IBI Scores Over Time - {site_name}" if site_name else "IBI Scores Over Time"
         fig_fish = px.line(
             fish_df, 
             x='year', 
             y='comparison_to_reference',
             markers=True,
-            title='IBI Scores Over Time',
+            title=title,
             labels={
                 'year': 'Year',
                 'comparison_to_reference': 'IBI Score (Compared to Reference)'
@@ -123,7 +128,7 @@ def create_fish_viz():
         return fig_fish
     
     except Exception as e:
-        print(f"Error creating fish visualization: {e}")
+        logger.error(f"Error creating fish visualization for {site_name}: {e}")
         # Return empty figure with error message
         fig = go.Figure()
         fig.update_layout(
@@ -150,6 +155,9 @@ def add_integrity_reference_lines(fig, df):
     Returns:
         Updated figure with reference lines
     """
+    if df.empty:
+        return fig
+        
     # Get min and max year for reference lines
     x_min = df['year'].min() - 1
     x_max = df['year'].max() + 1
@@ -191,6 +199,9 @@ def format_fish_metrics_table(metrics_df, summary_df):
         Tuple of (metrics_table, summary_rows) DataFrames
     """
     try:
+        if metrics_df.empty or summary_df.empty:
+            return pd.DataFrame({'Metric': METRIC_ORDER}), pd.DataFrame({'Metric': ['No Data']})
+            
         # Get unique years
         years = sorted(metrics_df['year'].unique())
         
@@ -209,7 +220,13 @@ def format_fish_metrics_table(metrics_df, summary_df):
             for metric in METRIC_ORDER:
                 metric_row = year_metrics[year_metrics['metric_name'] == metric]
                 if not metric_row.empty:
-                    scores.append(int(metric_row['metric_score'].values[0]))
+                    # Convert to int safely
+                    try:
+                        score_value = metric_row['metric_score'].values[0]
+                        scores.append(int(score_value))
+                    except (ValueError, TypeError) as e:
+                        logger.warning(f"Could not convert metric score to int: {score_value}, error: {e}")
+                        scores.append('-')
                 else:
                     scores.append('-')
             
@@ -230,11 +247,14 @@ def format_fish_metrics_table(metrics_df, summary_df):
         for year in years:
             year_summary = summary_df[summary_df['year'] == year]
             if not year_summary.empty:
-                summary_rows[str(year)] = [
-                    int(year_summary['total_score'].values[0]),
-                    f"{year_summary['comparison_to_reference'].values[0]:.2f}",
-                    year_summary['integrity_class'].values[0]
-                ]
+                try:
+                    total_score = int(year_summary['total_score'].values[0])
+                    comparison = f"{year_summary['comparison_to_reference'].values[0]:.2f}"
+                    integrity = year_summary['integrity_class'].values[0]
+                    summary_rows[str(year)] = [total_score, comparison, integrity]
+                except (ValueError, TypeError) as e:
+                    logger.warning(f"Error processing summary data for year {year}: {e}")
+                    summary_rows[str(year)] = ['-', '-', '-']
             else:
                 summary_rows[str(year)] = ['-', '-', '-']
         
@@ -244,7 +264,7 @@ def format_fish_metrics_table(metrics_df, summary_df):
         return metrics_table, summary_rows
     
     except Exception as e:
-        print(f"Error formatting fish metrics table: {e}")
+        logger.error(f"Error formatting fish metrics table: {e}")
         # Return empty DataFrames
         return pd.DataFrame({'Metric': METRIC_ORDER}), pd.DataFrame({'Metric': ['Error']})
 
@@ -301,16 +321,19 @@ def create_metrics_table_styles(metrics_table):
         ]
     }
 
-def create_fish_metrics_table_for_accordion():
+def create_fish_metrics_table_for_accordion(site_name=None):
     """
     Create a metrics table for fish data to display in accordion.
+    
+    Args:
+        site_name: Optional site name to filter data for
     
     Returns:
         Dash DataTable component
     """
     try:
-        # Get the data
-        metrics_df, summary_df = get_fish_metrics_data_for_table()
+        # Get the data with site filtering
+        metrics_df, summary_df = get_fish_metrics_data_for_table(site_name)
         
         if metrics_df.empty or summary_df.empty:
             return html.Div("No data available")
@@ -335,85 +358,44 @@ def create_fish_metrics_table_for_accordion():
         return table
     
     except Exception as e:
-        print(f"Error creating fish metrics table for accordion: {e}")
+        logger.error(f"Error creating fish metrics table for accordion: {e}")
         # Return a simple error message if table creation fails
         return html.Div(f"Error creating fish metrics table: {str(e)}")
 
-def create_fish_metrics_accordion():
+def create_fish_metrics_accordion(site_name=None):
     """
     Create an accordion layout for fish metrics table.
+    
+    Args:
+        site_name: Optional site name to filter data for
     
     Returns:
         HTML Div containing accordion component with metrics table
     """
     try:
-        # Get the table component
-        table = create_fish_metrics_table_for_accordion()
+        # Get the table component with site filtering
+        table = create_fish_metrics_table_for_accordion(site_name)
         
         # Use the reusable accordion function
         return create_metrics_accordion(table, "Fish Collection Metrics", "fish-accordion")
     
     except Exception as e:
-        print(f"Error creating fish metrics accordion: {e}")
+        logger.error(f"Error creating fish metrics accordion: {e}")
         return html.Div(f"Error creating metrics accordion: {str(e)}")
 
-def create_fish_metrics_table():
-    """
-    Create a table showing fish metrics scores (legacy function).
-    
-    Returns:
-        Dash DataTable component
-    """
-    try:
-        # Get the data
-        metrics_df, summary_df = get_fish_metrics_data_for_table()
-        
-        if metrics_df.empty or summary_df.empty:
-            return html.Div("No data available")
-        
-        # Format the data into table structure with reference values added
-        metrics_table, summary_rows = format_fish_metrics_table(metrics_df, summary_df)
-        
-        # Combine metrics and summary rows
-        full_table = pd.concat([metrics_table, summary_rows], ignore_index=True)
-        
-        # Get styling for the table
-        styles = create_metrics_table_styles(metrics_table)
-        
-        # Create the table component
-        table = dash_table.DataTable(
-            id='fish-metrics-table',
-            columns=[{"name": col, "id": col} for col in full_table.columns],
-            data=full_table.to_dict('records'),
-            **styles
-        )
-        
-        return table
-    
-    except Exception as e:
-        print(f"Error creating fish metrics table: {e}")
-        return html.Div(f"Error creating fish metrics table: {str(e)}")
+# Legacy functions maintained for compatibility
+def create_fish_metrics_table(site_name=None):
+    """Create a table showing fish metrics scores (legacy function)."""
+    return create_fish_metrics_table_for_accordion(site_name)
 
-def create_fish_viz_with_table():
-    """
-    Create fish community visualization with metrics table for the app.
-    
-    Returns:
-        Tuple of (figure, metrics_table) for inclusion in the app layout
-    """
+def create_fish_viz_with_table(site_name=None):
+    """Create fish community visualization with metrics table for the app."""
     try:
-        # Get the line chart
-        fig_fish = create_fish_viz()
-        
-        # Get the metrics table
-        metrics_table = create_fish_metrics_table()
-        
-        # Return both components for inclusion in the app layout
+        fig_fish = create_fish_viz(site_name)
+        metrics_table = create_fish_metrics_table(site_name)
         return fig_fish, metrics_table
-    
     except Exception as e:
-        print(f"Error creating fish visualization with table: {e}")
-        # Return simple placeholders if error occurs
+        logger.error(f"Error creating fish visualization with table: {e}")
         fig = go.Figure()
         fig.update_layout(title="Error creating visualization")
         return fig, html.Div("Error loading fish metrics data")
