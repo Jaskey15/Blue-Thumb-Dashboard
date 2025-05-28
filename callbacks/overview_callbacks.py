@@ -1,15 +1,14 @@
 """
-Overview tab callbacks for the Tenmile Creek Water Quality Dashboard.
-Handles map display and parameter selection functionality.
+Overview callbacks for the Tenmile Creek Water Quality Dashboard.
+This file contains callbacks specific to the overview tab.
 """
 
 import dash
 import plotly.graph_objects as go
-from dash import html
-from dash.dependencies import Input, Output, State
-
+from dash import html, Input, Output, State  
+from visualizations.map_viz import create_site_map
+from .helper_functions import get_parameter_legend, get_site_count_message, get_parameter_label
 from utils import setup_logging
-from .helper_functions import get_parameter_name, get_parameter_legend, get_site_count_message
 
 # Configure logging
 logger = setup_logging("overview_callbacks", category="callbacks")

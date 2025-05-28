@@ -3,17 +3,15 @@ Chemical callbacks for the Tenmile Creek Water Quality Dashboard.
 This file contains callbacks specific to the chemical data tab.
 """
 
+import json
 import dash
-from dash import html
-from dash.dependencies import Input, Output, State, ALL
-
+from dash import html, Input, Output, State, ALL
 from utils import setup_logging
 from cache_utils import (
     get_cache_key, get_cached_data, set_cache_data, clear_expired_cache
 )
 from data_definitions import SEASON_MONTHS
 from .helper_functions import (
-    update_site_dropdown, handle_site_selection,
     create_all_parameters_view, create_single_parameter_view
 )
 
@@ -23,44 +21,106 @@ logger = setup_logging("chemical_callbacks", category="callbacks")
 def register_chemical_callbacks(app):
     """Register all chemical-related callbacks."""
     
-    # Site dropdown callback for chemical tab
+    # Search results callback
     @app.callback(
-        [Output('chemical-site-dropdown', 'children'),
-        Output('chemical-site-dropdown', 'style')],
-        [Input('chemical-site-search-input', 'value')],
-        [State('chemical-available-sites', 'data'),
-        State('chemical-selected-site-data', 'data')]  # Add this State
+        [Output('chemical-search-results', 'children'),
+         Output('chemical-search-results', 'style')],
+        [Input('chemical-search-button', 'n_clicks')],
+        [State('chemical-search-input', 'value')],
+        prevent_initial_call=True
     )
-    def update_chemical_site_dropdown(search_value, data_type, selected_site_data):  # Add parameter
-        """Update the chemical site dropdown based on search input."""
-        return update_site_dropdown(search_value, data_type, selected_site_data)  # Pass all 3 parameters
+    def update_search_results(n_clicks, search_term):
+        """Show search results when search button is clicked"""
+        if not n_clicks or not search_term:
+            return [], {'display': 'none'}
+        
+        try:
+            # Get all sites with chemical data
+            from data_processing.chemical_processing import get_sites_with_chemical_data
+            all_sites = get_sites_with_chemical_data()
+            
+            # Filter sites based on search term (case-insensitive)
+            search_term_lower = search_term.lower()
+            matching_sites = [
+                site for site in all_sites 
+                if search_term_lower in site.lower()
+            ]
+            
+            # If no matches, show "no results"
+            if not matching_sites:
+                return [
+                    html.Div(
+                        "No sites found",
+                        style={'padding': '8px 12px', 'color': '#6c757d'}
+                    )
+                ], {'display': 'block', 'position': 'absolute', 'top': '100%', 'left': '0', 'right': '0', 'backgroundColor': 'white', 'border': '1px solid #ccc', 'borderTop': 'none', 'maxHeight': '200px', 'overflowY': 'auto', 'zIndex': '1000', 'boxShadow': '0 2px 4px rgba(0,0,0,0.1)'}
+            
+            # Create clickable list items
+            result_items = []
+            for site in matching_sites[:10]:  # Limit to 10 results
+                result_items.append(
+                    html.Div(
+                        site,
+                        id={'type': 'chemical-site-option', 'site': site},
+                        style={
+                            'padding': '8px 12px',
+                            'cursor': 'pointer',
+                            'borderBottom': '1px solid #eee'
+                        },
+                        className="site-option",
+                        n_clicks=0
+                    )
+                )
+            
+            logger.info(f"Chemical search for '{search_term}' found {len(matching_sites)} sites")
+            return result_items, {'display': 'block', 'position': 'absolute', 'top': '100%', 'left': '0', 'right': '0', 'backgroundColor': 'white', 'border': '1px solid #ccc', 'borderTop': 'none', 'maxHeight': '200px', 'overflowY': 'auto', 'zIndex': '1000', 'boxShadow': '0 2px 4px rgba(0,0,0,0.1)'}
+            
+        except Exception as e:
+            logger.error(f"Error in chemical site search: {e}")
+            return [], {'display': 'none'}
 
-    # Site selection callback for chemical tab
+    # Site selection callback
     @app.callback(
-        [Output('chemical-selected-site-data', 'data'),
-        Output('chemical-site-search-input', 'value'),
-        Output('chemical-site-clear-button', 'style'),
-        Output('chemical-no-site-message', 'style'),
-        Output('chemical-controls-content', 'style')],
-        [Input({'type': 'site-option', 'index': ALL, 'tab': 'chemical'}, 'n_clicks'),
-        Input('chemical-site-clear-button', 'n_clicks')],
-        [State('chemical-selected-site-data', 'data')]
+        [Output('chemical-selected-site', 'data'),
+         Output('chemical-search-input', 'value'),
+         Output('chemical-search-results', 'style', allow_duplicate=True),
+         Output('chemical-controls-content', 'style')],
+        [Input({'type': 'chemical-site-option', 'site': ALL}, 'n_clicks')],
+        [State('chemical-selected-site', 'data')],
+        prevent_initial_call=True
     )
-    def handle_chemical_site_selection(site_clicks, clear_clicks, current_site):
-        """Handle site selection for chemical tab."""
-        return handle_site_selection(site_clicks, clear_clicks, current_site, 'chemical')
+    def handle_site_selection(site_clicks, current_site):
+        """Handle when user clicks on a site from search results"""
+        ctx = dash.callback_context
+        
+        if not ctx.triggered or not any(site_clicks):
+            return dash.no_update, dash.no_update, dash.no_update, dash.no_update
+        
+        # Find which site was clicked
+        triggered_id = ctx.triggered[0]['prop_id']
+        site_info = json.loads(triggered_id.split('.')[0])
+        selected_site = site_info['site']
+        
+        logger.info(f"Selected site: {selected_site}")
+        
+        return (
+            selected_site,  # Store selected site
+            selected_site,  # Update search input to show selected site
+            {'display': 'none'},  # Hide search results
+            {'display': 'block'}  # Show controls
+        )
 
-    # Main chemical display callback
+    # Main display callback (update the Input to use the new selected site store)
     @app.callback(
         [Output('chemical-graph-container', 'children'),
-        Output('chemical-explanation-container', 'children'),
-        Output('chemical-diagram-container', 'children'),
-        Output('chemical-data-cache', 'data')],  
+         Output('chemical-explanation-container', 'children'),
+         Output('chemical-diagram-container', 'children'),
+         Output('chemical-data-cache', 'data')],  
         [Input('chemical-parameter-dropdown', 'value'),
-        Input('year-range-slider', 'value'),
-        Input('month-checklist', 'value'),
-        Input('highlight-thresholds-switch', 'value'),
-        Input('chemical-selected-site-data', 'data')],
+         Input('year-range-slider', 'value'),
+         Input('month-checklist', 'value'),
+         Input('highlight-thresholds-switch', 'value'),
+         Input('chemical-selected-site', 'data')],  # Changed to use the store
         [State('chemical-data-cache', 'data')]
     )
     def update_chemical_display(selected_parameter, year_range, selected_months, highlight_thresholds, selected_site, cache_data):
@@ -71,9 +131,13 @@ def register_chemical_callbacks(app):
         try:
             # If no site selected, return empty
             if not selected_site:
-               return html.Div(), html.Div(), html.Div(), cache_data or {}
+               return html.Div([
+                   html.Div("Please search for and select a site to view data.", 
+                           className="alert alert-info")
+               ]), html.Div(), html.Div(), cache_data or {}
 
-            print(f"DEBUG CACHE: Received cache_data keys: {list(cache_data.keys()) if cache_data else 'None'}")
+            logger.info(f"Processing chemical data for site: {selected_site}")
+            
             # Clean expired cache entries periodically
             cache_data = clear_expired_cache(cache_data)
             
@@ -89,6 +153,7 @@ def register_chemical_callbacks(app):
                 diagram_component = cached_result.get('diagram')
                 
                 if all([graph_component, explanation_component, diagram_component]):
+                    logger.info(f"Using cached data for {selected_site}")
                     return graph_component, explanation_component, diagram_component, cache_data
             
             # Cache miss - need to fetch fresh data
@@ -96,6 +161,14 @@ def register_chemical_callbacks(app):
             
             # Get and filter chemical data by site
             df_clean, key_parameters, reference_values = process_chemical_data(site_name=selected_site)
+            
+            # Check if we have any data for this site
+            if df_clean.empty:
+                no_data_message = html.Div([
+                    html.Div(f"No chemical data available for site: {selected_site}", 
+                            className="alert alert-warning")
+                ])
+                return no_data_message, html.Div(), html.Div(), cache_data or {}
             
             # Filter by year range 
             year_min, year_max = year_range
@@ -107,10 +180,10 @@ def register_chemical_callbacks(app):
             
             # Check if we have data after filtering 
             if len(df_filtered) == 0:
-                no_data_message = html.Div(
-                    "No data available for the selected time range.", 
-                    className="alert alert-warning"
-                )
+                no_data_message = html.Div([
+                    html.Div("No data available for the selected time range.", 
+                            className="alert alert-warning")
+                ])
                 return no_data_message, html.Div(), html.Div(), cache_data
             
             # Handle "all parameters" view differently 
@@ -140,10 +213,11 @@ def register_chemical_callbacks(app):
             }
             cache_data = set_cache_data(cache_data, cache_key, cache_result)
             
+            logger.info(f"Successfully processed chemical data for {selected_site}")
             return graph_component, explanation_component, diagram_component, cache_data
             
         except Exception as e:
-            print(f"Error updating chemical display: {e}")
+            logger.error(f"Error updating chemical display: {e}")
             error_message = html.Div([
                 html.Div("Error updating chemical display", className="alert alert-danger"),
                 html.Pre(str(e), style={"fontSize": "12px"})

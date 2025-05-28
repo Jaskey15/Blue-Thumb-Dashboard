@@ -145,84 +145,6 @@ def create_action_card(icon, title, why_text, tips_list, category=None):
         ])
     ], className=f"action-card mb-4 h-100 {category if category else ''}")
 
-def create_site_selector(selector_id_prefix, data_type):
-    """
-    Create a searchable site selector component.
-    
-    Args:
-        selector_id_prefix: Prefix for component IDs (e.g., "chemical-", "fish-")
-        data_type: Type of data to get sites for ('chemical', 'fish', 'macro', 'habitat')
-    
-    Returns:
-        HTML Div containing the site selector components
-    """
-    return html.Div([
-        # Label
-        html.Label("Select Site:", className="form-label mb-2", style={'fontWeight': 'bold'}),
-        
-        # Search input container
-        html.Div([
-            dcc.Input(
-                id=f"{selector_id_prefix}site-search-input",
-                type="text",
-                placeholder="Type to search for a site...",
-                className="form-control",
-                style={'width': '100%'},
-                debounce=False,
-                value=""
-            ),
-            # Clear button (initially hidden)
-            html.Button(
-                "×",
-                id=f"{selector_id_prefix}site-clear-button",
-                className="btn btn-outline-secondary",
-                style={
-                    'position': 'absolute',
-                    'right': '5px',
-                    'top': '50%',
-                    'transform': 'translateY(-50%)',
-                    'border': 'none',
-                    'background': 'transparent',
-                    'fontSize': '20px',
-                    'display': 'none'
-                }
-            )
-        ], style={'position': 'relative', 'marginBottom': '10px'}),
-        
-        # Autocomplete dropdown (initially hidden)
-        html.Div(
-            id=f"{selector_id_prefix}site-dropdown",
-            children=[],
-            style={
-                'display': 'none',
-                'position': 'absolute',
-                'top': '100%',
-                'left': '0',
-                'right': '0',
-                'backgroundColor': 'white',
-                'border': '1px solid #ccc',
-                'borderTop': 'none',
-                'maxHeight': '200px',
-                'overflowY': 'auto',
-                'zIndex': '1000',
-                'boxShadow': '0 2px 4px rgba(0,0,0,0.1)'
-            }
-        ),
-        
-        # Hidden stores for state management
-        dcc.Store(id=f"{selector_id_prefix}selected-site-data", data=None),
-        dcc.Store(id=f"{selector_id_prefix}available-sites", data=data_type),
-        
-        # Default message when no site is selected
-        html.Div(
-            "Please select a site to view data.",
-            id=f"{selector_id_prefix}no-site-message",
-            className="alert alert-info",
-            style={'textAlign': 'center', 'marginTop': '20px'}
-        )
-        
-    ], style={'position': 'relative', 'marginBottom': '20px'})
-
 def create_dropdown_row(id_value, label_text, options, default_value=None, clearable=False, placeholder=None):
     """
     Create a consistent row layout with a dropdown.
@@ -474,7 +396,7 @@ def create_overview_tab():
         ])
 
 def create_chemical_tab():
-    """Create the chemical data tab layout with site selector."""
+    """Create the chemical data tab layout with simple search functionality."""
     return html.Div([
         # Description - always visible
         html.Div([
@@ -482,11 +404,59 @@ def create_chemical_tab():
             html.P([
                 "Chemical monitoring provides valuable insights into the health of aquatic ecosystems, acting as an early warning system for environmental stressors that may not be immediately visible. While chemical data alone cannot fully determine if a stream is healthy, it plays a crucial role in detecting the source of problems that may impact the biological inhabitants of the stream. Chemical parameters can reveal human influences like agricultural runoff, urban development, industrial discharges, and other pollution sources before they cause widespread damage to aquatic communities. The key parameters that Blue Thumb monitors are Dissolved Oxygen, pH, Nitrogen, Phosphorus, and Chloride - each serving as an indicator of different aspects of water quality and potential environmental challenges. By tracking these parameters over time, we can identify trends, detect emerging issues, and guide restoration efforts to maintain or improve the overall health of streams."
             ]),
-            html.P("Select a site and parameter from the dropdowns for a description and graph showing the changes over time.")
+            html.P([
+                "You can find site names and locations on the ",
+                html.A("Overview tab", href="#", style={"text-decoration": "underline"}),
+                ". Search for a site below to begin analysis."
+            ])
         ], className="mb-4"),
         
-        # Site selector - always visible
-        create_site_selector("chemical-", "chemical"),
+        # Site search section
+        html.Div([
+            html.Label("Select Site:", className="form-label mb-2", style={'fontWeight': 'bold'}),
+            
+            # Search input with button
+            html.Div([
+                dbc.InputGroup([
+                    dbc.Input(
+                        id='chemical-search-input',
+                        placeholder="Type to search for a site...",
+                        type="text",
+                        value=""
+                    ),
+                    dbc.Button(
+                        "Search",
+                        id='chemical-search-button',
+                        color="primary",
+                        n_clicks=0
+                    )
+                ])
+            ], style={'position': 'relative', 'marginBottom': '10px'}),
+            
+            # Search results list (initially hidden)
+            html.Div(
+                id='chemical-search-results',
+                children=[],
+                style={
+                    'display': 'none',
+                    'position': 'absolute',
+                    'top': '100%',
+                    'left': '0',
+                    'right': '0',
+                    'backgroundColor': 'white',
+                    'border': '1px solid #ccc',
+                    'borderTop': 'none',
+                    'maxHeight': '200px',
+                    'overflowY': 'auto',
+                    'zIndex': '1000',
+                    'boxShadow': '0 2px 4px rgba(0,0,0,0.1)'
+                }
+            ),
+            
+            # Hidden store for selected site
+            dcc.Store(id='chemical-selected-site', data=None)
+            
+        ], style={'position': 'relative', 'marginBottom': '20px'}),
         
         # Controls and content - hidden until site is selected
         html.Div([
@@ -588,7 +558,7 @@ def create_chemical_tab():
     ])
 
 def create_biological_tab():
-    """Create the biological data tab layout with site selector."""
+    """Create the biological data tab layout with simple search functionality."""
     return html.Div([
         # Description - always visible
         html.Div([
@@ -596,11 +566,59 @@ def create_biological_tab():
             html.P([
                 "Biological monitoring provides direct evidence of stream health by examining the living organisms that call these aquatic ecosystems home. Fish and macroinvertebrate communities serve as excellent indicators of overall ecosystem health because they integrate the effects of multiple environmental stressors over time. These communities respond to changes in water quality, habitat structure, and flow patterns, making them sensitive barometers of ecological condition. Blue Thumb's biological assessments include fish community surveys and macroinvertebrate sampling, both of which provide unique insights into different aspects of stream health. Fish communities reflect longer-term conditions and habitat quality, while macroinvertebrates respond more quickly to pollution events and water quality changes."
             ]),
-            html.P("Select a biological community to explore the assessment data and learn about the species found in Oklahoma streams.")
+            html.P([
+                "You can find site names and locations on the ",
+                html.A("Overview tab", href="#", style={"text-decoration": "underline"}),
+                ". Search for a site below to begin analysis."
+            ])
         ], className="mb-4"),
         
-        # Site selector - always visible
-        create_site_selector("biological-", "biological"),
+        # Site search section
+        html.Div([
+            html.Label("Select Site:", className="form-label mb-2", style={'fontWeight': 'bold'}),
+            
+            # Search input with button
+            html.Div([
+                dbc.InputGroup([
+                    dbc.Input(
+                        id='biological-search-input',
+                        placeholder="Type to search for a site...",
+                        type="text",
+                        value=""
+                    ),
+                    dbc.Button(
+                        "Search",
+                        id='biological-search-button',
+                        color="primary",
+                        n_clicks=0
+                    )
+                ])
+            ], style={'position': 'relative', 'marginBottom': '10px'}),
+            
+            # Search results list (initially hidden)
+            html.Div(
+                id='biological-search-results',
+                children=[],
+                style={
+                    'display': 'none',
+                    'position': 'absolute',
+                    'top': '100%',
+                    'left': '0',
+                    'right': '0',
+                    'backgroundColor': 'white',
+                    'border': '1px solid #ccc',
+                    'borderTop': 'none',
+                    'maxHeight': '200px',
+                    'overflowY': 'auto',
+                    'zIndex': '1000',
+                    'boxShadow': '0 2px 4px rgba(0,0,0,0.1)'
+                }
+            ),
+            
+            # Hidden store for selected site
+            dcc.Store(id='biological-selected-site', data=None)
+            
+        ], style={'position': 'relative', 'marginBottom': '20px'}),
         
         # Controls and content - hidden until site is selected
         html.Div([
@@ -627,7 +645,7 @@ def create_biological_tab():
     ])
 
 def create_habitat_tab():
-    """Create the habitat data tab layout with site selector."""
+    """Create the habitat data tab layout with simple search functionality."""
     return html.Div([
         # Description - always visible
         html.Div([
@@ -635,13 +653,61 @@ def create_habitat_tab():
             html.P([
                 "Physical habitat assessment evaluates the structural components of stream ecosystems that provide the foundation for healthy aquatic communities. Habitat quality directly influences the types and abundance of organisms that can survive in a stream environment. Blue Thumb's habitat assessments examine multiple components including streambank stability, riparian vegetation, substrate composition, flow characteristics, and in-stream cover. These physical features determine whether streams can support diverse biological communities and maintain important ecological functions like nutrient cycling, sediment transport, and flood control."
             ]),
-            html.P("Habitat assessment scores reflect the overall quality of physical stream conditions and their ability to support aquatic life.")
+            html.P([
+                "You can find site names and locations on the ",
+                html.A("Overview tab", href="#", style={"text-decoration": "underline"}),
+                ". Search for a site below to begin analysis."
+            ])
         ], className="mb-4"),
         
-        # Site selector - always visible
-        create_site_selector("habitat-", "habitat"),
+        # Site search section
+        html.Div([
+            html.Label("Select Site:", className="form-label mb-2", style={'fontWeight': 'bold'}),
+            
+            # Search input with button
+            html.Div([
+                dbc.InputGroup([
+                    dbc.Input(
+                        id='habitat-search-input',
+                        placeholder="Type to search for a site...",
+                        type="text",
+                        value=""
+                    ),
+                    dbc.Button(
+                        "Search",
+                        id='habitat-search-button',
+                        color="primary",
+                        n_clicks=0
+                    )
+                ])
+            ], style={'position': 'relative', 'marginBottom': '10px'}),
+            
+            # Search results list (initially hidden)
+            html.Div(
+                id='habitat-search-results',
+                children=[],
+                style={
+                    'display': 'none',
+                    'position': 'absolute',
+                    'top': '100%',
+                    'left': '0',
+                    'right': '0',
+                    'backgroundColor': 'white',
+                    'border': '1px solid #ccc',
+                    'borderTop': 'none',
+                    'maxHeight': '200px',
+                    'overflowY': 'auto',
+                    'zIndex': '1000',
+                    'boxShadow': '0 2px 4px rgba(0,0,0,0.1)'
+                }
+            ),
+            
+            # Hidden store for selected site
+            dcc.Store(id='habitat-selected-site', data=None)
+            
+        ], style={'position': 'relative', 'marginBottom': '20px'}),
         
-        # Content - hidden until site is selected
+        # Controls and content - hidden until site is selected
         html.Div([
             dbc.Row([
                 dbc.Col([

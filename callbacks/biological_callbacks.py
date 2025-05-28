@@ -3,15 +3,11 @@ Biological callbacks for the Tenmile Creek Water Quality Dashboard.
 This file contains callbacks specific to the biological data tab.
 """
 
+import json
 import dash
-from dash import html
-from dash.dependencies import Input, Output, State, ALL
-
+from dash import html, Input, Output, State, ALL
 from utils import setup_logging
-from .helper_functions import (
-    update_site_dropdown, handle_site_selection, 
-    create_biological_community_display, create_gallery_navigation_callback
-)
+from .helper_functions import create_biological_community_display, create_gallery_navigation_callback
 
 # Configure logging
 logger = setup_logging("biological_callbacks", category="callbacks")

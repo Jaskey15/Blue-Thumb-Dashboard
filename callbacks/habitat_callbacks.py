@@ -3,12 +3,10 @@ Habitat callbacks for the Tenmile Creek Water Quality Dashboard.
 This file contains callbacks specific to the habitat data tab.
 """
 
+import json
 import dash
-from dash import html, dcc
-from dash.dependencies import Input, Output, State, ALL
-
+from dash import html, Input, Output, State, ALL
 from utils import setup_logging
-from .helper_functions import update_site_dropdown, handle_site_selection
 
 # Configure logging
 logger = setup_logging("habitat_callbacks", category="callbacks")
