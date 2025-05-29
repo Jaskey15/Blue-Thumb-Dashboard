@@ -3,8 +3,9 @@ Habitat callbacks for the Tenmile Creek Water Quality Dashboard.
 This file contains callbacks specific to the habitat data tab.
 """
 
+import json
 import dash
-from dash import html, Input, Output, State, dcc
+from dash import html, Input, Output, State, dcc, ALL
 import dash_bootstrap_components as dbc
 from utils import setup_logging, get_sites_with_data
 
@@ -16,97 +17,117 @@ def register_habitat_callbacks(app):
     
     # Callback 1: Search results - show matching sites when search button is clicked
     @app.callback(
-        Output('habitat-search-results', 'children'),
-        Input('habitat-search-button', 'n_clicks'),
-        State('habitat-search-input', 'value'),
+        [Output('habitat-search-results', 'children'),
+         Output('habitat-search-results', 'style')],
+        [Input('habitat-search-button', 'n_clicks')],
+        [State('habitat-search-input', 'value')],
         prevent_initial_call=True
     )
     def update_habitat_search_results(n_clicks, search_value):
-        """Update search results based on search input."""
-        if not search_value or not search_value.strip():
-            return html.P("Please enter a search term.", className="text-muted")
+        """Show search results in dropdown style matching chemical tab."""
+        if not n_clicks or not search_value:
+            return [], {'display': 'none'}
         
         try:
             # Get all sites with habitat data
             available_sites = get_sites_with_data('habitat')
             
             if not available_sites:
-                return html.P("No habitat data available.", className="text-warning")
+                return [
+                    html.Div(
+                        "No habitat data available",
+                        style={'padding': '8px 12px', 'color': '#6c757d'}
+                    )
+                ], {'display': 'block', 'position': 'absolute', 'top': '100%', 'left': '0', 'right': '0', 'backgroundColor': 'white', 'border': '1px solid #ccc', 'borderTop': 'none', 'maxHeight': '200px', 'overflowY': 'auto', 'zIndex': '1000', 'boxShadow': '0 2px 4px rgba(0,0,0,0.1)'}
             
             # Filter sites based on search input (case-insensitive)
             search_term = search_value.lower().strip()
             matching_sites = [site for site in available_sites 
-                            if search_term in site.lower()]
+                             if search_term in site.lower()]
             
             if not matching_sites:
-                return html.P(f"No sites found matching '{search_value}'.", 
-                            className="text-muted")
+                return [
+                    html.Div(
+                        "No sites found",
+                        style={'padding': '8px 12px', 'color': '#6c757d'}
+                    )
+                ], {'display': 'block', 'position': 'absolute', 'top': '100%', 'left': '0', 'right': '0', 'backgroundColor': 'white', 'border': '1px solid #ccc', 'borderTop': 'none', 'maxHeight': '200px', 'overflowY': 'auto', 'zIndex': '1000', 'boxShadow': '0 2px 4px rgba(0,0,0,0.1)'}
             
-            # Create clickable buttons for each matching site
-            site_buttons = []
+            # Create clickable list items (matching chemical tab style)
+            result_items = []
             for site in matching_sites[:10]:  # Limit to 10 results
-                button = dbc.Button(
-                    site,
-                    id={'type': 'habitat-site-button', 'site': site},
-                    color="outline-primary",
-                    size="sm",
-                    className="me-2 mb-2"
+                result_items.append(
+                    html.Div(
+                        site,
+                        id={'type': 'habitat-site-option', 'site': site},
+                        style={
+                            'padding': '8px 12px',
+                            'cursor': 'pointer',
+                            'borderBottom': '1px solid #eee'
+                        },
+                        className="site-option",
+                        n_clicks=0
+                    )
                 )
-                site_buttons.append(button)
             
-            return html.Div([
-                html.P(f"Found {len(matching_sites)} matching sites:", 
-                      className="text-success mb-2"),
-                html.Div(site_buttons)
-            ])
+            logger.info(f"Habitat search for '{search_value}' found {len(matching_sites)} sites")
+            return result_items, {
+                'display': 'block',
+                'position': 'absolute',
+                'top': '100%',
+                'left': '0',
+                'right': '0',
+                'backgroundColor': 'white',
+                'border': '1px solid #ccc',
+                'borderTop': 'none',
+                'maxHeight': '200px',
+                'overflowY': 'auto',
+                'zIndex': '1000',
+                'boxShadow': '0 2px 4px rgba(0,0,0,0.1)'
+            }
             
         except Exception as e:
             logger.error(f"Error in habitat search: {e}")
-            return html.P("Error searching sites. Please try again.", 
-                        className="text-danger")
+            return [], {'display': 'none'}
     
-    # Callback 2: Site selection - handle clicking on a site button
+    # Callback 2: Site selection - handle clicking on a site option
     @app.callback(
-        Output('habitat-selected-site', 'data'),
-        Input({'type': 'habitat-site-button', 'site': dash.dependencies.ALL}, 'n_clicks'),
+        [Output('habitat-selected-site', 'data'),
+         Output('habitat-search-input', 'value'),
+         Output('habitat-search-results', 'style', allow_duplicate=True)],
+        [Input({'type': 'habitat-site-option', 'site': ALL}, 'n_clicks')],
+        [State('habitat-selected-site', 'data')],
         prevent_initial_call=True
     )
-    def handle_habitat_site_selection(n_clicks_list):
-        """Handle site selection from search results."""
-        # Get which button was clicked
+    def handle_habitat_site_selection(site_clicks, current_site):
+        """Handle site selection from dropdown-style search results."""
+        # Check if any site was clicked
+        if not any(site_clicks) or not any(click for click in site_clicks if click):
+            return current_site, dash.no_update, dash.no_update
+        
+        # Find which site was clicked
         ctx = dash.callback_context
         if not ctx.triggered:
-            return dash.no_update
+            return current_site, dash.no_update, dash.no_update
         
-        # Extract site name from the triggered button
-        button_id = ctx.triggered[0]['prop_id'].split('.')[0]
-        if button_id:
-            import json
-            button_data = json.loads(button_id)
-            selected_site = button_data['site']
+        try:
+            # Extract site name from the triggered component
+            triggered_id = ctx.triggered[0]['prop_id']
+            site_info = json.loads(triggered_id.split('.')[0])
+            selected_site = site_info['site']
+            
             logger.info(f"Habitat site selected: {selected_site}")
-            return selected_site
-        
-        return dash.no_update
-    
-    # Clear button callback
-    @app.callback(
-        [Output('habitat-search-input', 'value'),
-        Output('habitat-selected-site', 'data', allow_duplicate=True),
-        Output('habitat-search-results', 'children', allow_duplicate=True)],
-        [Input('habitat-clear-button', 'n_clicks')],
-        prevent_initial_call=True
-    )
-    def clear_habitat_search(n_clicks):
-        """Clear the habitat search input and reset selections"""
-        if n_clicks:
+            
+            # Update UI: show selected site, hide results
             return (
-                "",  # Clear search input
-                None,  # Clear selected site
-                [html.P("Enter a search term and click 'Search' to find monitoring sites.", 
-                    className="text-muted")]  # Reset search results
+                selected_site,  # Store selected site
+                selected_site,  # Update search input to show selected site
+                {'display': 'none'}  # Hide search results
             )
-        return dash.no_update, dash.no_update, dash.no_update
+        
+        except Exception as e:
+            logger.error(f"Error in habitat site selection: {e}")
+            return current_site, dash.no_update, dash.no_update
     
     # Callback 3: Main display - show habitat visualization when site is selected
     @app.callback(
@@ -135,3 +156,21 @@ def register_habitat_callbacks(app):
                     html.Pre(str(e), style={"fontSize": "12px", "color": "red"})
                 ])
             ])
+    
+    # Callback 4: Clear button - clear search input and reset selections
+    @app.callback(
+        [Output('habitat-search-input', 'value', allow_duplicate=True),
+         Output('habitat-selected-site', 'data', allow_duplicate=True),
+         Output('habitat-search-results', 'style', allow_duplicate=True)],
+        [Input('habitat-clear-button', 'n_clicks')],
+        prevent_initial_call=True
+    )
+    def clear_habitat_search(n_clicks):
+        """Clear the habitat search input and reset selections"""
+        if n_clicks:
+            return (
+                "",  # Clear search input
+                None,  # Clear selected site
+                {'display': 'none'}  # Hide search results
+            )
+        return dash.no_update, dash.no_update, dash.no_update

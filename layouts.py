@@ -415,6 +415,12 @@ def create_chemical_tab():
         html.Div([
             html.Label("Select Site:", className="form-label mb-2", style={'fontWeight': 'bold'}),
             
+            # Helper text
+            html.Small(
+                "Enter a search term and click 'Search' to find monitoring sites.",
+                className="text-muted mb-2 d-block"
+            ),
+
             # Search input with button
             html.Div([
                 dbc.InputGroup([
@@ -438,12 +444,6 @@ def create_chemical_tab():
                     )
                 ])
             ], style={'position': 'relative', 'marginBottom': '5px'}),
-            
-            # Helper text
-            html.Small(
-                "Enter a search term and click 'Search' to find monitoring sites.",
-                className="text-muted"
-            ),
             
             # Search results list (initially hidden)
             html.Div(
@@ -606,6 +606,12 @@ def create_biological_tab():
         html.Div([
             html.Label("Select Site:", className="form-label mb-2", style={'fontWeight': 'bold'}),
             
+            # Helper text
+            html.Small(
+                "Enter a search term and click 'Search' to find monitoring sites.",
+                className="text-muted mb-2 d-block"
+            ),
+
             # Search input with button
             html.Div([
                 dbc.InputGroup([
@@ -632,12 +638,6 @@ def create_biological_tab():
                     )
                 ])
             ], style={'position': 'relative', 'marginBottom': '5px'}),
-            
-            # Helper text
-            html.Small(
-                "Enter a search term and click 'Search' to find monitoring sites.",
-                className="text-muted"
-            ),
             
             # Search results list (initially hidden)
             html.Div(
@@ -693,18 +693,25 @@ def create_habitat_tab():
             ], width=6)
         ], className="mb-4"),
         
-        # Site search section 
+        # Site search section (clean, no card wrapper)
         dbc.Row([
             dbc.Col([
                 html.Label("Select Site:", className="form-label mb-2", style={'fontWeight': 'bold'}),
                 
-                # Search input and button
+                # Helper text
+                html.Small(
+                    "Enter a search term and click 'Search' to find monitoring sites.",
+                    className="text-muted mb-2 d-block"
+                ),
+
+                # Search input and button - ADD CONTAINER WITH RELATIVE POSITIONING
                 html.Div([
                     dbc.InputGroup([
                         dbc.Input(
                             id="habitat-search-input",
                             placeholder="Enter site name (e.g., Tenmile, Boggy, Blue)",
-                            type="text"
+                            type="text",
+                            value=""
                         ),
                         dbc.Button(
                             "Search",
@@ -718,17 +725,28 @@ def create_habitat_tab():
                             color="secondary",
                             n_clicks=0
                         )
-                    ])
-                ], style={'position': 'relative', 'marginBottom': '5px'}),
-                
-                # Helper text
-                html.Small(
-                    "Enter a search term and click 'Search' to find monitoring sites.",
-                    className="text-muted mb-3"
-                ),
-                
-                # Search results container
-                html.Div(id="habitat-search-results", children=[])
+                    ]),
+                    
+                    # Search results list (initially hidden) - NOW PROPERLY CONTAINED
+                    html.Div(
+                        id="habitat-search-results",
+                        children=[],
+                        style={
+                            'display': 'none',
+                            'position': 'absolute',
+                            'top': '100%',
+                            'left': '0',
+                            'right': '0',
+                            'backgroundColor': 'white',
+                            'border': '1px solid #ccc',
+                            'borderTop': 'none',
+                            'maxHeight': '200px',
+                            'overflowY': 'auto',
+                            'zIndex': '1000',
+                            'boxShadow': '0 2px 4px rgba(0,0,0,0.1)'
+                        }
+                    )
+                ], style={'position': 'relative', 'marginBottom': '5px'}),  # THIS IS THE KEY FIX  
             ], width=12)
         ], className="mb-4"),
         
