@@ -429,9 +429,21 @@ def create_chemical_tab():
                         id='chemical-search-button',
                         color="primary",
                         n_clicks=0
+                    ),
+                    dbc.Button(
+                        "Clear",
+                        id='chemical-clear-button',
+                        color="secondary",
+                        n_clicks=0
                     )
                 ])
-            ], style={'position': 'relative', 'marginBottom': '10px'}),
+            ], style={'position': 'relative', 'marginBottom': '5px'}),
+            
+            # Helper text
+            html.Small(
+                "Enter a search term and click 'Search' to find monitoring sites.",
+                className="text-muted"
+            ),
             
             # Search results list (initially hidden)
             html.Div(
@@ -610,9 +622,22 @@ def create_biological_tab():
                         color="primary",
                         n_clicks=0,
                         disabled=True  # Start disabled
+                    ),
+                    dbc.Button(
+                        "Clear",
+                        id='biological-clear-button',
+                        color="secondary",
+                        n_clicks=0,
+                        disabled=True  # Start disabled
                     )
                 ])
-            ], style={'position': 'relative', 'marginBottom': '10px'}),
+            ], style={'position': 'relative', 'marginBottom': '5px'}),
+            
+            # Helper text
+            html.Small(
+                "Enter a search term and click 'Search' to find monitoring sites.",
+                className="text-muted"
+            ),
             
             # Search results list (initially hidden)
             html.Div(
@@ -668,32 +693,42 @@ def create_habitat_tab():
             ], width=6)
         ], className="mb-4"),
         
-        # Site search section (clean, no card wrapper)
+        # Site search section 
         dbc.Row([
             dbc.Col([
-                html.H5("Select a Site", className="mb-3"),
+                html.Label("Select Site:", className="form-label mb-2", style={'fontWeight': 'bold'}),
                 
                 # Search input and button
-                dbc.InputGroup([
-                    dbc.Input(
-                        id="habitat-search-input",
-                        placeholder="Enter site name (e.g., Tenmile, Boggy, Blue)",
-                        type="text",
-                        className="me-2"
-                    ),
-                    dbc.Button(
-                        "Search",
-                        id="habitat-search-button",
-                        color="primary",
-                        n_clicks=0
-                    )
-                ], className="mb-3"),
+                html.Div([
+                    dbc.InputGroup([
+                        dbc.Input(
+                            id="habitat-search-input",
+                            placeholder="Enter site name (e.g., Tenmile, Boggy, Blue)",
+                            type="text"
+                        ),
+                        dbc.Button(
+                            "Search",
+                            id="habitat-search-button",
+                            color="primary",
+                            n_clicks=0
+                        ),
+                        dbc.Button(
+                            "Clear",
+                            id="habitat-clear-button",
+                            color="secondary",
+                            n_clicks=0
+                        )
+                    ])
+                ], style={'position': 'relative', 'marginBottom': '5px'}),
+                
+                # Helper text
+                html.Small(
+                    "Enter a search term and click 'Search' to find monitoring sites.",
+                    className="text-muted mb-3"
+                ),
                 
                 # Search results container
-                html.Div(id="habitat-search-results", children=[
-                    html.P("Enter a search term and click 'Search' to find monitoring sites.", 
-                           className="text-muted")
-                ])
+                html.Div(id="habitat-search-results", children=[])
             ], width=12)
         ], className="mb-4"),
         

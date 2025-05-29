@@ -89,6 +89,25 @@ def register_habitat_callbacks(app):
         
         return dash.no_update
     
+    # Clear button callback
+    @app.callback(
+        [Output('habitat-search-input', 'value'),
+        Output('habitat-selected-site', 'data', allow_duplicate=True),
+        Output('habitat-search-results', 'children', allow_duplicate=True)],
+        [Input('habitat-clear-button', 'n_clicks')],
+        prevent_initial_call=True
+    )
+    def clear_habitat_search(n_clicks):
+        """Clear the habitat search input and reset selections"""
+        if n_clicks:
+            return (
+                "",  # Clear search input
+                None,  # Clear selected site
+                [html.P("Enter a search term and click 'Search' to find monitoring sites.", 
+                    className="text-muted")]  # Reset search results
+            )
+        return dash.no_update, dash.no_update, dash.no_update
+    
     # Callback 3: Main display - show habitat visualization when site is selected
     @app.callback(
         Output('habitat-content-container', 'children'),

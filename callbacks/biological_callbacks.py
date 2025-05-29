@@ -18,41 +18,41 @@ def register_biological_callbacks(app):
     # Community selection callback - shows/hides search section
     @app.callback(
         [Output('biological-site-search-section', 'style'),
-         Output('biological-search-input', 'disabled'),
-         Output('biological-search-button', 'disabled'),
-         Output('biological-search-input', 'value'),
-         Output('biological-selected-site', 'data'),
-         Output('biological-search-results', 'style'),
-         Output('biological-search-results', 'children')],
+        Output('biological-search-input', 'disabled'),
+        Output('biological-search-button', 'disabled'),
+        Output('biological-clear-button', 'disabled'),  
+        Output('biological-search-input', 'value'),
+        Output('biological-selected-site', 'data'),
+        Output('biological-search-results', 'style'),
+        Output('biological-search-results', 'children')],
         [Input('biological-community-dropdown', 'value')]
     )
     def update_biological_search_visibility(selected_community):
-        """
-        Show/hide search section based on community selection.
-        Clear any previous selections when community changes.
-        """
+        """Show/hide search section based on community selection."""
         if selected_community and selected_community != '':
             # Show search section, enable inputs, clear previous selections
             search_section_style = {'display': 'block', 'position': 'relative', 'marginBottom': '20px'}
             input_disabled = False
             button_disabled = False
+            clear_disabled = False  # Add this line
             search_value = ""
             selected_site = None
             results_style = {'display': 'none'}
             results_children = []
             
-            return search_section_style, input_disabled, button_disabled, search_value, selected_site, results_style, results_children
+            return search_section_style, input_disabled, button_disabled, clear_disabled, search_value, selected_site, results_style, results_children
         else:
             # Hide search section, disable inputs
             search_section_style = {'display': 'none'}
             input_disabled = True
             button_disabled = True
+            clear_disabled = True  # Add this line
             search_value = ""
             selected_site = None
             results_style = {'display': 'none'}
             results_children = []
             
-            return search_section_style, input_disabled, button_disabled, search_value, selected_site, results_style, results_children
+            return search_section_style, input_disabled, button_disabled, clear_disabled, search_value, selected_site, results_style, results_children
     
     # Search results callback
     @app.callback(
@@ -164,6 +164,24 @@ def register_biological_callbacks(app):
         except Exception as e:
             logger.error(f"Error in biological site selection: {e}")
             return current_site, dash.no_update, dash.no_update
+        
+    # Clear button callback
+    @app.callback(
+        [Output('biological-search-input', 'value', allow_duplicate=True),
+        Output('biological-selected-site', 'data', allow_duplicate=True),
+        Output('biological-search-results', 'style', allow_duplicate=True)],
+        [Input('biological-clear-button', 'n_clicks')],
+        prevent_initial_call=True
+    )
+    def clear_biological_search(n_clicks):
+        """Clear the biological search input and reset selections"""
+        if n_clicks:
+            return (
+                "",  # Clear search input
+                None,  # Clear selected site
+                {'display': 'none'}  # Hide search results
+            )
+        return dash.no_update, dash.no_update, dash.no_update
     
     # Main biological content callback
     @app.callback(

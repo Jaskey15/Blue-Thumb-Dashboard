@@ -107,6 +107,26 @@ def register_chemical_callbacks(app):
             {'display': 'none'},  # Hide search results
             {'display': 'block'}  # Show controls
         )
+    
+    # Clear button callback
+    @app.callback(
+        [Output('chemical-search-input', 'value', allow_duplicate=True),
+        Output('chemical-selected-site', 'data', allow_duplicate=True),
+        Output('chemical-search-results', 'style', allow_duplicate=True),
+        Output('chemical-controls-content', 'style', allow_duplicate=True)],
+        [Input('chemical-clear-button', 'n_clicks')],
+        prevent_initial_call=True
+    )
+    def clear_chemical_search(n_clicks):
+        """Clear the chemical search input and reset selections"""
+        if n_clicks:
+            return (
+                "",  # Clear search input
+                None,  # Clear selected site
+                {'display': 'none'},  # Hide search results
+                {'display': 'none'}  # Hide controls
+            )
+        return dash.no_update, dash.no_update, dash.no_update, dash.no_update
 
     # Main display callback - SIMPLIFIED: No caching, direct data processing
     @app.callback(
