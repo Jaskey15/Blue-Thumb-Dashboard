@@ -15,17 +15,18 @@ logger = setup_logging("habitat_callbacks", category="callbacks")
 def register_habitat_callbacks(app):
     """Register all habitat-related callbacks."""
     
-    # Callback 1: Search results - show matching sites when search button is clicked
+    # Callback 1: Search results - show matching sites when search button is clicked OR Enter is pressed
     @app.callback(
         [Output('habitat-search-results', 'children'),
-         Output('habitat-search-results', 'style')],
-        [Input('habitat-search-button', 'n_clicks')],
-        [State('habitat-search-input', 'value')],
+        Output('habitat-search-results', 'style')],
+        [Input('habitat-search-button', 'n_clicks'),
+        Input('habitat-search-input', 'n_submit')],
+        State('habitat-search-input', 'value'),
         prevent_initial_call=True
     )
-    def update_habitat_search_results(n_clicks, search_value):
-        """Show search results in dropdown style matching chemical tab."""
-        if not n_clicks or not search_value:
+    def update_habitat_search_results(button_clicks, enter_presses, search_value):
+        """Update search results based on search input."""
+        if (not button_clicks and not enter_presses) or not search_value or not search_value.strip():
             return [], {'display': 'none'}
         
         try:
@@ -33,27 +34,19 @@ def register_habitat_callbacks(app):
             available_sites = get_sites_with_data('habitat')
             
             if not available_sites:
-                return [
-                    html.Div(
-                        "No habitat data available",
-                        style={'padding': '8px 12px', 'color': '#6c757d'}
-                    )
-                ], {'display': 'block', 'position': 'absolute', 'top': '100%', 'left': '0', 'right': '0', 'backgroundColor': 'white', 'border': '1px solid #ccc', 'borderTop': 'none', 'maxHeight': '200px', 'overflowY': 'auto', 'zIndex': '1000', 'boxShadow': '0 2px 4px rgba(0,0,0,0.1)'}
+                return [html.Div("No habitat data available.", 
+                            className="p-2 text-warning")], {'display': 'block'}
             
             # Filter sites based on search input (case-insensitive)
             search_term = search_value.lower().strip()
             matching_sites = [site for site in available_sites 
-                             if search_term in site.lower()]
+                            if search_term in site.lower()]
             
             if not matching_sites:
-                return [
-                    html.Div(
-                        "No sites found",
-                        style={'padding': '8px 12px', 'color': '#6c757d'}
-                    )
-                ], {'display': 'block', 'position': 'absolute', 'top': '100%', 'left': '0', 'right': '0', 'backgroundColor': 'white', 'border': '1px solid #ccc', 'borderTop': 'none', 'maxHeight': '200px', 'overflowY': 'auto', 'zIndex': '1000', 'boxShadow': '0 2px 4px rgba(0,0,0,0.1)'}
+                return [html.Div(f"No sites found matching '{search_value}'.", 
+                            className="p-2 text-muted")], {'display': 'block'}
             
-            # Create clickable list items (matching chemical tab style)
+            # Create clickable list items (like chemical/biological tabs)
             result_items = []
             for site in matching_sites[:10]:  # Limit to 10 results
                 result_items.append(
@@ -70,7 +63,6 @@ def register_habitat_callbacks(app):
                     )
                 )
             
-            logger.info(f"Habitat search for '{search_value}' found {len(matching_sites)} sites")
             return result_items, {
                 'display': 'block',
                 'position': 'absolute',
@@ -88,47 +80,43 @@ def register_habitat_callbacks(app):
             
         except Exception as e:
             logger.error(f"Error in habitat search: {e}")
-            return [], {'display': 'none'}
+            return [html.Div("Error searching sites.", 
+                        className="p-2 text-danger")], {'display': 'block'}
     
-    # Callback 2: Site selection - handle clicking on a site option
+    # Callback 2: Site selection - handle clicking on a site from search results
     @app.callback(
         [Output('habitat-selected-site', 'data'),
-         Output('habitat-search-input', 'value'),
-         Output('habitat-search-results', 'style', allow_duplicate=True)],
-        [Input({'type': 'habitat-site-option', 'site': ALL}, 'n_clicks')],
+        Output('habitat-search-input', 'value'),
+        Output('habitat-search-results', 'style', allow_duplicate=True)],
+        [Input({'type': 'habitat-site-option', 'site': dash.dependencies.ALL}, 'n_clicks')],
         [State('habitat-selected-site', 'data')],
         prevent_initial_call=True
     )
     def handle_habitat_site_selection(site_clicks, current_site):
-        """Handle site selection from dropdown-style search results."""
+        """Handle site selection from search results."""
         # Check if any site was clicked
         if not any(site_clicks) or not any(click for click in site_clicks if click):
             return current_site, dash.no_update, dash.no_update
         
-        # Find which site was clicked
+        # Get which button was clicked
         ctx = dash.callback_context
         if not ctx.triggered:
             return current_site, dash.no_update, dash.no_update
         
-        try:
-            # Extract site name from the triggered component
-            triggered_id = ctx.triggered[0]['prop_id']
-            site_info = json.loads(triggered_id.split('.')[0])
-            selected_site = site_info['site']
-            
-            logger.info(f"Habitat site selected: {selected_site}")
-            
-            # Update UI: show selected site, hide results
-            return (
-                selected_site,  # Store selected site
-                selected_site,  # Update search input to show selected site
-                {'display': 'none'}  # Hide search results
-            )
+        # Extract site name from the triggered button
+        triggered_id = ctx.triggered[0]['prop_id']
+        import json
+        button_data = json.loads(triggered_id.split('.')[0])
+        selected_site = button_data['site']
         
-        except Exception as e:
-            logger.error(f"Error in habitat site selection: {e}")
-            return current_site, dash.no_update, dash.no_update
-    
+        logger.info(f"Habitat site selected: {selected_site}")
+        
+        return (
+            selected_site,  # Store selected site
+            selected_site,  # Update search input to show selected site
+            {'display': 'none'}  # Hide search results
+        )
+        
     # Callback 3: Main display - show habitat visualization when site is selected
     @app.callback(
         Output('habitat-content-container', 'children'),

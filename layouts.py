@@ -417,7 +417,7 @@ def create_chemical_tab():
             
             # Helper text
             html.Small(
-                "Enter a search term and click 'Search' to find monitoring sites.",
+                "Enter a search term and click 'Search' or press enter to find monitoring sites",
                 className="text-muted mb-2 d-block"
             ),
 
@@ -428,7 +428,8 @@ def create_chemical_tab():
                         id='chemical-search-input',
                         placeholder="Enter site name (e.g., Tenmile, Boggy, Blue)",
                         type="text",
-                        value=""
+                        value="",
+                        n_submit=0
                     ),
                     dbc.Button(
                         "Search",
@@ -449,20 +450,6 @@ def create_chemical_tab():
             html.Div(
                 id='chemical-search-results',
                 children=[],
-                style={
-                    'display': 'none',
-                    'position': 'absolute',
-                    'top': '100%',
-                    'left': '0',
-                    'right': '0',
-                    'backgroundColor': 'white',
-                    'border': '1px solid #ccc',
-                    'borderTop': 'none',
-                    'maxHeight': '200px',
-                    'overflowY': 'auto',
-                    'zIndex': '1000',
-                    'boxShadow': '0 2px 4px rgba(0,0,0,0.1)'
-                }
             ),
             
             # Hidden store for selected site
@@ -608,7 +595,7 @@ def create_biological_tab():
             
             # Helper text
             html.Small(
-                "Enter a search term and click 'Search' to find monitoring sites.",
+                "Enter a search term and click 'Search' or press enter to find monitoring sites",
                 className="text-muted mb-2 d-block"
             ),
 
@@ -620,7 +607,8 @@ def create_biological_tab():
                         placeholder="Enter site name (e.g., Tenmile, Boggy, Blue)",
                         type="text",
                         value="",
-                        disabled=True  # Start disabled
+                        disabled=True,  # Start disabled
+                        n_submit=0
                     ),
                     dbc.Button(
                         "Search",
@@ -643,20 +631,6 @@ def create_biological_tab():
             html.Div(
                 id='biological-search-results',
                 children=[],
-                style={
-                    'display': 'none',
-                    'position': 'absolute',
-                    'top': '100%',
-                    'left': '0',
-                    'right': '0',
-                    'backgroundColor': 'white',
-                    'border': '1px solid #ccc',
-                    'borderTop': 'none',
-                    'maxHeight': '200px',
-                    'overflowY': 'auto',
-                    'zIndex': '1000',
-                    'boxShadow': '0 2px 4px rgba(0,0,0,0.1)'
-                }
             ),
             
             # Hidden store for selected site
@@ -678,8 +652,7 @@ def create_habitat_tab():
         dbc.Row([
             # Left column - intro text
             dbc.Col([
-                load_markdown_content("habitat/habitat_intro.md", 
-                                    fallback_message="Habitat assessment information is currently unavailable.")
+                load_markdown_content("habitat/habitat_intro.md", fallback_message="Habitat assessment information is currently unavailable.")
             ], width=6),
             
             # Right column - image
@@ -693,25 +666,26 @@ def create_habitat_tab():
             ], width=6)
         ], className="mb-4"),
         
-        # Site search section (clean, no card wrapper)
+        # Site search section 
         dbc.Row([
             dbc.Col([
                 html.Label("Select Site:", className="form-label mb-2", style={'fontWeight': 'bold'}),
                 
                 # Helper text
                 html.Small(
-                    "Enter a search term and click 'Search' to find monitoring sites.",
+                    "Enter a search term and click 'Search' or press enter to find monitoring sites",
                     className="text-muted mb-2 d-block"
                 ),
 
-                # Search input and button - ADD CONTAINER WITH RELATIVE POSITIONING
+                # Search input and button
                 html.Div([
                     dbc.InputGroup([
                         dbc.Input(
                             id="habitat-search-input",
                             placeholder="Enter site name (e.g., Tenmile, Boggy, Blue)",
                             type="text",
-                            value=""
+                            value="",
+                            n_submit=0
                         ),
                         dbc.Button(
                             "Search",
@@ -727,26 +701,12 @@ def create_habitat_tab():
                         )
                     ]),
                     
-                    # Search results list (initially hidden) - NOW PROPERLY CONTAINED
+                    # Search results list (initially hidden) 
                     html.Div(
                         id="habitat-search-results",
                         children=[],
-                        style={
-                            'display': 'none',
-                            'position': 'absolute',
-                            'top': '100%',
-                            'left': '0',
-                            'right': '0',
-                            'backgroundColor': 'white',
-                            'border': '1px solid #ccc',
-                            'borderTop': 'none',
-                            'maxHeight': '200px',
-                            'overflowY': 'auto',
-                            'zIndex': '1000',
-                            'boxShadow': '0 2px 4px rgba(0,0,0,0.1)'
-                        }
                     )
-                ], style={'position': 'relative', 'marginBottom': '5px'}),  # THIS IS THE KEY FIX  
+                ], style={'position': 'relative', 'marginBottom': '5px'}), 
             ], width=12)
         ], className="mb-4"),
         

@@ -57,17 +57,18 @@ def register_biological_callbacks(app):
     # Search results callback
     @app.callback(
         [Output('biological-search-results', 'children', allow_duplicate=True),
-         Output('biological-search-results', 'style', allow_duplicate=True)],
-        [Input('biological-search-button', 'n_clicks')],
+        Output('biological-search-results', 'style', allow_duplicate=True)],
+        [Input('biological-search-button', 'n_clicks'),
+        Input('biological-search-input', 'n_submit')],  # Add this Input
         [State('biological-search-input', 'value'),
-         State('biological-community-dropdown', 'value')],
+        State('biological-community-dropdown', 'value')],
         prevent_initial_call=True
     )
-    def update_biological_search_results(n_clicks, search_value, selected_community):
+    def update_biological_search_results(button_clicks, enter_presses, search_value, selected_community):
         """
         Filter and display sites based on search input and selected community type.
         """
-        if not n_clicks or not search_value or not selected_community:
+        if (not button_clicks and not enter_presses) or not search_value or not selected_community:
             return [], {'display': 'none'}
         
         try:
@@ -76,7 +77,7 @@ def register_biological_callbacks(app):
             
             if not available_sites:
                 return [html.Div("No sites found for this community type.", 
-                               className="p-2 text-muted")], {'display': 'block'}
+                            className="p-2 text-muted")], {'display': 'block'}
             
             # Filter sites based on search input
             filtered_sites = [
@@ -86,7 +87,7 @@ def register_biological_callbacks(app):
             
             if not filtered_sites:
                 return [html.Div("No sites match your search.", 
-                               className="p-2 text-muted")], {'display': 'block'}
+                            className="p-2 text-muted")], {'display': 'block'}
             
             # Create clickable site options
             site_options = []
@@ -122,7 +123,7 @@ def register_biological_callbacks(app):
         except Exception as e:
             logger.error(f"Error in biological search: {e}")
             return [html.Div("Error loading sites.", 
-                           className="p-2 text-danger")], {'display': 'block'}
+                        className="p-2 text-danger")], {'display': 'block'}
     
     # Site selection callback
     @app.callback(

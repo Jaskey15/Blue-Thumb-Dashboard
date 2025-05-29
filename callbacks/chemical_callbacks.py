@@ -22,14 +22,21 @@ def register_chemical_callbacks(app):
     # Search results callback
     @app.callback(
         [Output('chemical-search-results', 'children'),
-         Output('chemical-search-results', 'style')],
-        [Input('chemical-search-button', 'n_clicks')],
+        Output('chemical-search-results', 'style')],
+        [Input('chemical-search-button', 'n_clicks'),
+        Input('chemical-search-input', 'n_submit')],  
         [State('chemical-search-input', 'value')],
         prevent_initial_call=True
     )
-    def update_search_results(n_clicks, search_term):
-        """Show search results when search button is clicked"""
-        if not n_clicks or not search_term:
+    def update_search_results(button_clicks, enter_presses, search_term):
+        """Show search results when search button is clicked OR Enter is pressed"""
+        
+        # Check if either the button was clicked or Enter was pressed
+        if not button_clicks and not enter_presses:
+            return [], {'display': 'none'}
+        
+        # Check if we have a search term
+        if not search_term:
             return [], {'display': 'none'}
         
         try:
@@ -51,7 +58,20 @@ def register_chemical_callbacks(app):
                         "No sites found",
                         style={'padding': '8px 12px', 'color': '#6c757d'}
                     )
-                ], {'display': 'block', 'position': 'absolute', 'top': '100%', 'left': '0', 'right': '0', 'backgroundColor': 'white', 'border': '1px solid #ccc', 'borderTop': 'none', 'maxHeight': '200px', 'overflowY': 'auto', 'zIndex': '1000', 'boxShadow': '0 2px 4px rgba(0,0,0,0.1)'}
+                ], {
+                    'display': 'block', 
+                    'position': 'absolute', 
+                    'top': '100%', 
+                    'left': '0', 
+                    'right': '0', 
+                    'backgroundColor': 'white', 
+                    'border': '1px solid #ccc', 
+                    'borderTop': 'none', 
+                    'maxHeight': '200px', 
+                    'overflowY': 'auto', 
+                    'zIndex': '1000', 
+                    'boxShadow': '0 2px 4px rgba(0,0,0,0.1)'
+                }
             
             # Create clickable list items
             result_items = []
@@ -71,7 +91,20 @@ def register_chemical_callbacks(app):
                 )
             
             logger.info(f"Chemical search for '{search_term}' found {len(matching_sites)} sites")
-            return result_items, {'display': 'block', 'position': 'absolute', 'top': '100%', 'left': '0', 'right': '0', 'backgroundColor': 'white', 'border': '1px solid #ccc', 'borderTop': 'none', 'maxHeight': '200px', 'overflowY': 'auto', 'zIndex': '1000', 'boxShadow': '0 2px 4px rgba(0,0,0,0.1)'}
+            return result_items, {
+                'display': 'block', 
+                'position': 'absolute', 
+                'top': '100%', 
+                'left': '0', 
+                'right': '0', 
+                'backgroundColor': 'white', 
+                'border': '1px solid #ccc', 
+                'borderTop': 'none', 
+                'maxHeight': '200px', 
+                'overflowY': 'auto', 
+                'zIndex': '1000', 
+                'boxShadow': '0 2px 4px rgba(0,0,0,0.1)'
+            }
             
         except Exception as e:
             logger.error(f"Error in chemical site search: {e}")
