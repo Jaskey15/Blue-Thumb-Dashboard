@@ -399,9 +399,8 @@ def create_chemical_tab():
     return html.Div([
         # Description - always visible
         html.Div([
-            html.H3("Chemical Water Quality", className="mb-3"),
             html.P([
-                "Chemical monitoring provides valuable insights into the health of aquatic ecosystems, acting as an early warning system for environmental stressors that may not be immediately visible. While chemical data alone cannot fully determine if a stream is healthy, it plays a crucial role in detecting the source of problems that may impact the biological inhabitants of the stream. Chemical parameters can reveal human influences like agricultural runoff, urban development, industrial discharges, and other pollution sources before they cause widespread damage to aquatic communities. The key parameters that Blue Thumb monitors are Dissolved Oxygen, pH, Nitrogen, Phosphorus, and Chloride - each serving as an indicator of different aspects of water quality and potential environmental challenges. By tracking these parameters over time, we can identify trends, detect emerging issues, and guide restoration efforts to maintain or improve the overall health of streams."
+                load_markdown_content('chemical/chemical_intro.md')
             ]),
             html.P([
                 "Search for a site below to begin analysis."
@@ -561,9 +560,8 @@ def create_biological_tab():
     return html.Div([
         # Description - always visible
         html.Div([
-            html.H3("Biological Assessment", className="mb-3"),
             html.P([
-                "Biological monitoring provides direct evidence of stream health by examining the living organisms that call these aquatic ecosystems home. Fish and macroinvertebrate communities serve as excellent indicators of overall ecosystem health because they integrate the effects of multiple environmental stressors over time. These communities respond to changes in water quality, habitat structure, and flow patterns, making them sensitive barometers of ecological condition. Blue Thumb's biological assessments include fish community surveys and macroinvertebrate sampling, both of which provide unique insights into different aspects of stream health. Fish communities reflect longer-term conditions and habitat quality, while macroinvertebrates respond more quickly to pollution events and water quality changes."
+                load_markdown_content('biological/biological_intro.md')
             ]),
             html.P([
                 "Select a community type and search for a site below to begin analysis."
@@ -652,7 +650,7 @@ def create_habitat_tab():
         dbc.Row([
             # Left column - intro text
             dbc.Col([
-                load_markdown_content("habitat/habitat_intro.md", fallback_message="Habitat assessment information is currently unavailable.")
+                load_markdown_content('habitat/habitat_intro.md')
             ], width=6),
             
             # Right column - image

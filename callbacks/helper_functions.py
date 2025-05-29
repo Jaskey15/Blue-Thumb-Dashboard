@@ -337,7 +337,6 @@ def create_biological_community_display(selected_community, selected_site):
             
             if site_data.empty:
                 return html.Div([
-                    html.H4(f"Fish Community Data for {selected_site}", className="mb-4"),
                     html.Div(f"No fish data available for {selected_site}", 
                             className="alert alert-warning mt-3")
                 ])
@@ -355,7 +354,6 @@ def create_biological_community_display(selected_community, selected_site):
             
             if all_macro_data.empty:
                 return html.Div([
-                    html.H4(f"Macroinvertebrate Community Data for {selected_site}", className="mb-4"),
                     html.Div("No macroinvertebrate data available in database", 
                             className="alert alert-warning mt-3")
                 ])
@@ -417,7 +415,6 @@ def create_biological_community_display(selected_community, selected_site):
             # Fourth row: Analysis section
             dbc.Row([
                 dbc.Col([
-                    html.H5("Analysis", className="mb-3"),
                     load_markdown_content(f"biological/{selected_community}_analysis.md")
                 ], width=12)
             ], className="mb-4"),
@@ -468,15 +465,10 @@ def create_habitat_display(selected_site):
         metrics_accordion = create_habitat_metrics_accordion(selected_site)  # Pass site parameter
         
         # Create unified layout for habitat assessment
-        content = html.Div([
-            # Site header
-            html.H4(f"Habitat Assessment Data for {selected_site}", 
-                   className="mb-4"),
-            
+        content = html.Div([            
             # First row: Graph (full width)
             dbc.Row([
                 dbc.Col([
-                    html.H5("Habitat Assessment Scores Over Time", className="mb-3"),
                     dcc.Graph(figure=viz_figure)
                 ], width=12)
             ], className="mb-4"),
@@ -491,7 +483,6 @@ def create_habitat_display(selected_site):
             # Third row: Analysis section
             dbc.Row([
                 dbc.Col([
-                    html.H5("Analysis", className="mb-3"),
                     load_markdown_content("habitat/habitat_analysis.md")
                 ], width=12)
             ], className="mb-4"),
