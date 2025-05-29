@@ -404,9 +404,10 @@ def create_chemical_tab():
                 "Chemical monitoring provides valuable insights into the health of aquatic ecosystems, acting as an early warning system for environmental stressors that may not be immediately visible. While chemical data alone cannot fully determine if a stream is healthy, it plays a crucial role in detecting the source of problems that may impact the biological inhabitants of the stream. Chemical parameters can reveal human influences like agricultural runoff, urban development, industrial discharges, and other pollution sources before they cause widespread damage to aquatic communities. The key parameters that Blue Thumb monitors are Dissolved Oxygen, pH, Nitrogen, Phosphorus, and Chloride - each serving as an indicator of different aspects of water quality and potential environmental challenges. By tracking these parameters over time, we can identify trends, detect emerging issues, and guide restoration efforts to maintain or improve the overall health of streams."
             ]),
             html.P([
+                "Search for a site below to begin analysis."
                 "You can find site names and locations on the ",
-                html.A("Overview tab", href="#", style={"text-decoration": "underline"}),
-                ". Search for a site below to begin analysis."
+                html.A("Overview tab.", id="chemical-overview-link", href="#", style={"text-decoration": "underline"}),
+                
             ])
         ], className="mb-4"),
         
@@ -419,7 +420,7 @@ def create_chemical_tab():
                 dbc.InputGroup([
                     dbc.Input(
                         id='chemical-search-input',
-                        placeholder="Type to search for a site...",
+                        placeholder="Enter site name (e.g., Tenmile, Boggy, Blue)",
                         type="text",
                         value=""
                     ),
@@ -566,9 +567,10 @@ def create_biological_tab():
                 "Biological monitoring provides direct evidence of stream health by examining the living organisms that call these aquatic ecosystems home. Fish and macroinvertebrate communities serve as excellent indicators of overall ecosystem health because they integrate the effects of multiple environmental stressors over time. These communities respond to changes in water quality, habitat structure, and flow patterns, making them sensitive barometers of ecological condition. Blue Thumb's biological assessments include fish community surveys and macroinvertebrate sampling, both of which provide unique insights into different aspects of stream health. Fish communities reflect longer-term conditions and habitat quality, while macroinvertebrates respond more quickly to pollution events and water quality changes."
             ]),
             html.P([
+                "Select a community type and search for a site below to begin analysis."
                 "You can find site names and locations on the ",
-                html.A("Overview tab", href="#", style={"text-decoration": "underline"}),
-                ". Select a community type and search for a site below to begin analysis."
+                html.A("Overview tab.", id="biological-overview-link", href="#", style={"text-decoration": "underline"}),
+                
             ])
         ], className="mb-4"),
         
@@ -597,7 +599,7 @@ def create_biological_tab():
                 dbc.InputGroup([
                     dbc.Input(
                         id='biological-search-input',
-                        placeholder="Type to search for a site...",
+                        placeholder="Enter site name (e.g., Tenmile, Boggy, Blue)",
                         type="text",
                         value="",
                         disabled=True  # Start disabled
@@ -680,7 +682,7 @@ def create_habitat_tab():
                         className="me-2"
                     ),
                     dbc.Button(
-                        "Search Sites",
+                        "Search",
                         id="habitat-search-button",
                         color="primary",
                         n_clicks=0
@@ -689,7 +691,7 @@ def create_habitat_tab():
                 
                 # Search results container
                 html.Div(id="habitat-search-results", children=[
-                    html.P("Enter a search term and click 'Search Sites' to find monitoring locations.", 
+                    html.P("Enter a search term and click 'Search' to find monitoring sites.", 
                            className="text-muted")
                 ])
             ], width=12)

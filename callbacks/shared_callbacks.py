@@ -61,3 +61,35 @@ def register_shared_callbacks(app):
         if n1 or n2:
             return not is_open
         return is_open
+
+    # --------------------------------------------------------------------------------------
+    # TAB NAVIGATION CALLBACKS
+    # --------------------------------------------------------------------------------------
+    
+    @app.callback(
+        Output("main-tabs", "active_tab"),
+        [Input("chemical-overview-link", "n_clicks"),
+         Input("biological-overview-link", "n_clicks")], 
+        prevent_initial_call=True
+    )
+    def navigate_to_overview_tab(chemical_clicks, biological_clicks):
+        """
+        Navigate to overview tab when overview links are clicked from other tabs.
+        
+        Args:
+            chemical_clicks: Number of clicks on chemical tab overview link
+            biological_clicks: Number of clicks on biological tab overview link  
+            habitat_clicks: Number of clicks on habitat tab overview link
+            
+        Returns:
+            String indicating which tab should be active
+        """
+        ctx = dash.callback_context
+        
+        # Check if any of the overview links were clicked
+        if ctx.triggered:
+            # Any overview link click should navigate to overview tab
+            return "overview-tab"
+        
+        # If no trigger, don't update
+        return dash.no_update
