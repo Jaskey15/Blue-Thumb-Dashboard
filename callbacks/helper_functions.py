@@ -85,11 +85,11 @@ def get_parameter_legend(param_type, param_name):
     # Habitat parameter legends
     elif param_type == 'habitat':
         return [
-            {"color": "#1e8449", "label": "Grade A (>0.90)"},
-            {"color": "#7cb342", "label": "Grade B (0.80-0.89)"},
-            {"color": "#ff9800", "label": "Grade C (0.70-0.79)"},
-            {"color": "#e53e3e", "label": "Grade D (0.60-0.69)"},
-            {"color": "#e74c3c", "label": "Grade F (<0.60)"}
+            {"color": "#1e8449", "label": "Grade A (>90)"},
+            {"color": "#7cb342", "label": "Grade B (80-89)"},
+            {"color": "#ff9800", "label": "Grade C (70-79)"},
+            {"color": "#e53e3e", "label": "Grade D (60-69)"},
+            {"color": "#e74c3c", "label": "Grade F (<60)"}
         ]
     
     # Default legend if parameter type/name not recognized
@@ -380,10 +380,6 @@ def create_biological_community_display(selected_community, selected_site):
             
         # Create unified layout for the community
         content = html.Div([
-            # Site header
-            html.H4(f"{selected_community.title()} Community Data for {selected_site}", 
-                   className="mb-4"),
-            
             # First row: Description on left, gallery on right
             dbc.Row([
                 # Left column: Description
@@ -400,7 +396,6 @@ def create_biological_community_display(selected_community, selected_site):
             # Second row: Graph (full width)
             dbc.Row([
                 dbc.Col([
-                    html.H5(f"{selected_community.title()} Assessment Over Time", className="mb-3"),
                     dcc.Graph(figure=viz_figure)
                 ], width=12)
             ], className="mb-4"),

@@ -2,4 +2,3 @@
 
 Biological monitoring examines the creatures that live in a stream, providing direct evidence of ecosystem health. These assessments measure how aquatic life responds to both chemical and physical conditions over time, offering the most integrated view of stream health. The abundance and diversity of fish, macroinvertebrates, and other aquatic organisms serve as nature's report card — a living testament to water quality that integrates all environmental factors. Unlike chemical testing that captures only a moment in time, biological communities reflect conditions over their entire lifecycle, making them the most reliable indicators of a stream's true health. Healthy streams support diverse communities of sensitive species that cannot survive in degraded environments, providing clear evidence that the complex web of ecological relationships remains intact. 
 
-Select a community from the dropdown menu to learn more and see how its health has changed over time.

@@ -648,9 +648,14 @@ def create_habitat_tab():
     return html.Div([
         # Description section with two-column layout
         dbc.Row([
-            # Left column - intro text
+            # Left column - intro text AND the additional paragraph
             dbc.Col([
-                load_markdown_content('habitat/habitat_intro.md')
+                load_markdown_content('habitat/habitat_intro.md'),
+                html.P([
+                    "Select a site below to begin analysis. "
+                    "You can find site names and locations on the ",
+                    html.A("Overview tab.", id="habitat-overview-link", href="#", style={"text-decoration": "underline"}),
+                ], className="mt-3")  # Add some top margin to separate from markdown content
             ], width=6),
             
             # Right column - image

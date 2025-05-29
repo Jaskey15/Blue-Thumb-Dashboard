@@ -100,7 +100,7 @@ def process_habitat_csv_data(site_name=None):
             'bankstability': 'bank_stability',
             'bankvegetationstability': 'bank_vegetation_stability',
             'streamsidecover': 'streamside_cover',
-            'habitatscore': 'total_score',
+            'total': 'total_score',
             'habitatgrade': 'habitat_grade'
         }
         
@@ -339,10 +339,12 @@ def insert_habitat_summary_scores(cursor, habitat_df, assessment_id_map):
                                          (isinstance(v, str) and v.replace('.', '', 1).isdigit())]
                     if total_score_values:
                         total_score = float(total_score_values[0])
+                        total_score = round(total_score)
                     else:
                         # Fallback to the first value and try to convert it
                         try:
                             total_score = float(row['total_score'].iloc[0])
+                            total_score = round(total_score)
                         except:
                             logger.error(f"Could not convert any total_score values to float for sample_id {sample_id}")
                             continue
@@ -350,6 +352,7 @@ def insert_habitat_summary_scores(cursor, habitat_df, assessment_id_map):
                     # If it's already a scalar value
                     try:
                         total_score = float(row['total_score'])
+                        total_score = round(total_score)
                     except:
                         logger.error(f"Could not convert total_score to float for sample_id {sample_id}")
                         continue

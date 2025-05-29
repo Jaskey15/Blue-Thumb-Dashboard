@@ -69,10 +69,11 @@ def register_shared_callbacks(app):
     @app.callback(
         Output("main-tabs", "active_tab"),
         [Input("chemical-overview-link", "n_clicks"),
-         Input("biological-overview-link", "n_clicks")], 
+         Input("biological-overview-link", "n_clicks"),
+         Input("habitat-overview-link", "n_clicks")], 
         prevent_initial_call=True
     )
-    def navigate_to_overview_tab(chemical_clicks, biological_clicks):
+    def navigate_to_overview_tab(chemical_clicks, biological_clicks, habitat_clicks):
         """
         Navigate to overview tab when overview links are clicked from other tabs.
         

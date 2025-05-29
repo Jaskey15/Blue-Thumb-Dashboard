@@ -22,8 +22,8 @@ COLORS = {
     },
     'macro': {
         'non-impaired': '#1e8449',        # Green
-        'slightly_impaired': '#ff9800',   # Orange
-        'moderately_impaired': '#f57c00', # Dark orange
+        'slightly_impaired': '#7cb342',   # Light green
+        'moderately_impaired': '#ff9800', # Orange
         'severely_impaired': '#e74c3c',   # Red
     },
     'habitat': {
@@ -83,11 +83,11 @@ MACRO_THRESHOLDS = [
 
 # Habitat assessment thresholds (based on total score ranges)
 HABITAT_THRESHOLDS = [
-    {'min': 0.9, 'max': float('inf'), 'status': 'A', 'color': COLORS['habitat']['a']},
-    {'min': 0.8, 'max': 0.9, 'status': 'B', 'color': COLORS['habitat']['b']},
-    {'min': 0.7, 'max': 0.8, 'status': 'C', 'color': COLORS['habitat']['c']},
-    {'min': 0.6, 'max': 0.7, 'status': 'D', 'color': COLORS['habitat']['d']},
-    {'min': -float('inf'), 'max': 0.6, 'status': 'F', 'color': COLORS['habitat']['f']}
+    {'min': 90, 'max': float('inf'), 'status': 'A', 'color': COLORS['habitat']['a']},
+    {'min': 80, 'max': 89, 'status': 'B', 'color': COLORS['habitat']['b']},
+    {'min': 70, 'max': 79, 'status': 'C', 'color': COLORS['habitat']['c']},
+    {'min': 60, 'max': 69, 'status': 'D', 'color': COLORS['habitat']['d']},
+    {'min': -float('inf'), 'max': 59, 'status': 'F', 'color': COLORS['habitat']['f']}
 ]
 
 # Parameter display names
@@ -423,7 +423,7 @@ def add_data_markers(fig, sites, data_type, parameter_name=None, season=None, fi
             elif data_type == 'habitat':
                 status, color = determine_status_by_type('habitat', value)
                 year = site_data[config['date_column']].iloc[0]  
-                hover_text = f"Site: {site_name}<br>Habitat Score: {value:.3f}<br>Grade: {status}<br>Last assessment: {year}"
+                hover_text = f"Site: {site_name}<br>Habitat Score: {value:.0f}<br>Grade: {status}<br>Last assessment: {year}"
             
             # Add marker with determined color
             fig = add_site_marker(
