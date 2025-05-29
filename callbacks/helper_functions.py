@@ -297,7 +297,8 @@ def create_single_parameter_view(df_filtered, parameter, reference_values, highl
                     src=CHEMICAL_DIAGRAMS[parameter],
                     caption=CHEMICAL_DIAGRAM_CAPTIONS.get(parameter, "")
                 )
-            ], className="d-flex h-100 align-items-center justify-content-center")
+            ], className="d-flex h-100 align-items-center justify-content-center", 
+            style={'height': '100%'})
         else:
             diagram_component = html.Div(
                 "No diagram available for this parameter.", 

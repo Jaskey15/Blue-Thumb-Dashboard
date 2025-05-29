@@ -561,11 +561,11 @@ def create_chemical_tab():
             dbc.Row([
                 dbc.Col([
                     html.Div(id='chemical-explanation-container')
-                ], width=6),  
+                ], width=6, className="d-flex"),  
                 dbc.Col([
                     html.Div(id='chemical-diagram-container')
-                ], width=6)  
-            ])
+                ], width=6, className="d-flex align-items-center")  
+            ], className="h-100 align-items-stretch", style={'minHeight': '400px'})
         ], id="chemical-controls-content", style={'display': 'none'})
     ])
 
