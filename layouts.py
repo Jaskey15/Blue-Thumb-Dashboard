@@ -8,7 +8,7 @@ from dash import dcc, html
 from utils import load_markdown_content, create_image_with_caption, setup_logging
 
 # Import from data_definitions to avoid duplication
-from data_definitions import CHEMICAL_DIAGRAMS
+from config.data_definitions import CHEMICAL_DIAGRAMS
 
 # Configure logging
 logger = setup_logging("layouts", category="app")
@@ -716,7 +716,7 @@ def create_protect_our_streams_tab():
     """
     try:
         # Import the card data
-        from action_cards import HOME_YARD_CARDS, RURAL_CARDS, RECREATION_CARDS, COMMUNITY_CARDS
+        from config.action_cards import HOME_YARD_CARDS, RURAL_CARDS, RECREATION_CARDS, COMMUNITY_CARDS
         
         # Create cards using the imported data
         home_yard_cards = [create_action_card(**card) for card in HOME_YARD_CARDS]

@@ -10,7 +10,7 @@ import plotly.graph_objects as go
 from dash import html, dcc
 from utils import load_markdown_content, create_image_with_caption, setup_logging
 
-from data_definitions import (
+from config.data_definitions import (
     FISH_DATA, MACRO_DATA, CHEMICAL_DIAGRAMS, CHEMICAL_DIAGRAM_CAPTIONS,
     PARAMETER_DISPLAY_NAMES, PARAMETER_AXIS_LABELS
 )
