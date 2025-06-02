@@ -117,6 +117,10 @@ def extract_site_metadata_from_csv(file_path, data_type):
         DataFrame with unique sites and their metadata
     """
     try:
+        if data_type == 'updated_chemical':
+            df = pd.read_csv(file_path, encoding='cp1252')  # Same encoding as your updated_chemical_processing.py
+        else:
+            df = pd.read_csv(file_path)  # Default encoding for other files
         df = pd.read_csv(file_path)
         
         # Clean column names
@@ -131,6 +135,14 @@ def extract_site_metadata_from_csv(file_path, data_type):
                 'county_col': 'county',
                 'basin_col': 'riverbasin',
                 'ecoregion_col': None  # Not available in chemical data
+            },
+            'updated_chemical': { 
+                'site_col': 'site_name',  
+                'lat_col': 'lat',
+                'lon_col': 'lon', 
+                'county_col': 'countyname',
+                'basin_col': None,  # Not available in updated chemical data
+                'ecoregion_col': None  # Not available in updated chemical data
             },
             'fish': {
                 'site_col': 'sitename',
@@ -404,6 +416,7 @@ def process_site_data():
         base_data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'raw')
         data_files_to_check = [
             ('chemical', os.path.join(base_data_dir, 'chemical_data.csv')),
+            ('updated_chemical', os.path.join(base_data_dir, 'updated_chemical_data.csv')),
             ('fish', os.path.join(base_data_dir, 'fish_data.csv')),
             ('habitat', os.path.join(base_data_dir, 'habitat_data.csv')),
             ('macro', os.path.join(base_data_dir, 'macro_data.csv'))

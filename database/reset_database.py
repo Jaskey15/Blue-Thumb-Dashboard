@@ -48,6 +48,7 @@ def reload_all_data():
         # Import all processing modules
         from data_processing.site_processing import process_site_data
         from data_processing.chemical_processing import load_chemical_data_to_db
+        from data_processing.updated_chemical_processing import load_updated_chemical_data_to_db  # ADD THIS
         from data_processing.fish_processing import load_fish_data
         from data_processing.macro_processing import load_macroinvertebrate_data
         from data_processing.habitat_processing import load_habitat_data
@@ -63,30 +64,37 @@ def reload_all_data():
             return False
         
         # Only proceed with other data processing if sites were loaded successfully
-        logger.info("Step 2: Loading chemical data...")
+        logger.info("Step 2: Loading original chemical data...")  # UPDATED LABEL
         chemical_result = load_chemical_data_to_db()
         chemical_success = chemical_result is not False and chemical_result is not None
         
-        logger.info("Step 3: Loading fish data...")
+        # ADD NEW STEP FOR UPDATED CHEMICAL DATA
+        logger.info("Step 3: Loading updated chemical data...")
+        updated_chemical_result = load_updated_chemical_data_to_db()
+        updated_chemical_success = updated_chemical_result is not False and updated_chemical_result is not None
+        
+        # UPDATE STEP NUMBERS FOR EXISTING STEPS
+        logger.info("Step 4: Loading fish data...")
         fish_result = load_fish_data()
         fish_success = not (hasattr(fish_result, 'empty') and fish_result.empty) if fish_result is not None else False
         
-        logger.info("Step 4: Loading macroinvertebrate data...")
+        logger.info("Step 5: Loading macroinvertebrate data...")
         macro_result = load_macroinvertebrate_data()
         macro_success = not (hasattr(macro_result, 'empty') and macro_result.empty) if macro_result is not None else False
 
-        logger.info("Step 5: Loading habitat data...")
+        logger.info("Step 6: Loading habitat data...")
         habitat_result = load_habitat_data()
         habitat_success = not (hasattr(habitat_result, 'empty') and habitat_result.empty) if habitat_result is not None else False
 
-        logger.info("Step 6: Cleaning up unused sites...")
+        logger.info("Step 7: Cleaning up unused sites...")  # UPDATED STEP NUMBER
         from data_processing.site_processing import cleanup_unused_sites
         cleanup_result = cleanup_unused_sites()
         cleanup_success = cleanup_result is not False and cleanup_result is not None
         
         elapsed_time = time.time() - start_time
         
-        if chemical_success and fish_success and macro_success and habitat_success and cleanup_success:
+        # UPDATE SUCCESS CHECK TO INCLUDE UPDATED CHEMICAL DATA
+        if chemical_success and updated_chemical_success and fish_success and macro_success and habitat_success and cleanup_success:
             logger.info(f"Successfully reloaded all data in {elapsed_time:.2f} seconds")
             return True
         else:
