@@ -18,6 +18,44 @@ from utils import setup_logging
 # Set up logging
 logger = setup_logging("updated_chemical_processing", category="processing")
 
+# Define BDL values (same as your existing chemical_processing.py)
+BDL_VALUES = {
+    'Nitrate': 0.3,    
+    'Nitrite': 0.03,    
+    'Ammonia': 0.03,
+}
+
+# Nutrient column mappings
+NUTRIENT_COLUMN_MAPPINGS = {
+    'ammonia': {
+        'range_selection': 'Ammonia Nitrogen Range Selection',
+        'low_col1': 'Ammonia Nitrogen Low Reading #1',
+        'low_col2': 'Ammonia Nitrogen Low Reading #2', 
+        'mid_col1': 'Ammonia_nitrogen_midrange1_Final',
+        'mid_col2': 'Ammonia_nitrogen_midrange2_Final'
+    },
+    'orthophosphate': {
+        'range_selection': 'Orthophosphate Range Selection',
+        'low_col1': 'Orthophosphate_Low1_Final',
+        'low_col2': 'Orthophosphate_Low2_Final',
+        'mid_col1': 'Orthophosphate_Mid1_Final', 
+        'mid_col2': 'Orthophosphate_Mid2_Final',
+        'high_col1': 'Orthophosphate_High1_Final',
+        'high_col2': 'Orthophosphate_High2_Final'
+    },
+    'chloride': {
+        'range_selection': 'Chloride Range Selection',
+        'low_col1': 'Chloride_Low1_Final',
+        'low_col2': 'Chloride_Low2_Final',
+        'high_col1': 'Chloride_High1_Final',
+        'high_col2': 'Chloride_High2_Final'
+    }
+}
+
+# --------------------------------------------------------------------------------------
+# DATA LOADING & PARSING FUNCTIONS
+# --------------------------------------------------------------------------------------
+
 def load_updated_chemical_data():
     """
     Load the updated chemical data CSV file.
@@ -78,35 +116,10 @@ def parse_sampling_dates(df):
     except Exception as e:
         logger.error(f"Error parsing sampling dates: {e}")
         return df
-    
-# Add this after your existing functions
 
-# Nutrient column mappings
-NUTRIENT_COLUMN_MAPPINGS = {
-    'ammonia': {
-        'range_selection': 'Ammonia Nitrogen Range Selection',
-        'low_col1': 'Ammonia Nitrogen Low Reading #1',
-        'low_col2': 'Ammonia Nitrogen Low Reading #2', 
-        'mid_col1': 'Ammonia_nitrogen_midrange1_Final',
-        'mid_col2': 'Ammonia_nitrogen_midrange2_Final'
-    },
-    'orthophosphate': {
-        'range_selection': 'Orthophosphate Range Selection',
-        'low_col1': 'Orthophosphate_Low1_Final',
-        'low_col2': 'Orthophosphate_Low2_Final',
-        'mid_col1': 'Orthophosphate_Mid1_Final', 
-        'mid_col2': 'Orthophosphate_Mid2_Final',
-        'high_col1': 'Orthophosphate_High1_Final',
-        'high_col2': 'Orthophosphate_High2_Final'
-    },
-    'chloride': {
-        'range_selection': 'Chloride Range Selection',
-        'low_col1': 'Chloride_Low1_Final',
-        'low_col2': 'Chloride_Low2_Final',
-        'high_col1': 'Chloride_High1_Final',
-        'high_col2': 'Chloride_High2_Final'
-    }
-}
+# --------------------------------------------------------------------------------------
+# NUTRIENT PROCESSING FUNCTIONS
+# --------------------------------------------------------------------------------------
 
 def get_greater_value(row, col1, col2, tiebreaker='col1'):
     """
@@ -242,7 +255,11 @@ def process_simple_nutrients(df):
     except Exception as e:
         logger.error(f"Error processing simple nutrients: {e}")
         return df
-    
+
+# --------------------------------------------------------------------------------------
+# DATA FORMATTING & VALIDATION FUNCTIONS
+# --------------------------------------------------------------------------------------
+
 def calculate_soluble_nitrogen(df):
     """
     Calculate soluble nitrogen from processed Nitrate, Nitrite, and Ammonia values.
@@ -255,13 +272,6 @@ def calculate_soluble_nitrogen(df):
         DataFrame: DataFrame with soluble_nitrogen column added
     """
     try:
-        # Define BDL values (same as your existing chemical_processing.py)
-        BDL_VALUES = {
-            'Nitrate': 0.3,    
-            'Nitrite': 0.03,    
-            'Ammonia': 0.03,
-        }
-        
         # Function to handle BDL replacement (same logic as existing)
         def convert_bdl_value(value, bdl_replacement):
             if pd.isna(value):
@@ -441,7 +451,11 @@ def process_updated_chemical_data_complete():
     except Exception as e:
         logger.error(f"Error in complete processing pipeline: {e}")
         return pd.DataFrame()
-    
+
+# --------------------------------------------------------------------------------------
+# DATABASE OPERATIONS
+# --------------------------------------------------------------------------------------
+
 def check_for_duplicates(df):
     """
     Check for duplicates against existing data in the database.
@@ -515,60 +529,6 @@ def check_for_duplicates(df):
         # If duplicate checking fails, return original data and let user decide
         logger.warning("Duplicate checking failed - returning all data. Manual review recommended.")
         return df
-
-def load_updated_chemical_data_to_db():
-    """
-    Complete pipeline: process updated chemical data and load into database.
-    Handles duplicate checking and uses existing database insertion logic.
-    
-    Returns:
-        bool: True if successful, False otherwise
-    """
-    try:
-        logger.info("Starting complete pipeline for updated chemical data...")
-        
-        # Step 1: Process the updated chemical data
-        logger.info("Step 1: Processing updated chemical data...")
-        processed_df = process_updated_chemical_data_complete()
-        
-        if processed_df.empty:
-            logger.error("Failed to process updated chemical data")
-            return False
-        
-        logger.info(f"Successfully processed {len(processed_df)} records")
-        
-        # Step 2: Check for and remove duplicates
-        logger.info("Step 2: Checking for duplicates against existing database...")
-        df_no_duplicates = check_for_duplicates(processed_df)
-        
-        if df_no_duplicates.empty:
-            logger.info("No new records to insert after duplicate removal")
-            return True
-        
-        # Step 3: Use existing database insertion function
-        logger.info(f"Step 3: Inserting {len(df_no_duplicates)} new records into database...")
-        
-        # Import the existing function (we need to add this import at the top)
-        from data_processing.chemical_processing import load_chemical_data_to_db
-        
-        # The existing function expects to process from CSV, but we can adapt it
-        # We'll create a temporary approach using the core database logic
-        success = insert_processed_chemical_data(df_no_duplicates)
-        
-        if success:
-            logger.info("Successfully completed updated chemical data pipeline!")
-            logger.info(f"Final summary:")
-            logger.info(f"  - Processed: {len(processed_df)} total records")
-            logger.info(f"  - Duplicates removed: {len(processed_df) - len(df_no_duplicates)}")
-            logger.info(f"  - New records inserted: {len(df_no_duplicates)}")
-            return True
-        else:
-            logger.error("Database insertion failed")
-            return False
-            
-    except Exception as e:
-        logger.error(f"Error in updated chemical data pipeline: {e}")
-        return False
 
 def insert_processed_chemical_data(df):
     """
@@ -670,18 +630,54 @@ def insert_processed_chemical_data(df):
         logger.error(f"Error inserting processed chemical data: {e}")
         return False
 
-# Update the test section at the bottom
-if __name__ == "__main__":
-    logger.info("Testing complete updated chemical data pipeline with database insertion...")
+# --------------------------------------------------------------------------------------
+# MAIN PIPELINE FUNCTION
+# --------------------------------------------------------------------------------------
+
+def load_updated_chemical_data_to_db():
+    """
+    Complete pipeline: process updated chemical data and load into database.
+    Handles duplicate checking and uses existing database insertion logic.
     
-    # Test the complete pipeline including database insertion
-    success = load_updated_chemical_data_to_db()
-    
-    if success:
-        print("\n🎉 SUCCESS! Updated chemical data pipeline completed successfully!")
-        print("Check the logs above for detailed information about:")
-        print("  - Number of records processed")
-        print("  - Duplicates found and removed") 
-        print("  - New records inserted into database")
-    else:
-        print("\n❌ FAILED! Check the logs above for error details.")
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    try:
+        logger.info("Starting complete pipeline for updated chemical data...")
+        
+        # Step 1: Process the updated chemical data
+        logger.info("Step 1: Processing updated chemical data...")
+        processed_df = process_updated_chemical_data_complete()
+        
+        if processed_df.empty:
+            logger.error("Failed to process updated chemical data")
+            return False
+        
+        logger.info(f"Successfully processed {len(processed_df)} records")
+        
+        # Step 2: Check for and remove duplicates
+        logger.info("Step 2: Checking for duplicates against existing database...")
+        df_no_duplicates = check_for_duplicates(processed_df)
+        
+        if df_no_duplicates.empty:
+            logger.info("No new records to insert after duplicate removal")
+            return True
+        
+        # Step 3: Insert new records into database
+        logger.info(f"Step 3: Inserting {len(df_no_duplicates)} new records into database...")
+        success = insert_processed_chemical_data(df_no_duplicates)
+        
+        if success:
+            logger.info("Successfully completed updated chemical data pipeline!")
+            logger.info(f"Final summary:")
+            logger.info(f"  - Processed: {len(processed_df)} total records")
+            logger.info(f"  - Duplicates removed: {len(processed_df) - len(df_no_duplicates)}")
+            logger.info(f"  - New records inserted: {len(df_no_duplicates)}")
+            return True
+        else:
+            logger.error("Database insertion failed")
+            return False
+            
+    except Exception as e:
+        logger.error(f"Error in updated chemical data pipeline: {e}")
+        return False
