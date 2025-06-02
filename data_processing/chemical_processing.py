@@ -13,19 +13,15 @@ from data_processing.data_loader import (
 )
 from database.database import get_connection, close_connection
 
+# Import shared chemical utilities
+from data_processing.chemical_utils import (
+    validate_chemical_data, determine_status, apply_bdl_conversions,
+    calculate_soluble_nitrogen, remove_empty_chemical_rows
+)
 from utils import setup_logging
 
-# Use the shared logging setup
+# Configure Logging
 logger = setup_logging("chemical_processing", category="processing")
-
-# Define constants for BDL values (Below Detection Limit)
-# Values obtained from Blue Thumb Coordinator
-BDL_VALUES = {
-    'Nitrate': 0.3,    
-    'Nitrite': 0.03,    
-    'Ammonia': 0.03,
-    'Phosphorus': 0.005,
-}
 
 # Key parameters for analysis and visualization
 KEY_PARAMETERS = [    
@@ -41,60 +37,6 @@ PARAMETER_MAP = {
     'Phosphorus': 4,
     'Chloride': 5
 }
-
-def convert_bdl_value(value, bdl_replacement):
-    """
-    Convert zeros to BDL replacement values.
-    Keeps NaN values as NaN for visualization gaps.
-    """
-    if pd.isna(value):
-        return np.nan  # Keep NaN as NaN for visualization
-    
-    # Try to convert to numeric if it's not already
-    try:
-        if not isinstance(value, (int, float)):
-            value = float(value)
-    except:
-        return np.nan  
-        
-    if value == 0:
-        return bdl_replacement  # Assume zeros are below detection limit
-    
-    return value  # Return the original value if not zero
-
-def validate_data_quality(df, chemical_columns):
-    """Flag any implausible values (e.g., negative concentrations)."""
-    for col in chemical_columns:
-        if col in df.columns:
-            neg_values = (df[col] < 0).sum()
-            if neg_values > 0:
-                logger.warning(f"Found {neg_values} negative values in {col}. These may indicate data quality issues.")
-    return df
-
-def remove_empty_rows(df, chemical_columns):
-    """Remove rows where all chemical parameters are null."""
-    # Filter for columns that actually exist in the DataFrame
-    existing_columns = [col for col in chemical_columns if col in df.columns]
-    
-    if not existing_columns:
-        logger.warning("None of the specified chemical columns exist in the DataFrame")
-        return df  # Return original DataFrame if no chemical columns exist
-    
-    # Create a subset with just the existing chemical columns
-    chem_df = df[existing_columns].copy()
-    
-    # Count non-null values in each row
-    non_null_counts = chem_df.notnull().sum(axis=1)
-    
-    # Keep rows that have at least one chemical parameter
-    df_filtered = df[non_null_counts > 0].copy()
-    
-    # Log how many rows were removed
-    removed_count = len(df) - len(df_filtered)
-    if removed_count > 0:
-        logger.info(f"Removed {removed_count} rows with no chemical data")
-    
-    return df_filtered
 
 def get_sites_with_chemical_data():
     """Return a list of sites that have chemical data."""
@@ -183,26 +125,22 @@ def get_reference_values():
             reference_values[param] = {}
             param_data = df[df['parameter_code'] == param]
             
-            for param in df['parameter_code'].unique():
-                reference_values[param] = {}
-                param_data = df[df['parameter_code'] == param]
+            # Mapping of database threshold_type to dashboard reference key
+            threshold_mapping = {
+                'normal_min': 'normal min',
+                'normal_max': 'normal max',
+                'caution_min': 'caution min',
+                'caution_max': 'caution max',
+                'normal': 'normal',
+                'caution': 'caution',
+                'poor': 'poor'
+            }
 
-                # Mapping of database threshold_type to dashboard reference key
-                threshold_mapping = {
-                    'normal_min': 'normal min',
-                    'normal_max': 'normal max',
-                    'caution_min': 'caution min',
-                    'caution_max': 'caution max',
-                    'normal': 'normal',
-                    'caution': 'caution',
-                    'poor': 'poor'
-                }
-
-                # Process all thresholds with a single loop
-                for _, row in param_data.iterrows():
-                    if row['threshold_type'] in threshold_mapping:
-                        reference_key = threshold_mapping[row['threshold_type']]
-                        reference_values[param][reference_key] = row['value']
+            # Process all thresholds with a single loop
+            for _, row in param_data.iterrows():
+                if row['threshold_type'] in threshold_mapping:
+                    reference_key = threshold_mapping[row['threshold_type']]
+                    reference_values[param][reference_key] = row['value']
                 
         # If no reference values in database, use hardcoded defaults
         if not reference_values:
@@ -269,52 +207,6 @@ def get_reference_values():
         }
     finally:
         close_connection(conn)
-
-def determine_status(parameter, value, reference_values):
-    """Determine the status of a parameter value based on reference thresholds."""
-    if pd.isna(value):
-        return "Unknown"
-        
-    if parameter not in reference_values:
-        return "Normal"  # Default if no reference values
-        
-    ref = reference_values[parameter]
-    
-    if parameter == 'do_percent':
-        if 'normal min' in ref and 'normal max' in ref:
-            if value < ref['caution min'] or value > ref['caution max']:
-                return "Poor"
-            elif value < ref['normal min'] or value > ref['normal max']:
-                return "Caution"
-            else:
-                return "Normal"
-                
-    elif parameter == 'pH':
-        if 'normal min' in ref and 'normal max' in ref:
-            if value < ref['normal min']:
-                return "Below Normal"
-            elif value > ref['normal max']:
-                return "Above Normal"
-            else:
-                return "Normal"
-                
-    elif parameter in ['soluble_nitrogen', 'Phosphorus']:
-        if 'caution' in ref and 'normal' in ref:
-            if value > ref['caution']:
-                return "Poor"
-            elif value > ref['normal']:
-                return "Caution"
-            else:
-                return "Normal"
-                
-    elif parameter == 'Chloride':
-        if 'poor' in ref:
-            if value > ref['poor']:
-                return "Poor"
-            else:
-                return "Normal"
-                
-    return "Normal"  # Default if no specific condition met
 
 def load_chemical_data_to_db(site_name=None):
     """
@@ -423,7 +315,7 @@ def load_chemical_data_to_db(site_name=None):
                             
                             # Check if this measurement already exists (batch lookup)
                             if (event_id, parameter_id) not in existing_measurements:
-                                # Calculate status
+                                # Calculate status using shared utility
                                 status = determine_status(parameter, value, reference_values)
                                 
                                 # Insert new measurement
@@ -518,13 +410,13 @@ def process_chemical_data_from_csv(site_name=None):
     df_clean = chemical_data.rename(columns=renamed_columns)
     logger.debug(f"Columns renamed: {', '.join(renamed_columns.keys())} -> {', '.join(renamed_columns.values())}")
     
-    # Define chemical parameter columns for validation and filtering
+    # Define chemical parameter columns for processing
     chemical_columns = [col for col in [
         'do_percent', 'pH', 'Nitrate', 'Nitrite', 'Ammonia', 'Phosphorus', 'Chloride'
     ] if col in df_clean.columns]
     
     # Remove rows where all chemical parameters are null
-    df_clean = remove_empty_rows(df_clean, chemical_columns)
+    df_clean = remove_empty_chemical_rows(df_clean, chemical_columns)
     
     # Ensure Date column exists and is datetime
     if 'date' in df_clean.columns:
@@ -542,21 +434,8 @@ def process_chemical_data_from_csv(site_name=None):
     df_clean['Month'] = df_clean['Date'].dt.month
     logger.debug("Date columns processed and time components extracted")
 
-    # Check for missing BDL columns and log warnings
-    missing_bdl_columns = [col for col in BDL_VALUES.keys() if col not in df_clean.columns]
-    if missing_bdl_columns:
-        logger.warning(f"BDL conversion: Could not find these columns: {', '.join(missing_bdl_columns)}")
-
-    # Apply BDL conversions for specific columns
-    bdl_conversion_count = 0
-    for column, bdl_value in BDL_VALUES.items():
-        if column in df_clean.columns:
-            df_clean[column] = df_clean[column].apply(
-                lambda x: convert_bdl_value(x, bdl_value)
-            )
-            bdl_conversion_count += 1
-
-    logger.debug(f"Applied BDL conversions to {bdl_conversion_count} columns")
+    # Apply BDL conversions using shared utility
+    df_clean = apply_bdl_conversions(df_clean)
  
     # Convert all numeric columns
     numeric_conversion_count = 0 
@@ -567,22 +446,11 @@ def process_chemical_data_from_csv(site_name=None):
     
     logger.debug(f"Converted {numeric_conversion_count} columns to numeric type")
     
-    # Validate data quality (check for negative values)
-    df_clean = validate_data_quality(df_clean, chemical_columns)
+    # Validate data quality using shared utility (removes invalid values)
+    df_clean = validate_chemical_data(df_clean, remove_invalid=True)
         
-    # Calculate total nitrogen using converted values
-    required_nitrogen_cols = ['Nitrate', 'Nitrite', 'Ammonia']
-    if all(col in df_clean.columns for col in required_nitrogen_cols):
-        # For calculation purposes, treat both NaN and zeros as BDL values
-        nitrate_values = df_clean['Nitrate'].replace({0: BDL_VALUES['Nitrate']}).fillna(BDL_VALUES['Nitrate'])
-        nitrite_values = df_clean['Nitrite'].replace({0: BDL_VALUES['Nitrite']}).fillna(BDL_VALUES['Nitrite'])
-        ammonia_values = df_clean['Ammonia'].replace({0: BDL_VALUES['Ammonia']}).fillna(BDL_VALUES['Ammonia'])
-        
-        df_clean['soluble_nitrogen'] = nitrate_values + nitrite_values + ammonia_values
-        logger.debug("Calculated soluble_nitrogen from component values")
-    else:   
-        missing_nitrogen_cols = [col for col in required_nitrogen_cols if col not in df_clean.columns]
-        logger.warning(f"Cannot calculate soluble_nitrogen: Missing columns: {', '.join(missing_nitrogen_cols)}")
+    # Calculate total nitrogen using shared utility
+    df_clean = calculate_soluble_nitrogen(df_clean)
 
     # Check for missing values in final dataframe
     missing_values = df_clean.isnull().sum().sum()

@@ -88,6 +88,8 @@ def create_tables():
         county TEXT,
         river_basin TEXT,
         ecoregion TEXT,
+        active BOOLEAN DEFAULT 1,
+        last_chemical_reading_date TEXT,
         UNIQUE(site_name)
     )
     ''')
