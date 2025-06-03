@@ -361,8 +361,24 @@ def create_overview_tab():
                     )
                 ], width=12)
             ], className="mt-3 mb-3"),
+
+            # Fourth row: Active sites toggle
+            dbc.Row([
+                dbc.Col([
+                    html.Label(
+                        "Active sites only:", 
+                        className="form-label mb-2", 
+                        style={'fontWeight': 'bold'}
+                    ),
+                    dbc.Switch(
+                        id='active-sites-only-toggle',
+                        value=False,  # Default to showing all sites
+                        className="mb-3"
+                    )
+                ], width=12)
+            ], className="mb-3"),
             
-            # Fourth row: Map (empty initially, filled by callback)
+            # Fifth row: Map (empty initially, filled by callback)
             dbc.Row([
                 dbc.Col([
                     dcc.Graph(
@@ -377,7 +393,7 @@ def create_overview_tab():
                 ], width=12)
             ]),
             
-            # Fifth row: Dynamic Legend Container
+            # Sixth row: Dynamic Legend Container
             dbc.Row([
                 dbc.Col([
                     html.Div(id='map-legend-container', className="text-center mt-2 mb-4")

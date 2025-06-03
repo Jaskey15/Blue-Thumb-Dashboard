@@ -285,6 +285,31 @@ def format_parameter_value(parameter, value):
         return f"{value:.0f} mg/L"  
     else:
         return f"{value}"
+    
+def filter_sites_by_active_status(sites, active_only=False):
+    """
+    Filter monitoring sites based on active status.
+    
+    Args:
+        sites: List of site dictionaries with 'active' property
+        active_only: Boolean - if True, return only active sites; if False, return all sites
+    
+    Returns:
+        Tuple of (filtered_sites, active_count, historic_count, total_count)
+    """
+    if not active_only:
+        # Return all sites with counts
+        active_count = sum(1 for site in sites if site.get('active', False))
+        historic_count = len(sites) - active_count
+        return sites, active_count, historic_count, len(sites)
+    
+    # Filter to only active sites
+    filtered_sites = [site for site in sites if site.get('active', False)]
+    active_count = len(filtered_sites)
+    historic_count = 0  # No historic sites when filtering
+    total_original = len(sites)
+    
+    return filtered_sites, active_count, historic_count, total_original
 
 def add_site_marker(fig, lat, lon, color, site_name, hover_text=None, active=True):
     """
@@ -294,7 +319,7 @@ def add_site_marker(fig, lat, lon, color, site_name, hover_text=None, active=Tru
         fig: The plotly figure to add the marker to
         lat: Latitude of the marker
         lon: Longitude of the marker
-        color: Color of the marker (will be overridden for active/historic styling)
+        color: Color of the marker (if provided, overrides active/historic styling)
         site_name: Name of the site
         hover_text: Text to display on hover (defaults to site_name if None)
         active: Whether the site is active (True) or historic (False)
@@ -302,15 +327,19 @@ def add_site_marker(fig, lat, lon, color, site_name, hover_text=None, active=Tru
     Returns:
         The updated figure
     """
-
-    if active:
-        marker_color = '#3366CC'  # Blue for active sites
-        marker_symbol = 'circle'
-        marker_size = 10
+    
+    # If a specific color is provided (for parameter data), use it
+    if color and color != '':
+        marker_color = color
+        marker_size = 10  
     else:
-        marker_color = '#9370DB'  # Medium slate blue for historic sites
-        marker_symbol = 'circle'
-        marker_size = 5  # Smaller for historic sites
+        # Use active/historic styling
+        if active:
+            marker_color = '#3366CC'  # Blue for active sites
+            marker_size = 10
+        else:
+            marker_color = '#9370DB'  # Medium slate blue for historic sites
+            marker_size = 6  # Smaller for historic sites
     
     fig.add_trace(go.Scattermap(
         lat=[lat],
@@ -320,7 +349,7 @@ def add_site_marker(fig, lat, lon, color, site_name, hover_text=None, active=Tru
             size=marker_size,
             color=marker_color,
             opacity=1.0,
-            symbol=marker_symbol
+            symbol='circle'
         ),
         text=[hover_text if hover_text else site_name],
         name=site_name,
@@ -572,7 +601,7 @@ def create_basic_site_map():
         print(f"Error creating basic site map: {e}")
         return create_error_map(f"Error creating map: {str(e)}"), 0, 0, 0
     
-def add_parameter_colors_to_map(fig, param_type, param_name):
+def add_parameter_colors_to_map(fig, param_type, param_name, sites=None):
     """
     Update an existing map figure with parameter-specific color coding.
     
@@ -580,31 +609,35 @@ def add_parameter_colors_to_map(fig, param_type, param_name):
         fig: Existing plotly figure with basic markers
         param_type: Type of parameter ('chem', 'bio', or 'habitat')
         param_name: Specific parameter name (e.g., 'do_percent', 'Fish_IBI')
+        sites: List of site dictionaries to use (defaults to MONITORING_SITES if None)
     
     Returns:
         Tuple of (updated_figure, sites_with_data_count, total_sites_count)
     """
     try:        
+        # Use provided sites or default to all monitoring sites
+        sites_to_use = sites if sites is not None else MONITORING_SITES
+        
         # Clear existing traces (basic blue markers)
         fig.data = []
         
         # Add parameter-specific markers with filtering enabled
         if param_type == 'chem':
             fig, sites_with_data, total_sites = add_data_markers(
-                fig, MONITORING_SITES, 'chemical', parameter_name=param_name, filter_no_data=True
+                fig, sites_to_use, 'chemical', parameter_name=param_name, filter_no_data=True
             )
         elif param_type == 'bio':
             if param_name == 'Fish_IBI':
                 fig, sites_with_data, total_sites = add_data_markers(
-                    fig, MONITORING_SITES, 'fish', filter_no_data=True
+                    fig, sites_to_use, 'fish', filter_no_data=True
                 )
             elif param_name == 'Macro_Combined':
                 fig, sites_with_data, total_sites = add_data_markers(
-                    fig, MONITORING_SITES, 'macro', filter_no_data=True
+                    fig, sites_to_use, 'macro', filter_no_data=True
                 )
         elif param_type == 'habitat':
             fig, sites_with_data, total_sites = add_data_markers(
-                fig, MONITORING_SITES, 'habitat', filter_no_data=True
+                fig, sites_to_use, 'habitat', filter_no_data=True
             )
         
         # Update layout to ensure proper map display 
@@ -639,7 +672,7 @@ def add_parameter_colors_to_map(fig, param_type, param_name):
         print(f"Error adding parameter colors: {e}")
         import traceback
         traceback.print_exc()
-        return fig, 0, len(MONITORING_SITES)  # Return original figure if coloring fails
+        return fig, 0, len(sites_to_use)  # Return original figure if coloring fails
 
 def create_site_map(param_type=None, param_name=None):
     """
