@@ -309,8 +309,8 @@ def add_site_marker(fig, lat, lon, color, site_name, hover_text=None, active=Tru
         marker_size = 10
     else:
         marker_color = '#9370DB'  # Medium slate blue for historic sites
-        marker_symbol = 'triangle'
-        marker_size = 8  # Smaller for historic sites
+        marker_symbol = 'circle'
+        marker_size = 5  # Smaller for historic sites
     
     fig.add_trace(go.Scattermap(
         lat=[lat],
