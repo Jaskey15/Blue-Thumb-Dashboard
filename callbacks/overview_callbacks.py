@@ -18,14 +18,14 @@ def register_overview_callbacks(app):
     
     @app.callback(
         [Output('site-map-graph', 'figure'),
-         Output('parameter-dropdown', 'disabled'),
-         Output('map-legend-container', 'children')],
+        Output('parameter-dropdown', 'disabled'),
+        Output('map-legend-container', 'children')],
         [Input('main-tabs', 'active_tab')]
     )
     def load_basic_map_on_tab_open(active_tab):
         """
         Load the basic map when the Overview tab is opened.
-        This shows blue dots immediately without parameter-specific data.
+        This shows different shapes and colors for active vs historic sites.
         """
         # Only load map when Overview tab is active
         if active_tab != 'overview-tab':
@@ -34,19 +34,39 @@ def register_overview_callbacks(app):
         try:
             from visualizations.map_viz import create_basic_site_map
             
-            # Create basic map with blue markers - NO CACHING, direct call
-            basic_map = create_basic_site_map()
+            # Create basic map with site counts
+            basic_map, active_count, historic_count, total_count = create_basic_site_map()
             
             # Enable the parameter dropdown now that map is loaded
             dropdown_disabled = False
             
-            # No legend needed for basic map
-            legend_html = html.Div()
+            # Create legend for basic map
+            legend_content = [
+                # Site count display
+                html.Div(
+                    f"Showing {total_count} monitoring sites ({active_count} active, {historic_count} historic)",
+                    className="text-center mb-2",
+                    style={"font-weight": "bold", "color": "#666"}
+                ),
+                # Legend items
+                html.Div([
+                    html.Div([
+                        html.Span("● ", style={"color": "#3366CC", "font-size": "20px"}),
+                        html.Span("Active Sites", className="mr-3")
+                    ], style={"display": "inline-block", "margin-right": "15px"}),
+                    html.Div([
+                        html.Span("▲ ", style={"color": "#9370DB", "font-size": "20px"}),
+                        html.Span("Historic Sites", className="mr-3")
+                    ], style={"display": "inline-block", "margin-right": "15px"})
+                ])
+            ]
+
+            legend_html = html.Div(legend_content, className="text-center mt-2 mb-4")
             
             return basic_map, dropdown_disabled, legend_html
             
         except Exception as e:
-            logger.error(f"Error loading basic map: {e}")  # Using logger instead of print
+            logger.error(f"Error loading basic map: {e}")
             
             # Return empty map and keep dropdown disabled
             empty_map = {

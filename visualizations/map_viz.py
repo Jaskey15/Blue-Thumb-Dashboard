@@ -116,14 +116,14 @@ def load_sites_from_database():
     Load all monitoring sites from the database with coordinates and metadata.
     
     Returns:
-        List of site dictionaries with name, lat, lon, county, river_basin, ecoregion
+        List of site dictionaries with name, lat, lon, county, river_basin, ecoregion, active
     """
     conn = None
     try:
         conn = get_connection()
         
         query = """
-        SELECT site_name, latitude, longitude, county, river_basin, ecoregion
+        SELECT site_name, latitude, longitude, county, river_basin, ecoregion, active
         FROM sites
         WHERE latitude IS NOT NULL AND longitude IS NOT NULL
         ORDER BY site_name
@@ -135,7 +135,7 @@ def load_sites_from_database():
         
         sites = []
         for row in rows:
-            site_name, lat, lon, county, river_basin, ecoregion = row
+            site_name, lat, lon, county, river_basin, ecoregion, active = row
             
             # Handle missing metadata
             county = county if county is not None else "Unknown"
@@ -148,7 +148,8 @@ def load_sites_from_database():
                 "lon": lon,
                 "county": county,
                 "river_basin": river_basin,
-                "ecoregion": ecoregion
+                "ecoregion": ecoregion,
+                "active": bool(active)  # Convert to boolean for clarity
             })
         
         logger.info(f"Successfully loaded {len(sites)} monitoring sites from database")
@@ -285,29 +286,41 @@ def format_parameter_value(parameter, value):
     else:
         return f"{value}"
 
-def add_site_marker(fig, lat, lon, color, site_name, hover_text=None):
+def add_site_marker(fig, lat, lon, color, site_name, hover_text=None, active=True):
     """
-    Add a site marker to the map.
+    Add a site marker to the map with different styling for active vs historic sites.
     
     Args:
         fig: The plotly figure to add the marker to
         lat: Latitude of the marker
         lon: Longitude of the marker
-        color: Color of the marker
+        color: Color of the marker (will be overridden for active/historic styling)
         site_name: Name of the site
         hover_text: Text to display on hover (defaults to site_name if None)
+        active: Whether the site is active (True) or historic (False)
     
     Returns:
         The updated figure
     """
+
+    if active:
+        marker_color = '#3366CC'  # Blue for active sites
+        marker_symbol = 'circle'
+        marker_size = 10
+    else:
+        marker_color = '#9370DB'  # Medium slate blue for historic sites
+        marker_symbol = 'triangle'
+        marker_size = 8  # Smaller for historic sites
+    
     fig.add_trace(go.Scattermap(
         lat=[lat],
         lon=[lon],
         mode='markers',
         marker=dict(
-            size=10,
-            color=color,
-            opacity=1.0
+            size=marker_size,
+            color=marker_color,
+            opacity=1.0,
+            symbol=marker_symbol
         ),
         text=[hover_text if hover_text else site_name],
         name=site_name,
@@ -432,7 +445,8 @@ def add_data_markers(fig, sites, data_type, parameter_name=None, season=None, fi
                 lon=site["lon"],
                 color=color,
                 site_name=site_name,
-                hover_text=hover_text
+                hover_text=hover_text,
+                active=site["active"]  # Added this line
             )
     
     return fig, sites_with_data, total_sites
@@ -472,11 +486,10 @@ def create_error_map(error_message):
 
 def create_basic_site_map():
     """
-    Create a basic interactive map with all monitoring sites shown as blue markers.
-    This loads quickly and shows site locations without parameter-specific data.
+    Create a basic interactive map with all monitoring sites shown with different shapes/colors for active vs historic.
     
     Returns:
-        Plotly figure with basic site markers
+        Tuple of (figure, active_count, historic_count, total_count)
     """
     try:
         # Create the base map
@@ -484,22 +497,35 @@ def create_basic_site_map():
         
         # Check if we have sites loaded
         if not MONITORING_SITES:
-            return create_error_map("Error: No monitoring sites available")
+            return create_error_map("Error: No monitoring sites available"), 0, 0, 0
         
-        # Add all sites as basic blue markers
+        # Track counts
+        active_count = 0
+        historic_count = 0
+        total_count = len(MONITORING_SITES)
+        
+        # Add all sites with appropriate styling handled by add_site_marker
         for site in MONITORING_SITES:
             hover_text = (f"Site: {site['name']}<br>"
                          f"County: {site['county']}<br>"
                          f"River Basin: {site['river_basin']}<br>"
                          f"Ecoregion: {site['ecoregion']}")
             
+            # Count sites by status
+            if site["active"]:
+                active_count += 1
+            else:
+                historic_count += 1
+            
+            # Add marker (styling handled internally by add_site_marker)
             fig = add_site_marker(
                 fig=fig,
                 lat=site["lat"],
                 lon=site["lon"],
-                color='#3366CC',  # Blue for all basic markers
+                color='',  # Empty since styling is handled internally
                 site_name=site["name"],
-                hover_text=hover_text
+                hover_text=hover_text,
+                active=site["active"]
             )
         
         # Set up map layout
@@ -540,12 +566,12 @@ def create_basic_site_map():
         # Add title 
         fig.update_layout(title=dict(text="Monitoring Sites", x=0.5, y=0.98))
         
-        return fig
+        return fig, active_count, historic_count, total_count
     
     except Exception as e:
         print(f"Error creating basic site map: {e}")
-        return create_error_map(f"Error creating map: {str(e)}")
-
+        return create_error_map(f"Error creating map: {str(e)}"), 0, 0, 0
+    
 def add_parameter_colors_to_map(fig, param_type, param_name):
     """
     Update an existing map figure with parameter-specific color coding.
