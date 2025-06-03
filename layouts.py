@@ -5,6 +5,7 @@ This file contains functions that create and return the layouts for different da
 
 import dash_bootstrap_components as dbc
 from dash import dcc, html
+from data_processing.chemical_processing import get_chemical_date_range
 from utils import load_markdown_content, create_image_with_caption, setup_logging
 
 # Import from data_definitions to avoid duplication
@@ -416,6 +417,10 @@ def create_overview_tab():
 
 def create_chemical_tab():
     """Create the chemical data tab layout with simple search functionality."""
+
+    # Get dynamic date range
+    min_year, max_year = get_chemical_date_range()
+    
     return html.Div([
         # Description - always visible
         html.Div([
@@ -504,11 +509,11 @@ def create_chemical_tab():
                     html.Label("Select Year Range:", className="form-label mb-2", style={'fontWeight': 'bold'}),
                     dcc.RangeSlider(
                         id='year-range-slider',
-                        min=2005,
-                        max=2020,
+                        min=min_year,
+                        max=max_year,
                         step=1,
-                        marks={year: str(year) for year in range(2005, 2021, 2)},
-                        value=[2005, 2020],
+                        marks={year: str(year) for year in range(min_year, max_year + 1)},
+                        value=[min_year, max_year],  # Show full range by default
                         className="mb-3"
                     )
                 ], width=12)  

@@ -208,6 +208,39 @@ def get_reference_values():
     finally:
         close_connection(conn)
 
+def get_chemical_date_range():
+    """
+    Get the date range (min and max years) for all chemical data in the database.
+    
+    Returns:
+        Tuple of (min_year, max_year) or (2005, 2025) if no data found
+    """
+    conn = None
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        
+        # Query for min and max years from chemical collection events
+        cursor.execute("SELECT MIN(year), MAX(year) FROM chemical_collection_events")
+        result = cursor.fetchone()
+        
+        if result and result[0] is not None and result[1] is not None:
+            min_year, max_year = result
+            logger.info(f"Chemical data date range: {min_year} to {max_year}")
+            return min_year, max_year
+        else:
+            logger.warning("No chemical data found in database, using default range")
+            return 2005, 2025
+            
+    except Exception as e:
+        logger.error(f"Error getting chemical date range: {e}")
+        logger.info("Falling back to default date range")
+        return 2005, 2025
+        
+    finally:
+        if conn:
+            close_connection(conn)
+
 def load_chemical_data_to_db(site_name=None):
     """
     Process chemical data from CSV and load it into the database.
