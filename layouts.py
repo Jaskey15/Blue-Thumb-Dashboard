@@ -344,7 +344,7 @@ def create_overview_tab():
                 dbc.Col([
                     html.Label(
                         "Select parameter to view current status:", 
-                        style={"margin-bottom": "5px"}
+                        style={"margin-bottom": "5px", "fontWeight": "bold"},
                     ),
                     dcc.Dropdown(
                         id='parameter-dropdown',
@@ -362,18 +362,22 @@ def create_overview_tab():
                 ], width=12)
             ], className="mt-3 mb-3"),
 
-            # Fourth row: Active sites toggle
+            # Fourth row: Active sites toggle - UPDATED TO MATCH CHEMICAL TAB STYLING
             dbc.Row([
                 dbc.Col([
                     html.Label(
                         "Active sites only:", 
-                        className="form-label mb-2", 
-                        style={'fontWeight': 'bold'}
+                        style={
+                            "display": "inline-block", 
+                            "vertical-align": "middle", 
+                            "margin-right": "10px", 
+                            "fontWeight": "bold"
+                        }
                     ),
                     dbc.Switch(
                         id='active-sites-only-toggle',
                         value=False,  # Default to showing all sites
-                        className="mb-3"
+                        style={"display": "inline-block", "vertical-align": "middle"}
                     )
                 ], width=12)
             ], className="mb-3"),
@@ -419,7 +423,7 @@ def create_chemical_tab():
                 load_markdown_content('chemical/chemical_intro.md')
             ]),
             html.P([
-                "Search for a site below to begin analysis."
+                "Search for a site below to begin analysis. "
                 "You can find site names and locations on the ",
                 html.A("Overview tab.", id="chemical-overview-link", href="#", style={"text-decoration": "underline"}),
                 
@@ -510,47 +514,62 @@ def create_chemical_tab():
                 ], width=12)  
             ]),
             
-            # Season and month selection
+            # Season and month selection - UPDATED LAYOUT TO MATCH ORIGINAL
             dbc.Row([
                 dbc.Col([
-                    html.Label("Select Season:", className="form-label mb-2", style={'fontWeight': 'bold'}),
-                    html.Div([
-                        dbc.Button("ALL", id="select-all-months", color="secondary", size="sm", className="me-2 mb-2"),
-                        dbc.Button("SPRING", id="select-spring", color="success", size="sm", className="me-2 mb-2"),
-                        dbc.Button("SUMMER", id="select-summer", color="warning", size="sm", className="me-2 mb-2"),
-                        dbc.Button("FALL", id="select-fall", color="danger", size="sm", className="me-2 mb-2"),
-                        dbc.Button("WINTER", id="select-winter", color="info", size="sm", className="me-2 mb-2")
-                    ])
-                ], width=6),
-                
+                    html.Label(
+                        "Select Season:", 
+                        style={"display": "inline-block", "vertical-align": "middle", "margin-right": "10px", "fontWeight": "bold"}
+                    ),
+                    dbc.ButtonGroup(
+                        [
+                            dbc.Button("ALL", color="secondary", id="select-all-months", n_clicks=1, size="sm"),
+                            dbc.Button("SPRING", color="success", id="select-spring", n_clicks=0, size="sm"),
+                            dbc.Button("SUMMER", color="warning", id="select-summer", n_clicks=0, size="sm"),
+                            dbc.Button("FALL", color="danger", id="select-fall", n_clicks=0, size="sm"),
+                            dbc.Button("WINTER", color="info", id="select-winter", n_clicks=0, size="sm")
+                        ],
+                        style={"display": "inline-block", "vertical-align": "middle"}
+                    )
+                ], width=5),
+
+                # Month selection (right side) - UPDATED LAYOUT TO MATCH ORIGINAL
                 dbc.Col([
-                    html.Label("Select Months:", className="form-label mb-2", style={'fontWeight': 'bold'}),
+                    html.Label(
+                        "Select Months:", 
+                        style={"display": "inline-block", "vertical-align": "middle", "margin-right": "10px", "fontWeight": "bold"}
+                    ),
                     dcc.Checklist(
                         id='month-checklist',
                         options=[
-                            {'label': 'Jan', 'value': 1}, {'label': 'Feb', 'value': 2}, {'label': 'Mar', 'value': 3},
-                            {'label': 'Apr', 'value': 4}, {'label': 'May', 'value': 5}, {'label': 'Jun', 'value': 6},
-                            {'label': 'Jul', 'value': 7}, {'label': 'Aug', 'value': 8}, {'label': 'Sep', 'value': 9},
-                            {'label': 'Oct', 'value': 10}, {'label': 'Nov', 'value': 11}, {'label': 'Dec', 'value': 12}
+                            {'label': 'Jan', 'value': 1}, {'label': 'Feb', 'value': 2},
+                            {'label': 'Mar', 'value': 3}, {'label': 'Apr', 'value': 4},
+                            {'label': 'May', 'value': 5}, {'label': 'Jun', 'value': 6},
+                            {'label': 'Jul', 'value': 7}, {'label': 'Aug', 'value': 8},
+                            {'label': 'Sep', 'value': 9}, {'label': 'Oct', 'value': 10},
+                            {'label': 'Nov', 'value': 11}, {'label': 'Dec', 'value': 12}
                         ],
-                        value=list(range(1, 13)),
+                        value=list(range(1, 13)),  # Default to all months
                         inline=True,
-                        className="mb-3"
+                        style={"display": "inline-block", "vertical-align": "middle"}
                     )
-                ], width=6)
-            ]),
+                ], width=7)
+            ], className="mb-3"),
             
-            # Highlight switch
+            # Highlight switch - UPDATED LAYOUT TO MATCH ORIGINAL
             dbc.Row([
                 dbc.Col([
-                    html.Label("Highlight Threshold Violations:", className="form-label mb-2", style={'fontWeight': 'bold'}),
+                    html.Label(
+                        "Highlight Threshold Violations:", 
+                        style={"display": "inline-block", "vertical-align": "middle", "margin-right": "10px", "fontWeight": "bold"}
+                    ),
                     dbc.Switch(
                         id="highlight-thresholds-switch",
                         value=True,
-                        className="mb-3"
+                        style={"display": "inline-block", "vertical-align": "middle"}
                     )
                 ], width=6)
-            ]),
+            ], className="mb-3"),
             
             # Graph 
             dbc.Row([

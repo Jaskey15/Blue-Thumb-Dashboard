@@ -165,11 +165,54 @@ def delete_duplicate_site(cursor, site_id, site_name):
     cursor.execute("DELETE FROM sites WHERE site_id = ?", (site_id,))
     logger.info(f"Deleted duplicate site: {site_name} (ID: {site_id})")
 
+def cleanup_site_names():
+    """Clean up site names by removing extra spaces and normalizing formatting."""
+    logger.info("Starting site name cleanup...")
+    
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Get all sites
+        cursor.execute("SELECT site_id, site_name FROM sites ORDER BY site_name")
+        all_sites = cursor.fetchall()
+        
+        logger.info(f"Found {len(all_sites)} sites to process")
+        
+        sites_cleaned = 0
+        
+        for site_id, original_name in all_sites:
+            # Clean the site name
+            cleaned_name = original_name.strip()
+            
+            # Only update if there's a change
+            if cleaned_name != original_name:
+                try:
+                    cursor.execute("UPDATE sites SET site_name = ? WHERE site_id = ?", (cleaned_name, site_id))
+                    sites_cleaned += 1
+                    logger.debug(f"Cleaned site name: '{original_name}' -> '{cleaned_name}'")
+                    
+                except sqlite3.IntegrityError as e:
+                    logger.error(f"Cannot clean site name '{original_name}' -> '{cleaned_name}': {e}")
+                    # Continue with other sites rather than failing completely
+                    continue
+        
+        conn.commit()
+        logger.info(f"Successfully cleaned {sites_cleaned} site names")
+        return True
+        
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Error during site name cleanup: {e}")
+        return False
+    finally:
+        close_connection(conn)
+
 def merge_duplicate_sites():
     """
-    Main function to merge sites with the same coordinates.
+    Main function to merge sites with the same coordinates and clean up site names.
     """
-    logger.info("Starting site merge process...")
+    logger.info("Starting site merge and cleanup process...")
     
     try:
         # Load CSV data for reference
@@ -182,10 +225,6 @@ def merge_duplicate_sites():
         # Find duplicate groups
         duplicate_groups_df = find_duplicate_coordinate_groups()
         
-        if duplicate_groups_df.empty:
-            logger.info("No duplicate sites found!")
-            return True
-        
         conn = get_connection()
         cursor = conn.cursor()
         
@@ -195,48 +234,63 @@ def merge_duplicate_sites():
         sites_deleted = 0
         
         try:
-            # Process each duplicate group
-            for (rounded_lat, rounded_lon), group in duplicate_groups_df.groupby(['rounded_lat', 'rounded_lon']):
-                logger.info(f"\nProcessing duplicate group at ({rounded_lat}, {rounded_lon})")
-                logger.info(f"Sites in group: {list(group['site_name'])}")
+            # Only process coordinate duplicates if they exist
+            if not duplicate_groups_df.empty:
+                logger.info(f"Found {len(duplicate_groups_df)} sites in coordinate duplicate groups")
                 
-                # Determine preferred site
-                preferred_site, sites_to_merge, reason = determine_preferred_site(
-                    group, updated_chemical_sites, chemical_data_sites
-                )
-                
-                logger.info(f"Keeping: {preferred_site['site_name']} - {reason}")
-                
-                # Transfer data from each site to be merged
-                for site_to_merge in sites_to_merge:
-                    logger.info(f"Merging data from: {site_to_merge['site_name']}")
+                # Process each duplicate group
+                for (rounded_lat, rounded_lon), group in duplicate_groups_df.groupby(['rounded_lat', 'rounded_lon']):
+                    logger.info(f"Processing duplicate group at ({rounded_lat}, {rounded_lon})")
+                    logger.info(f"Sites in group: {list(group['site_name'])}")
                     
-                    # Transfer all data
-                    transfer_counts = transfer_site_data(
-                        cursor, 
-                        site_to_merge['site_id'], 
-                        preferred_site['site_id']
+                    # Determine preferred site
+                    preferred_site, sites_to_merge, reason = determine_preferred_site(
+                        group, updated_chemical_sites, chemical_data_sites
                     )
                     
-                    # Log transfer details
-                    total_transferred = sum(transfer_counts.values())
-                    logger.info(f"Total records transferred: {total_transferred}")
+                    logger.info(f"Keeping: {preferred_site['site_name']} - {reason}")
                     
-                    # Delete the duplicate site
-                    delete_duplicate_site(cursor, site_to_merge['site_id'], site_to_merge['site_name'])
-                    sites_deleted += 1
-                
-                # Update metadata for the preferred site
-                update_site_metadata(cursor, preferred_site['site_id'], site_data_df, preferred_site['site_name'])
-                
-                groups_processed += 1
-                sites_merged += len(sites_to_merge)
+                    # Transfer data from each site to be merged
+                    for site_to_merge in sites_to_merge:
+                        logger.info(f"Merging data from: {site_to_merge['site_name']}")
+                        
+                        # Transfer all data
+                        transfer_counts = transfer_site_data(
+                            cursor, 
+                            site_to_merge['site_id'], 
+                            preferred_site['site_id']
+                        )
+                        
+                        # Log transfer details
+                        total_transferred = sum(transfer_counts.values())
+                        logger.info(f"Total records transferred: {total_transferred}")
+                        
+                        # Delete the duplicate site
+                        delete_duplicate_site(cursor, site_to_merge['site_id'], site_to_merge['site_name'])
+                        sites_deleted += 1
+                    
+                    # Update metadata for the preferred site
+                    update_site_metadata(cursor, preferred_site['site_id'], site_data_df, preferred_site['site_name'])
+                    
+                    groups_processed += 1
+                    sites_merged += len(sites_to_merge)
+            else:
+                logger.info("No coordinate duplicate sites found!")
+            
+            # Always run site name cleanup
+            logger.info("Running site name cleanup...")
+            cleanup_success = cleanup_site_names()
+            
+            if cleanup_success:
+                logger.info("Site name cleanup completed successfully")
+            else:
+                logger.warning("Site name cleanup had some issues but continued")
             
             # Commit all changes
             conn.commit()
             
-            logger.info(f"\nMerge complete!")
-            logger.info(f"Groups processed: {groups_processed}")
+            logger.info(f"Process complete!")
+            logger.info(f"Coordinate duplicate groups processed: {groups_processed}")
             logger.info(f"Sites merged: {sites_merged}")
             logger.info(f"Sites deleted: {sites_deleted}")
             
@@ -244,7 +298,7 @@ def merge_duplicate_sites():
             
         except Exception as e:
             conn.rollback()
-            logger.error(f"Error during merge, rolling back: {e}")
+            logger.error(f"Error during merge and cleanup, rolling back: {e}")
             return False
             
     except Exception as e:
