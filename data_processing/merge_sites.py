@@ -2,7 +2,9 @@ import pandas as pd
 import sqlite3
 import os
 from utils import setup_logging
+from data_processing.data_loader import clean_site_name
 from database.database import get_connection, close_connection
+
 
 # Set up logging
 logger = setup_logging("merge_sites", category="processing")
@@ -58,8 +60,8 @@ def analyze_coordinate_duplicates():
         site_data_df, updated_chemical_df, chemical_data_df = load_csv_files()
         
         # Create sets of site names for fast lookup
-        updated_chemical_sites = set(updated_chemical_df['Site Name'].str.strip())
-        chemical_data_sites = set(chemical_data_df['SiteName'].str.strip())
+        updated_chemical_sites = set(updated_chemical_df['Site Name'].apply(clean_site_name))
+        chemical_data_sites = set(chemical_data_df['SiteName'].apply(clean_site_name))
         
         # Find duplicate groups
         duplicate_groups_df = find_duplicate_coordinate_groups()

@@ -2,29 +2,17 @@ import os
 import pandas as pd
 import sqlite3
 
-# Import from data_loader - using the enhanced functions
-from data_processing.data_loader import load_csv_data, clean_column_names, save_processed_data
+# Import from data_loader
+from data_processing.data_loader import load_csv_data, clean_column_names, save_processed_data, clean_site_name
+from database.database import get_connection, close_connection
 from utils import setup_logging
 
 # Initialize logger
 logger = setup_logging("site_processing", category="processing")
 
-def get_db_connection():
-    """Create and return a database connection."""
-    db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'database', 'tenmile_biology.db')
-    os.makedirs(os.path.dirname(db_path), exist_ok=True)
-    conn = sqlite3.connect(db_path)
-    return conn
-
-def close_db_connection(conn):
-    """Safely close a database connection."""
-    if conn:
-        conn.commit()
-        conn.close()
-
 def create_sites_table():
     """Create the sites table in the database."""
-    conn = get_db_connection()
+    conn = get_connection()
     cursor = conn.cursor()
     
     cursor.execute('''
@@ -42,7 +30,7 @@ def create_sites_table():
     
     conn.commit()
     logger.info("Sites table created successfully")
-    close_db_connection(conn)
+    close_connection(conn)
 
 def load_site_data():
     """
@@ -250,17 +238,16 @@ def find_missing_sites(sites_df):
     if sites_df.empty:
         return pd.DataFrame()
     
-    conn = get_db_connection()
+    conn = get_connection()
     try:
         cursor = conn.cursor()
         
         # Get existing site names from database
         cursor.execute("SELECT site_name FROM sites")
-        existing_sites = {row[0].strip().lower() for row in cursor.fetchall()}
+        existing_sites = {clean_site_name(row[0]).lower() for row in cursor.fetchall()}
         
         # Find sites that don't exist in database
-        # Since site names are now pre-cleaned, we can do more direct comparison
-        mask = ~sites_df['site_name'].str.strip().str.lower().isin(existing_sites)
+        mask = ~sites_df['site_name'].apply(clean_site_name).str.lower().isin(existing_sites)
         missing_sites = sites_df[mask].copy()
         
         return missing_sites
@@ -269,7 +256,7 @@ def find_missing_sites(sites_df):
         logger.error(f"Error finding missing sites: {e}")
         return pd.DataFrame()
     finally:
-        close_db_connection(conn)
+        close_connection(conn)
 
 def insert_sites_into_db(sites_df):
     """
@@ -285,7 +272,7 @@ def insert_sites_into_db(sites_df):
         logger.warning("No site data to insert into database")
         return 0
     
-    conn = get_db_connection()
+    conn = get_connection()
     
     try:
         # Ensure we have the required site_name column
@@ -331,7 +318,7 @@ def insert_sites_into_db(sites_df):
         return 0
     
     finally:
-        close_db_connection(conn)
+        close_connection(conn)
 
 def get_all_sites():
     """
@@ -340,7 +327,7 @@ def get_all_sites():
     Returns:
         DataFrame containing all site data
     """
-    conn = get_db_connection()
+    conn = get_connection()
     try:
         query = "SELECT * FROM sites ORDER BY site_name"
         sites_df = pd.read_sql_query(query, conn)
@@ -350,7 +337,7 @@ def get_all_sites():
         logger.error(f"Error retrieving sites from database: {e}")
         return pd.DataFrame()
     finally:
-        close_db_connection(conn)
+        close_connection(conn)
 
 def get_site_by_name(site_name):
     """
@@ -362,7 +349,7 @@ def get_site_by_name(site_name):
     Returns:
         DataFrame row containing site data or None if not found
     """
-    conn = get_db_connection()
+    conn = get_connection()
     try:
         query = "SELECT * FROM sites WHERE site_name = ?"
         site_df = pd.read_sql_query(query, conn, params=(site_name,))
@@ -377,7 +364,7 @@ def get_site_by_name(site_name):
         logger.error(f"Error retrieving site data for {site_name}: {e}")
         return None
     finally:
-        close_db_connection(conn)
+        close_connection(conn)
 
 def get_site_id(site_name):
     """
@@ -389,7 +376,7 @@ def get_site_id(site_name):
     Returns:
         int: Site ID or None if not found
     """
-    conn = get_db_connection()
+    conn = get_connection()
     try:
         cursor = conn.cursor()
         cursor.execute("SELECT site_id FROM sites WHERE site_name = ?", (site_name,))
@@ -404,7 +391,7 @@ def get_site_id(site_name):
         logger.error(f"Error getting site_id for {site_name}: {e}")
         return None
     finally:
-        close_db_connection(conn)
+        close_connection(conn)
 
 def process_site_data():
     try:
@@ -438,7 +425,7 @@ def cleanup_unused_sites():
     Returns:
         bool: True if successful, False otherwise
     """
-    conn = get_db_connection()
+    conn = get_connection()
     try:
         cursor = conn.cursor()
         
@@ -481,7 +468,7 @@ def cleanup_unused_sites():
         logger.error(f"Error cleaning up unused sites: {e}")
         return False
     finally:
-        close_db_connection(conn)
+        close_connection(conn)
 
 def classify_active_sites():
     """
@@ -491,7 +478,7 @@ def classify_active_sites():
     Returns:
         bool: True if classification was successful, False otherwise
     """
-    conn = get_db_connection()
+    conn = get_connection()
     try:
         cursor = conn.cursor()
         
@@ -564,7 +551,7 @@ def classify_active_sites():
         logger.error(f"Error classifying active sites: {e}")
         return False
     finally:
-        close_db_connection(conn)
+        close_connection(conn)
 
 if __name__ == "__main__":
     success = process_site_data()

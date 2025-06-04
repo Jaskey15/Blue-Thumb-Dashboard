@@ -3,14 +3,15 @@ import sys
 import pandas as pd
 import numpy as np
 
-# Add project root to path (following your existing pattern)
+# Add project root to path 
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
 
-# Import utilities from data_loader and database (following your existing pattern)
+# Import utilities from data_loader and database 
 from data_processing.data_loader import (
     load_csv_data, clean_column_names, 
     save_processed_data, get_unique_sites,
+    clean_site_name
 )
 from database.database import get_connection, close_connection
 
@@ -375,7 +376,7 @@ def check_for_duplicates(df):
         df['date_for_comparison'] = df['Date'].dt.date
         
         # Create sets of (site_name, date) tuples for efficient comparison
-        existing_combinations = set(zip(existing_df['site_name'], existing_df['collection_date']))
+        existing_combinations = set(zip(existing_df['site_name'].apply(clean_site_name), existing_df['collection_date']))
         
         # Check each row in our updated data for duplicates
         duplicate_mask = df.apply(

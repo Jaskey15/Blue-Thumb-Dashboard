@@ -13,6 +13,7 @@ import pandas as pd
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, parent_dir)
 
+from data_processing.data_loader import clean_site_name
 from utils import setup_logging
 
 # Set up logging
@@ -116,7 +117,7 @@ def extract_sites_from_csv(config):
         
         # Build the site metadata DataFrame
         site_data = pd.DataFrame()
-        site_data['site_name'] = unique_sites[config['site_column']].str.strip()
+        site_data['site_name'] = unique_sites[config['site_column']].apply(clean_site_name)
         
         # Extract metadata columns if they exist
         for metadata_field, column_name in [
