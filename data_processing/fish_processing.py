@@ -2,6 +2,12 @@ import pandas as pd
 import sqlite3
 from database.database import get_connection, close_connection
 from data_processing.data_loader import load_csv_data, clean_column_names, save_processed_data
+from data_processing.biological_utils import (
+    insert_collection_events,
+    remove_invalid_biological_values,
+    validate_score_ranges,
+    convert_columns_to_numeric
+)
 from utils import setup_logging
 
 logger = setup_logging("fish_processing", category="processing")
@@ -32,11 +38,11 @@ def load_fish_data(site_name=None):
                 logger.warning(f"No fish data found for processing.")
                 return pd.DataFrame()
                 
-            # Process sites and insert collection events
-            insert_collection_events(cursor, fish_df)
+            # Insert collection events using shared utility
+            event_id_map = insert_fish_collection_events(cursor, fish_df)
             
             # Insert metrics and summary scores
-            insert_metrics_data(cursor, fish_df)
+            insert_metrics_data(cursor, fish_df, event_id_map)
             
             conn.commit()
             logger.info("Fish data loaded successfully")
@@ -81,7 +87,7 @@ def process_fish_csv_data(site_name=None):
         # Clean column names for consistency 
         fish_df = clean_column_names(fish_df)
         
-        # Map to standardized column names (same as before)
+        # Map to standardized column names
         column_mapping = {
             'sitename': 'site_name',
             'sampleid': 'sample_id',
@@ -115,12 +121,12 @@ def process_fish_csv_data(site_name=None):
                 
         fish_df = fish_df.rename(columns=valid_mapping)
         
-        # Filter by site name if provided (site names are now standardized)
+        # Filter by site name if provided
         if site_name:
             fish_df = fish_df[fish_df['site_name'] == site_name]
             logger.info(f"Filtered to {len(fish_df)} rows for site: {site_name}")
         
-        # Handle date formatting (rest of function remains the same)
+        # Handle date formatting
         if 'collection_date' in fish_df.columns:
             try:
                 fish_df['collection_date'] = pd.to_datetime(fish_df['collection_date'])
@@ -128,15 +134,15 @@ def process_fish_csv_data(site_name=None):
             except Exception as e:
                 logger.error(f"Error processing dates: {e}")
         
-        # Check for invalid data (-999 values)
-        score_columns = [col for col in fish_df.columns if col.endswith('_score')]
-        score_columns.append('comparison_to_reference')
+        # Use shared biological utilities for data cleaning
+        # Remove invalid values (-999, -99)
+        fish_df = remove_invalid_biological_values(fish_df, invalid_values=[-999, -99])
         
-        # Remove rows with -999 values in score columns
-        invalid_mask = (fish_df[score_columns] == -999).any(axis=1)
-        if invalid_mask.any():
-            logger.warning(f"Removing {invalid_mask.sum()} rows with invalid scores (-999)")
-            fish_df = fish_df[~invalid_mask]
+        # Convert score columns to numeric
+        fish_df = convert_columns_to_numeric(fish_df)
+        
+        # Validate score ranges (biological scores typically 0-10 or similar)
+        fish_df = validate_score_ranges(fish_df, min_score=0, max_score=10)
         
         # Validate IBI scores (check if total_score matches sum of component scores)
         fish_df = validate_ibi_scores(fish_df)
@@ -206,79 +212,51 @@ def validate_ibi_scores(fish_df):
         logger.error(f"Error validating IBI scores: {e}")
         return fish_df  # Return original dataframe if validation fails
 
-def insert_collection_events(cursor, fish_df):
+def insert_fish_collection_events(cursor, fish_df):
     """
-    Insert fish collection events into the database.
+    Insert fish collection events using the shared biological utility.
     
     Args:
         cursor: Database cursor
         fish_df: DataFrame with fish data
     
     Returns:
-        dict: Dictionary mapping sample_ids to event_ids
+        dict: Dictionary mapping sample_id to event_id
     """
     try:
-        event_id_map = {}  # Map sample_id to event_id for later use
+        # Define parameters for fish collection events
+        table_name = 'fish_collection_events'
+        grouping_columns = ['site_name', 'sample_id']
+        column_mapping = {
+            'site_id': 'site_name',  # Will be looked up automatically
+            'sample_id': 'sample_id',
+            'collection_date': 'collection_date_str',
+            'year': 'year'
+        }
         
-        # Get unique collection events
-        if 'site_name' not in fish_df.columns or 'sample_id' not in fish_df.columns:
-            logger.error("Missing required columns site_name or sample_id")
-            return event_id_map
-            
-        unique_events = fish_df.drop_duplicates(subset=['site_name', 'sample_id']).copy()
+        # Use shared utility function
+        event_id_map = insert_collection_events(
+            cursor=cursor,
+            df=fish_df,
+            table_name=table_name,
+            grouping_columns=grouping_columns,
+            column_mapping=column_mapping
+        )
         
-        for _, event in unique_events.iterrows():
-            # Get site_id (assumes site already exists)
-            cursor.execute("SELECT site_id FROM sites WHERE site_name = ?", (event['site_name'],))
-            site_result = cursor.fetchone()
-
-            if site_result:
-                site_id = site_result[0]
-            else:
-                logger.error(f"Site '{event['site_name']}' not found in database. Run site processing first.")
-                continue  # Skip this event
-            
-            # Check if this sample is already in the database
-            cursor.execute('''
-                SELECT event_id FROM fish_collection_events 
-                WHERE site_id = ? AND sample_id = ?
-            ''', (site_id, event['sample_id']))
-            
-            result = cursor.fetchone()
-            
-            if result:
-                # Sample already exists, store its event_id
-                event_id_map[event['sample_id']] = result[0]
-            else:
-                # Insert new sample
-                cursor.execute('''
-                    INSERT INTO fish_collection_events 
-                    (site_id, sample_id, collection_date, year)
-                    VALUES (?, ?, ?, ?)
-                ''', (
-                    site_id, 
-                    event['sample_id'], 
-                    event.get('collection_date_str'), 
-                    event.get('year')
-                ))
-                
-                event_id = cursor.lastrowid
-                event_id_map[event['sample_id']] = event_id
-        
-        logger.info(f"Processed {len(unique_events)} fish collection events")
         return event_id_map
         
     except Exception as e:
-        logger.error(f"Error inserting collection events: {e}")
+        logger.error(f"Error inserting fish collection events: {e}")
         return {}
 
-def insert_metrics_data(cursor, fish_df):
+def insert_metrics_data(cursor, fish_df, event_id_map):
     """
     Insert fish metrics and summary scores into the database.
     
     Args:
         cursor: Database cursor
         fish_df: DataFrame with fish data
+        event_id_map: Dictionary mapping sample_id to event_id
     
     Returns:
         int: Number of metrics records inserted
@@ -311,30 +289,13 @@ def insert_metrics_data(cursor, fish_df):
             
         # For each unique sample, insert metrics and summary
         for sample_id, sample_df in fish_df.groupby('sample_id'):
-            # Skip if no sample_id
-            if pd.isna(sample_id):
+            # Skip if no sample_id or not in event_id_map
+            if pd.isna(sample_id) or sample_id not in event_id_map:
+                if not pd.isna(sample_id):
+                    logger.warning(f"No event_id found for sample_id={sample_id}")
                 continue
                 
-            # Get site_id
-            if 'site_name' not in sample_df.iloc[0]:
-                continue
-                
-            site_name = sample_df.iloc[0]['site_name']
-            
-            # Get or create event_id
-            cursor.execute('''
-                SELECT e.event_id
-                FROM fish_collection_events e
-                JOIN sites s ON e.site_id = s.site_id
-                WHERE s.site_name = ? AND e.sample_id = ?
-            ''', (site_name, sample_id))
-            
-            event_result = cursor.fetchone()
-            if not event_result:
-                logger.warning(f"No event found for sample_id={sample_id}, site={site_name}")
-                continue
-                
-            event_id = event_result[0]
+            event_id = event_id_map[sample_id]
             
             # Clear existing data for this event (to handle updates)
             cursor.execute('DELETE FROM fish_metrics WHERE event_id = ?', (event_id,))

@@ -2,6 +2,12 @@ import pandas as pd
 import sqlite3
 from database.database import get_connection, close_connection
 from data_processing.data_loader import load_csv_data, clean_column_names, save_processed_data
+from data_processing.biological_utils import (
+    insert_collection_events,
+    remove_invalid_biological_values,
+    validate_score_ranges,
+    convert_columns_to_numeric
+)
 from utils import setup_logging
 
 # Set up logging
@@ -25,10 +31,12 @@ def load_macroinvertebrate_data():
                logger.warning("No macroinvertebrate data to process")
                return pd.DataFrame()
            
-           # Pass the processed data to each function (no more redundant processing!)
-           insert_collection_events(cursor, macro_df)
-           insert_reference_and_metrics_data(cursor, macro_df)
-           calculate_summary_scores(cursor, macro_df)
+           # Insert collection events using shared utility
+           event_id_map = insert_macro_collection_events(cursor, macro_df)
+           
+           # Insert metrics and summary scores
+           insert_reference_and_metrics_data(cursor, macro_df, event_id_map)
+           calculate_summary_scores(cursor, macro_df, event_id_map)
 
            conn.commit()   
            logger.info("Macroinvertebrate data loaded successfully")
@@ -115,17 +123,17 @@ def process_macro_csv_data(site_name=None):
             except Exception as e:
                 logger.error(f"Error processing dates: {e}")
         
-        # Check for invalid data (-99 or -999 values)
-        score_columns = [col for col in macro_df.columns if col.endswith('_score')]
-        score_columns.append('comparison_to_reference')
+        # Use shared biological utilities for data cleaning
+        # Remove invalid values (-999, -99)
+        macro_df = remove_invalid_biological_values(macro_df, invalid_values=[-999, -99])
         
-        # Remove rows with -99 or -999 values in score columns or comparison_to_reference
-        invalid_mask = (macro_df[score_columns] == -99).any(axis=1) | (macro_df[score_columns] == -999).any(axis=1)
-        if invalid_mask.any():
-            logger.warning(f"Removing {invalid_mask.sum()} rows with invalid scores (-99 or -999)")
-            macro_df = macro_df[~invalid_mask]
+        # Convert score columns to numeric
+        macro_df = convert_columns_to_numeric(macro_df)
         
-        # Calculate total score by summing individual metric scores (rest remains same)
+        # Validate score ranges (biological scores typically 0-10 or similar)
+        macro_df = validate_score_ranges(macro_df, min_score=0, max_score=10)
+        
+        # Calculate total score by summing individual metric scores
         metric_score_cols = [
             'taxa_richness_score', 
             'hbi_score_score', 
@@ -196,76 +204,60 @@ def determine_biological_condition(comparison_value):
    except:
        return "Unknown"
 
-def insert_collection_events(cursor, macro_df):
-   """
-   Insert macroinvertebrate collection events into the database.
-   
-   Args:
-       cursor: Database cursor
-       macro_df: Processed macroinvertebrate DataFrame
-   """
-   try:
-       if macro_df.empty:
-           logger.warning("No macroinvertebrate data to insert")
-           return
-           
-       # Get required columns
-       required_cols = ['site_name', 'sample_id', 'season', 'year', 'habitat']
-       missing_cols = [col for col in required_cols if col not in macro_df.columns]
-       
-       if missing_cols:
-           logger.error(f"Missing required columns for collection events: {missing_cols}")
-           return
-           
-       # Get unique collection events
-       unique_events = macro_df.drop_duplicates(subset=['site_name', 'sample_id', 'season', 'year']).copy()
-       
-       # Insert each collection event
-       for _, event in unique_events.iterrows():
-           # Get site_id (assumes site already exists)
-           cursor.execute("SELECT site_id FROM sites WHERE site_name = ?", (event['site_name'],))
-           site_result = cursor.fetchone()
+def insert_macro_collection_events(cursor, macro_df):
+    """
+    Insert macro collection events using the shared biological utility.
+    
+    Args:
+        cursor: Database cursor
+        macro_df: DataFrame with macro data
+    
+    Returns:
+        dict: Dictionary mapping (sample_id, habitat) to event_id
+    """
+    try:
+        # Define parameters for macro collection events
+        table_name = 'macro_collection_events'
+        grouping_columns = ['site_name', 'sample_id', 'habitat']
+        column_mapping = {
+            'site_id': 'site_name',  # Will be looked up automatically
+            'sample_id': 'sample_id',
+            'season': 'season',
+            'year': 'year',
+            'habitat': 'habitat'
+        }
+        
+        # Use shared utility function
+        event_id_map = insert_collection_events(
+            cursor=cursor,
+            df=macro_df,
+            table_name=table_name,
+            grouping_columns=grouping_columns,
+            column_mapping=column_mapping
+        )
+        
+        return event_id_map
+        
+    except Exception as e:
+        logger.error(f"Error inserting macro collection events: {e}")
+        return {}
 
-           if site_result:
-               site_id = site_result[0]
-           else:
-               logger.error(f"Site '{event['site_name']}' not found in database. Run site processing first.")
-               continue  # Skip this event
-           
-           # Insert collection event
-           cursor.execute('''
-               INSERT INTO macro_collection_events 
-               (site_id, sample_id, season, year, habitat)
-               VALUES (?, ?, ?, ?, ?)
-           ''', (
-               site_id, 
-               event.get('sample_id'), 
-               event.get('season'), 
-               event.get('year'), 
-               event.get('habitat')
-           ))
-       
-       logger.info(f"Inserted {len(unique_events)} macroinvertebrate collection events")
-       
-   except Exception as e:
-       logger.error(f"Error inserting collection events: {e}")
-       raise
-
-def insert_reference_and_metrics_data(cursor, macro_df):
+def insert_reference_and_metrics_data(cursor, macro_df, event_id_map):
    """
    Insert macroinvertebrate reference values and metrics data.
    
    Args:
        cursor: Database cursor
        macro_df: Processed macroinvertebrate DataFrame
+       event_id_map: Dictionary mapping (sample_id, habitat) to event_id
    """
    try:
        if macro_df.empty:
            logger.warning("No macroinvertebrate data to insert")
            return
        
-       # Group by sample_id - only process each unique sample once
-       unique_samples = macro_df.drop_duplicates(subset=['sample_id']).copy()
+       # Group by sample_id and habitat - only process each unique sample once
+       unique_samples = macro_df.drop_duplicates(subset=['sample_id', 'habitat']).copy()
        logger.info(f"Processing metrics for {len(unique_samples)} unique samples")
            
        # Define metric mappings
@@ -290,23 +282,17 @@ def insert_reference_and_metrics_data(cursor, macro_df):
        # For each unique sample, insert metrics
        for _, row in unique_samples.iterrows():
            # Skip if missing required fields
-           if 'site_name' not in row or 'sample_id' not in row:
+           if 'sample_id' not in row or 'habitat' not in row:
                continue
                
-           # Get the event_id
-           cursor.execute('''
-               SELECT e.event_id
-               FROM macro_collection_events e
-               JOIN sites s ON e.site_id = s.site_id
-               WHERE s.site_name = ? AND e.sample_id = ?
-           ''', (row['site_name'], row['sample_id']))
+           # Get the event_id using the mapping key
+           mapping_key = (row['sample_id'], row['habitat'])
            
-           event_result = cursor.fetchone()
-           if not event_result:
-               logger.warning(f"No event found for sample_id={row.get('sample_id')}, site={row.get('site_name')}")
+           if mapping_key not in event_id_map:
+               logger.warning(f"No event_id found for sample_id={row.get('sample_id')}, habitat={row.get('habitat')}")
                continue
                
-           event_id = event_result[0]
+           event_id = event_id_map[mapping_key]
            metrics_by_event[event_id] = set()
            
            # Insert metrics for this event
@@ -333,13 +319,14 @@ def insert_reference_and_metrics_data(cursor, macro_df):
        logger.error(f"Error inserting reference and metrics data: {e}")
        raise
 
-def calculate_summary_scores(cursor, macro_df):
+def calculate_summary_scores(cursor, macro_df, event_id_map):
    """
    Calculate and insert summary scores into the database.
    
    Args:
        cursor: Database cursor
        macro_df: Processed macroinvertebrate DataFrame
+       event_id_map: Dictionary mapping (sample_id, habitat) to event_id
    """
    try:
        if macro_df.empty:
@@ -347,28 +334,26 @@ def calculate_summary_scores(cursor, macro_df):
            return
            
        # Check for required columns
-       required_cols = ['site_name', 'sample_id', 'total_score', 'comparison_to_reference']
+       required_cols = ['sample_id', 'habitat', 'total_score', 'comparison_to_reference']
        missing_cols = [col for col in required_cols if col not in macro_df.columns]
        
        if missing_cols:
            logger.error(f"Missing required columns for summary scores: {missing_cols}")
            return
            
+       # Process unique combinations of sample_id and habitat
+       unique_samples = macro_df.drop_duplicates(subset=['sample_id', 'habitat']).copy()
+       
        # For each collection event, insert summary scores
-       for _, row in macro_df.iterrows():
-           # Get the event_id
-           cursor.execute('''
-               SELECT e.event_id
-               FROM macro_collection_events e
-               JOIN sites s ON e.site_id = s.site_id
-               WHERE s.site_name = ? AND e.sample_id = ?
-           ''', (row['site_name'], row['sample_id']))
+       for _, row in unique_samples.iterrows():
+           # Get the event_id using the mapping key
+           mapping_key = (row['sample_id'], row['habitat'])
            
-           event_result = cursor.fetchone()
-           if not event_result:
+           if mapping_key not in event_id_map:
+               logger.warning(f"No event_id found for sample_id={row.get('sample_id')}, habitat={row.get('habitat')}")
                continue
                
-           event_id = event_result[0]
+           event_id = event_id_map[mapping_key]
            
            # Determine biological condition
            biological_condition = determine_biological_condition(row['comparison_to_reference'])
