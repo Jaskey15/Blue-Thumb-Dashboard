@@ -43,12 +43,12 @@ def recreate_schema():
         return False
 
 def reload_all_data():
-    """Reload all data from CSV files into the database."""
+    """Reload all data from cleaned CSV files into the database."""
     try:        
         # Import all processing modules
         from data_processing.site_processing import process_site_data
         from data_processing.chemical_processing import load_chemical_data_to_db
-        from data_processing.updated_chemical_processing import load_updated_chemical_data_to_db  # ADD THIS
+        from data_processing.updated_chemical_processing import load_updated_chemical_data_to_db
         from data_processing.fish_processing import load_fish_data
         from data_processing.macro_processing import load_macroinvertebrate_data
         from data_processing.habitat_processing import load_habitat_data
@@ -56,36 +56,35 @@ def reload_all_data():
         start_time = time.time()
         
         # CRITICAL: Site processing must run first and complete successfully
-        logger.info("Step 1: Loading site data...")
+        logger.info("Step 1: Loading site data from cleaned CSV...")
         site_success = process_site_data()
         
         if not site_success:
             logger.error("Site processing failed. Cannot continue with other data processing.")
             return False
         
-        # Only proceed with other data processing if sites were loaded successfully
-        logger.info("Step 2: Loading original chemical data...")  # UPDATED LABEL
+        # Load all data types using cleaned CSVs
+        logger.info("Step 2: Loading original chemical data from cleaned CSV...")
         chemical_result = load_chemical_data_to_db()
         chemical_success = chemical_result is not False and chemical_result is not None
         
-        # ADD NEW STEP FOR UPDATED CHEMICAL DATA
-        logger.info("Step 3: Loading updated chemical data...")
+        logger.info("Step 3: Loading updated chemical data from cleaned CSV...")
         updated_chemical_result = load_updated_chemical_data_to_db()
         updated_chemical_success = updated_chemical_result is not False and updated_chemical_result is not None
         
-        # UPDATE STEP NUMBERS FOR EXISTING STEPS
-        logger.info("Step 4: Loading fish data...")
+        logger.info("Step 4: Loading fish data from cleaned CSV...")
         fish_result = load_fish_data()
         fish_success = not (hasattr(fish_result, 'empty') and fish_result.empty) if fish_result is not None else False
         
-        logger.info("Step 5: Loading macroinvertebrate data...")
+        logger.info("Step 5: Loading macroinvertebrate data from cleaned CSV...")
         macro_result = load_macroinvertebrate_data()
         macro_success = not (hasattr(macro_result, 'empty') and macro_result.empty) if macro_result is not None else False
 
-        logger.info("Step 6: Loading habitat data...")
+        logger.info("Step 6: Loading habitat data from cleaned CSV...")
         habitat_result = load_habitat_data()
         habitat_success = not (hasattr(habitat_result, 'empty') and habitat_result.empty) if habitat_result is not None else False
 
+        """
         logger.info("Step 7: Merging duplicate sites...")
         from data_processing.merge_sites import merge_duplicate_sites  
         merge_result = merge_duplicate_sites()
@@ -100,11 +99,12 @@ def reload_all_data():
         from data_processing.site_processing import cleanup_unused_sites
         cleanup_result = cleanup_unused_sites()
         cleanup_success = cleanup_result is not False and cleanup_result is not None
+        """
         
         elapsed_time = time.time() - start_time
         
         # UPDATE SUCCESS CHECK TO INCLUDE UPDATED CHEMICAL DATA
-        if chemical_success and updated_chemical_success and fish_success and macro_success and habitat_success and merge_success and classification_success and cleanup_success:
+        if chemical_success and updated_chemical_success and fish_success and macro_success and habitat_success:
             logger.info(f"Successfully reloaded all data in {elapsed_time:.2f} seconds")
             return True
         else:

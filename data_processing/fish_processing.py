@@ -62,7 +62,7 @@ def load_fish_data(site_name=None):
 
 def process_fish_csv_data(site_name=None):
     """
-    Process fish data from CSV file.
+    Process fish data from cleaned CSV file.
     
     Args:
         site_name: Optional site name to filter data for
@@ -71,17 +71,17 @@ def process_fish_csv_data(site_name=None):
         DataFrame with processed fish data
     """
     try:
-        # Load raw fish data
+        # Load raw fish data from CLEANED CSV
         fish_df = load_csv_data('fish', parse_dates=['Date'])
         
         if fish_df.empty:
-            logger.error("Failed to load fish data from CSV.")
+            logger.error("Failed to load fish data from cleaned CSV.")
             return pd.DataFrame()
         
-        # Clean column names for consistency
+        # Clean column names for consistency 
         fish_df = clean_column_names(fish_df)
         
-        # Map to standardized column names
+        # Map to standardized column names (same as before)
         column_mapping = {
             'sitename': 'site_name',
             'sampleid': 'sample_id',
@@ -115,7 +115,12 @@ def process_fish_csv_data(site_name=None):
                 
         fish_df = fish_df.rename(columns=valid_mapping)
         
-        # Handle date formatting
+        # Filter by site name if provided (site names are now standardized)
+        if site_name:
+            fish_df = fish_df[fish_df['site_name'] == site_name]
+            logger.info(f"Filtered to {len(fish_df)} rows for site: {site_name}")
+        
+        # Handle date formatting (rest of function remains the same)
         if 'collection_date' in fish_df.columns:
             try:
                 fish_df['collection_date'] = pd.to_datetime(fish_df['collection_date'])

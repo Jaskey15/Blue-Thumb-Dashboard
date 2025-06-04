@@ -50,118 +50,123 @@ def load_macroinvertebrate_data():
    return get_macroinvertebrate_dataframe()
 
 def process_macro_csv_data(site_name=None):
-   """
-   Process macroinvertebrate data from CSV file.
-   
-   Args:
-       site_name: Optional site name to filter data for
-       
-   Returns:
-       DataFrame with processed macroinvertebrate data
-   """
-   try:
-       # Load raw macro data
-       macro_df = load_csv_data('macro')
-       
-       if macro_df.empty:
-           logger.error("Failed to load macroinvertebrate data from CSV.")
-           return pd.DataFrame()
-       
-       # Clean column names for consistency
-       macro_df = clean_column_names(macro_df)
-       
-       # Map to standardized column names
-       column_mapping = {
-           'sitename': 'site_name',
-           'date': 'collection_date',
-           'year': 'year',
-           'season': 'season',
-           'habitat_type': 'habitat',
-           'sampleid': 'sample_id',
-           'taxa_richness': 'taxa_richness',
-           'modified_hbi': 'hbi_score',
-           'ept_perc': 'ept_abundance',
-           'ept_taxa': 'ept_taxa_richness',
-           'dom_2_taxa': 'contribution_dominants',
-           'shannon_weaver': 'shannon_weaver',
-           'taxa_richness_score': 'taxa_richness_score',
-           'mod_hbi_score': 'hbi_score_score',
-           'ept_perc_score': 'ept_abundance_score',
-           'ept_taxa_score': 'ept_taxa_richness_score',
-           'dom2_taxa_score': 'contribution_dominants_score',
-           'shannon_weaver_score': 'shannon_weaver_score',
-           'percent_reference': 'comparison_to_reference'
-       }
-       
-       # Create a mapping with only columns that exist in the dataframe
-       valid_mapping = {}
-       for k, v in column_mapping.items():
-           matching_cols = [col for col in macro_df.columns if col.lower() == k.lower()]
-           if matching_cols:
-               valid_mapping[matching_cols[0]] = v
-               
-       macro_df = macro_df.rename(columns=valid_mapping)
-       
-       # Handle date formatting
-       if 'collection_date' in macro_df.columns:
-           try:
-               macro_df['collection_date'] = pd.to_datetime(macro_df['collection_date'])
-               macro_df['collection_date_str'] = macro_df['collection_date'].dt.strftime('%Y-%m-%d')
-           except Exception as e:
-               logger.error(f"Error processing dates: {e}")
-       
-       # Check for invalid data (-99 or -999 values)
-       score_columns = [col for col in macro_df.columns if col.endswith('_score')]
-       score_columns.append('comparison_to_reference')
-       
-       # Remove rows with -99 or -999 values in score columns or comparison_to_reference
-       invalid_mask = (macro_df[score_columns] == -99).any(axis=1) | (macro_df[score_columns] == -999).any(axis=1)
-       if invalid_mask.any():
-           logger.warning(f"Removing {invalid_mask.sum()} rows with invalid scores (-99 or -999)")
-           macro_df = macro_df[~invalid_mask]
-       
-       # Calculate total score by summing individual metric scores
-       metric_score_cols = [
-           'taxa_richness_score', 
-           'hbi_score_score', 
-           'ept_abundance_score', 
-           'ept_taxa_richness_score', 
-           'contribution_dominants_score', 
-           'shannon_weaver_score'
-       ]
-       
-       # Check which columns exist and calculate total score
-       available_score_cols = [col for col in metric_score_cols if col in macro_df.columns]
+    """
+    Process macroinvertebrate data from cleaned CSV file.
+    
+    Args:
+        site_name: Optional site name to filter data for
+        
+    Returns:
+        DataFrame with processed macroinvertebrate data
+    """
+    try:
+        # Load raw macro data from CLEANED CSV
+        macro_df = load_csv_data('macro')
+        
+        if macro_df.empty:
+            logger.error("Failed to load macroinvertebrate data from cleaned CSV.")
+            return pd.DataFrame()
+        
+        # Clean column names for consistency 
+        macro_df = clean_column_names(macro_df)
+        
+        # Map to standardized column names 
+        column_mapping = {
+            'sitename': 'site_name',
+            'date': 'collection_date',
+            'year': 'year',
+            'season': 'season',
+            'habitat_type': 'habitat',
+            'sampleid': 'sample_id',
+            'taxa_richness': 'taxa_richness',
+            'modified_hbi': 'hbi_score',
+            'ept_perc': 'ept_abundance',
+            'ept_taxa': 'ept_taxa_richness',
+            'dom_2_taxa': 'contribution_dominants',
+            'shannon_weaver': 'shannon_weaver',
+            'taxa_richness_score': 'taxa_richness_score',
+            'mod_hbi_score': 'hbi_score_score',
+            'ept_perc_score': 'ept_abundance_score',
+            'ept_taxa_score': 'ept_taxa_richness_score',
+            'dom2_taxa_score': 'contribution_dominants_score',
+            'shannon_weaver_score': 'shannon_weaver_score',
+            'percent_reference': 'comparison_to_reference'
+        }
+        
+        # Create a mapping with only columns that exist in the dataframe
+        valid_mapping = {}
+        for k, v in column_mapping.items():
+            matching_cols = [col for col in macro_df.columns if col.lower() == k.lower()]
+            if matching_cols:
+                valid_mapping[matching_cols[0]] = v
+                
+        macro_df = macro_df.rename(columns=valid_mapping)
+        
+        # Filter by site name if provided 
+        if site_name:
+            macro_df = macro_df[macro_df['site_name'] == site_name]
+            logger.info(f"Filtered to {len(macro_df)} rows for site: {site_name}")
+        
+        # Handle date formatting 
+        if 'collection_date' in macro_df.columns:
+            try:
+                macro_df['collection_date'] = pd.to_datetime(macro_df['collection_date'])
+                macro_df['collection_date_str'] = macro_df['collection_date'].dt.strftime('%Y-%m-%d')
+            except Exception as e:
+                logger.error(f"Error processing dates: {e}")
+        
+        # Check for invalid data (-99 or -999 values)
+        score_columns = [col for col in macro_df.columns if col.endswith('_score')]
+        score_columns.append('comparison_to_reference')
+        
+        # Remove rows with -99 or -999 values in score columns or comparison_to_reference
+        invalid_mask = (macro_df[score_columns] == -99).any(axis=1) | (macro_df[score_columns] == -999).any(axis=1)
+        if invalid_mask.any():
+            logger.warning(f"Removing {invalid_mask.sum()} rows with invalid scores (-99 or -999)")
+            macro_df = macro_df[~invalid_mask]
+        
+        # Calculate total score by summing individual metric scores (rest remains same)
+        metric_score_cols = [
+            'taxa_richness_score', 
+            'hbi_score_score', 
+            'ept_abundance_score', 
+            'ept_taxa_richness_score', 
+            'contribution_dominants_score', 
+            'shannon_weaver_score'
+        ]
+        
+        # Check which columns exist and calculate total score
+        available_score_cols = [col for col in metric_score_cols if col in macro_df.columns]
 
-       if len(available_score_cols) == len(metric_score_cols):
-           # Only calculate total if we have all the score columns
-           macro_df['total_score'] = macro_df[available_score_cols].sum(axis=1)
-           logger.info("Calculated total_score from all component score columns")
-       elif available_score_cols:
-           # If we only have some but not all score columns, we should log a warning
-           logger.warning(f"Only found {len(available_score_cols)} of {len(metric_score_cols)} score columns")
-           logger.warning(f"Missing: {set(metric_score_cols) - set(available_score_cols)}")
-           
-           # Calculate total from available columns but note it's incomplete
-           macro_df['total_score'] = macro_df[available_score_cols].sum(axis=1)
-           logger.info("Calculated partial total_score from available component score columns")
-       else:
-           # No score columns available
-           logger.warning("No metric score columns found, cannot calculate total_score")
-           macro_df['total_score'] = None
-       
-       # Determine biological condition based on comparison_to_reference
-       if 'comparison_to_reference' in macro_df.columns:
-           macro_df['biological_condition'] = macro_df['comparison_to_reference'].apply(determine_biological_condition)
-           logger.info("Determined biological_condition based on comparison_to_reference")
-       
-       save_processed_data(macro_df, 'macro_data')
-       
-       return macro_df
-       
-   except Exception as e:
-       logger.error(f"Error processing macroinvertebrate CSV data: {e}")
-       return pd.DataFrame()
+        if len(available_score_cols) == len(metric_score_cols):
+            # Only calculate total if we have all the score columns
+            macro_df['total_score'] = macro_df[available_score_cols].sum(axis=1)
+            logger.info("Calculated total_score from all component score columns")
+        elif available_score_cols:
+            # If we only have some but not all score columns, we should log a warning
+            logger.warning(f"Only found {len(available_score_cols)} of {len(metric_score_cols)} score columns")
+            logger.warning(f"Missing: {set(metric_score_cols) - set(available_score_cols)}")
+            
+            # Calculate total from available columns but note it's incomplete
+            macro_df['total_score'] = macro_df[available_score_cols].sum(axis=1)
+            logger.info("Calculated partial total_score from available component score columns")
+        else:
+            # No score columns available
+            logger.warning("No metric score columns found, cannot calculate total_score")
+            macro_df['total_score'] = None
+        
+        # Determine biological condition based on comparison_to_reference
+        if 'comparison_to_reference' in macro_df.columns:
+            macro_df['biological_condition'] = macro_df['comparison_to_reference'].apply(determine_biological_condition)
+            logger.info("Determined biological_condition based on comparison_to_reference")
+        
+        save_processed_data(macro_df, 'macro_data')
+        
+        return macro_df
+        
+    except Exception as e:
+        logger.error(f"Error processing macroinvertebrate CSV data: {e}")
+        return pd.DataFrame()
 
 def determine_biological_condition(comparison_value):
    """

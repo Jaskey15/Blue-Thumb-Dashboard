@@ -8,20 +8,13 @@ from database.database import get_connection, close_connection
 logger = setup_logging("merge_sites", category="processing")
 
 def load_csv_files():
-    """Load the relevant CSV files for site name checking."""
+    """Load the relevant cleaned CSV files for site name checking."""
     base_dir = os.path.dirname(os.path.dirname(__file__))
     
-    # Load site_data.csv for metadata and names
-    site_data = pd.read_csv(os.path.join(base_dir, 'data', 'raw', 'site_data.csv'))
-    
-    # Load updated_chemical_data.csv for preferred names
-    updated_chemical = pd.read_csv(
-        os.path.join(base_dir, 'data', 'raw', 'updated_chemical_data.csv'), 
-        encoding='cp1252'
-    )
-    
-    # Load chemical_data.csv for fallback names
-    chemical_data = pd.read_csv(os.path.join(base_dir, 'data', 'raw', 'chemical_data.csv'))
+    # Load CLEANED CSV files from processed directory
+    site_data = pd.read_csv(os.path.join(base_dir, 'data', 'processed', 'cleaned_site_data.csv'))
+    updated_chemical = pd.read_csv(os.path.join(base_dir, 'data', 'processed', 'cleaned_updated_chemical_data.csv'))
+    chemical_data = pd.read_csv(os.path.join(base_dir, 'data', 'processed', 'cleaned_chemical_data.csv'))
     
     return site_data, updated_chemical, chemical_data
 
@@ -39,8 +32,7 @@ def find_duplicate_coordinate_groups():
         longitude,
         county,
         river_basin,
-        ecoregion,
-        active
+        ecoregion
     FROM sites 
     WHERE latitude IS NOT NULL AND longitude IS NOT NULL
     ORDER BY rounded_lat, rounded_lon, site_name
@@ -53,6 +45,97 @@ def find_duplicate_coordinate_groups():
     duplicate_groups = df.groupby(['rounded_lat', 'rounded_lon']).filter(lambda x: len(x) > 1)
     
     return duplicate_groups
+
+def analyze_coordinate_duplicates():
+    """
+    Analyze coordinate duplicates without making any changes.
+    Returns summary statistics for review.
+    """
+    logger.info("Analyzing coordinate duplicates (read-only)...")
+    
+    try:
+        # Load CSV data for reference
+        site_data_df, updated_chemical_df, chemical_data_df = load_csv_files()
+        
+        # Create sets of site names for fast lookup
+        updated_chemical_sites = set(updated_chemical_df['Site Name'].str.strip())
+        chemical_data_sites = set(chemical_data_df['SiteName'].str.strip())
+        
+        # Find duplicate groups
+        duplicate_groups_df = find_duplicate_coordinate_groups()
+        
+        if duplicate_groups_df.empty:
+            logger.info("✅ No coordinate duplicate sites found!")
+            return {
+                'total_duplicate_sites': 0,
+                'duplicate_groups': 0,
+                'examples': []
+            }
+        
+        # Analyze the duplicates
+        duplicate_groups_summary = []
+        total_duplicate_sites = len(duplicate_groups_df)
+        
+        logger.info(f"Found {total_duplicate_sites} sites in coordinate duplicate groups")
+        
+        # Process each duplicate group for analysis
+        group_count = 0
+        for (rounded_lat, rounded_lon), group in duplicate_groups_df.groupby(['rounded_lat', 'rounded_lon']):
+            group_count += 1
+            
+            sites_in_group = list(group['site_name'])
+            sites_in_updated = group[group['site_name'].isin(updated_chemical_sites)]
+            sites_in_chemical = group[group['site_name'].isin(chemical_data_sites)]
+            
+            # Determine what would be preferred
+            if len(sites_in_updated) > 1:
+                preferred_site = sites_in_updated.loc[sites_in_updated['site_name'].str.len().idxmax()]
+                reason = "Multiple in updated_chemical - would keep longer name"
+            elif len(sites_in_updated) == 1:
+                preferred_site = sites_in_updated.iloc[0]
+                reason = "Found in updated_chemical"
+            elif len(sites_in_chemical) > 0:
+                if len(sites_in_chemical) > 1:
+                    preferred_site = sites_in_chemical.loc[sites_in_chemical['site_name'].str.len().idxmax()]
+                else:
+                    preferred_site = sites_in_chemical.iloc[0]
+                reason = "Found in chemical_data"
+            else:
+                preferred_site = group.loc[group['site_name'].str.len().idxmax()]
+                reason = "Arbitrary choice - longest name"
+            
+            group_info = {
+                'coordinates': f"({rounded_lat}, {rounded_lon})",
+                'site_count': len(group),
+                'sites': sites_in_group,
+                'would_keep': preferred_site['site_name'],
+                'reason': reason
+            }
+            
+            duplicate_groups_summary.append(group_info)
+            
+            logger.info(f"Group {group_count} at ({rounded_lat}, {rounded_lon}):")
+            logger.info(f"  Sites: {sites_in_group}")
+            logger.info(f"  Would keep: {preferred_site['site_name']} - {reason}")
+        
+        # Summary statistics
+        summary = {
+            'total_duplicate_sites': total_duplicate_sites,
+            'duplicate_groups': group_count,
+            'examples': duplicate_groups_summary[:10],  # First 10 examples
+            'all_groups': duplicate_groups_summary
+        }
+        
+        logger.info(f"\n📊 COORDINATE DUPLICATE ANALYSIS SUMMARY:")
+        logger.info(f"Total sites that are coordinate duplicates: {total_duplicate_sites}")
+        logger.info(f"Number of duplicate coordinate groups: {group_count}")
+        logger.info(f"Sites that would be deleted in merge: {total_duplicate_sites - group_count}")
+        
+        return summary
+        
+    except Exception as e:
+        logger.error(f"Error analyzing coordinate duplicates: {e}")
+        return None
 
 def determine_preferred_site(group, updated_chemical_sites, chemical_data_sites):
     """
@@ -167,19 +250,20 @@ def delete_duplicate_site(cursor, site_id, site_name):
 
 def merge_duplicate_sites():
     """
-    Main function to merge sites with the same coordinates and clean up site names.
+    Main function to merge sites with the same coordinates.
+    Note: Site name cleanup is no longer needed since we use cleaned CSVs.
     """
-    logger.info("Starting site merge and cleanup process...")
+    logger.info("Starting coordinate-based site merge process...")
     
     try:
-        # Load CSV data for reference
+        # Load cleaned CSV data for reference
         site_data_df, updated_chemical_df, chemical_data_df = load_csv_files()
         
-        # Create sets of site names for fast lookup
+        # Create sets of site names for fast lookup (names are already cleaned)
         updated_chemical_sites = set(updated_chemical_df['Site Name'].str.strip())
         chemical_data_sites = set(chemical_data_df['SiteName'].str.strip())
         
-        # Find duplicate groups
+        # Find duplicate groups based on coordinates
         duplicate_groups_df = find_duplicate_coordinate_groups()
         
         conn = get_connection()
@@ -234,20 +318,11 @@ def merge_duplicate_sites():
             else:
                 logger.info("No coordinate duplicate sites found!")
             
-            # Always run site name cleanup
-            logger.info("Running site name cleanup...")
-            cleanup_success = cleanup_site_names()
-            
-            if cleanup_success:
-                logger.info("Site name cleanup completed successfully")
-            else:
-                logger.warning("Site name cleanup had some issues but continued")
-            
             # Commit all changes
             conn.commit()
             
-            logger.info(f"Process complete!")
-            logger.info(f"Coordinate duplicate groups processed: {groups_processed}")
+            logger.info(f"Coordinate-based merge complete!")
+            logger.info(f"Duplicate groups processed: {groups_processed}")
             logger.info(f"Sites merged: {sites_merged}")
             logger.info(f"Sites deleted: {sites_deleted}")
             
@@ -255,11 +330,11 @@ def merge_duplicate_sites():
             
         except Exception as e:
             conn.rollback()
-            logger.error(f"Error during merge and cleanup, rolling back: {e}")
+            logger.error(f"Error during coordinate merge, rolling back: {e}")
             return False
             
     except Exception as e:
-        logger.error(f"Error in site merge: {e}")
+        logger.error(f"Error in coordinate-based site merge: {e}")
         return False
         
     finally:
@@ -267,8 +342,25 @@ def merge_duplicate_sites():
             close_connection(conn)
 
 if __name__ == "__main__":
-    success = merge_duplicate_sites()
-    if success:
-        print("Site merge completed successfully!")
+    # When run directly, just analyze duplicates without merging
+    print("🔍 Analyzing coordinate duplicates...")
+    
+    analysis = analyze_coordinate_duplicates()
+    
+    if analysis:
+        print(f"\n📊 ANALYSIS RESULTS:")
+        print(f"Total duplicate sites: {analysis['total_duplicate_sites']}")
+        print(f"Duplicate groups: {analysis['duplicate_groups']}")
+        print(f"Sites that would be deleted: {analysis['total_duplicate_sites'] - analysis['duplicate_groups']}")
+        
+        if analysis['duplicate_groups'] > 0:
+            print(f"\n📝 First few examples:")
+            for i, group in enumerate(analysis['examples'][:5], 1):
+                print(f"{i}. {group['coordinates']}: {group['site_count']} sites")
+                print(f"   Sites: {group['sites']}")
+                print(f"   Would keep: {group['would_keep']}")
+                print()
+        
+        print("To actually merge the duplicates, call merge_duplicate_sites() function")
     else:
-        print("Site merge failed. Check logs for details.")
+        print("❌ Analysis failed. Check logs for details.")

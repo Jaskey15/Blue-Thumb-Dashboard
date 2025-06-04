@@ -64,7 +64,7 @@ def load_habitat_data(site_name=None):
 
 def process_habitat_csv_data(site_name=None):
     """
-    Process habitat data from CSV file.
+    Process habitat data from cleaned CSV file.
     
     Args:
         site_name: Optional site name to filter data for
@@ -73,17 +73,17 @@ def process_habitat_csv_data(site_name=None):
         DataFrame with processed habitat data
     """
     try:
-        # Load raw habitat data
+        # Load raw habitat data from CLEANED CSV
         habitat_df = load_csv_data('habitat')
         
         if habitat_df.empty:
-            logger.error("Failed to load habitat data from CSV.")
+            logger.error("Failed to load habitat data from cleaned CSV.")
             return pd.DataFrame()
         
-        # Clean column names for consistency
+        # Clean column names 
         habitat_df = clean_column_names(habitat_df)
         
-        # Map to standardized column names
+        # Map to standardized column names 
         column_mapping = {
             'sitename': 'site_name',
             'sampleid': 'sample_id',
@@ -113,7 +113,12 @@ def process_habitat_csv_data(site_name=None):
                 
         habitat_df = habitat_df.rename(columns=valid_mapping)
         
-        # Handle date formatting
+        # Filter by site name if provided
+        if site_name:
+            habitat_df = habitat_df[habitat_df['site_name'] == site_name]
+            logger.info(f"Filtered to {len(habitat_df)} rows for site: {site_name}")
+        
+        # Handle date formatting 
         if 'assessment_date' in habitat_df.columns:
             try:
                 habitat_df['assessment_date'] = pd.to_datetime(habitat_df['assessment_date'])
