@@ -84,8 +84,7 @@ def reload_all_data():
         habitat_result = load_habitat_data()
         habitat_success = not (hasattr(habitat_result, 'empty') and habitat_result.empty) if habitat_result is not None else False
 
-        """
-        logger.info("Step 7: Merging duplicate sites...")
+        logger.info("Step 7: Merging duplicate sites by coordinates...")
         from data_processing.merge_sites import merge_duplicate_sites  
         merge_result = merge_duplicate_sites()
         merge_success = merge_result is not False and merge_result is not None
@@ -99,12 +98,12 @@ def reload_all_data():
         from data_processing.site_processing import cleanup_unused_sites
         cleanup_result = cleanup_unused_sites()
         cleanup_success = cleanup_result is not False and cleanup_result is not None
-        """
+
         
         elapsed_time = time.time() - start_time
         
         # UPDATE SUCCESS CHECK TO INCLUDE UPDATED CHEMICAL DATA
-        if chemical_success and updated_chemical_success and fish_success and macro_success and habitat_success:
+        if chemical_success and updated_chemical_success and fish_success and macro_success and habitat_success and merge_success and classification_success and cleanup_success:
             logger.info(f"Successfully reloaded all data in {elapsed_time:.2f} seconds")
             return True
         else:
