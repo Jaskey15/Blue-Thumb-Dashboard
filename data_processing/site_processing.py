@@ -46,58 +46,54 @@ def create_sites_table():
 
 def load_site_data():
     """
-    Load site information from site_data.csv file using enhanced data_loader.
+    Load site information from MASTER_SITES.CSV file (consolidated data).
     Returns a DataFrame with essential site information.
     """
     try:
-        # Use the enhanced load_csv_data function (site names automatically cleaned)
-        site_df = load_csv_data('site', clean_site_names=True)
+        # Load from master_sites.csv
+        master_sites_path = os.path.join(
+            os.path.dirname(os.path.dirname(__file__)), 
+            'data', 'processed', 'master_sites.csv'
+        )
         
-        if site_df.empty:
-            logger.error("Failed to load site data")
+        if not os.path.exists(master_sites_path):
+            logger.error("master_sites.csv not found. Run site consolidation first.")
             return pd.DataFrame()
         
-        # Clean column names using the utility function
-        site_df = clean_column_names(site_df)
-
+        site_df = pd.read_csv(master_sites_path)
+        logger.info(f"Loaded {len(site_df)} sites from master_sites.csv")
+        
+        # FILTER TO ONLY DATABASE SCHEMA COLUMNS
+        database_columns = ['site_name', 'latitude', 'longitude', 'county', 'river_basin', 'ecoregion']
+        
+        # Check which columns exist
+        available_columns = [col for col in database_columns if col in site_df.columns]
+        missing_columns = [col for col in database_columns if col not in site_df.columns]
+        
+        if missing_columns:
+            logger.warning(f"Missing columns in master_sites.csv: {missing_columns}")
+        
+        if 'site_name' not in available_columns:
+            logger.error("Required site_name column missing from master_sites.csv")
+            return pd.DataFrame()
+        
+        # Select only the columns that match the database schema
+        sites_df = site_df[available_columns].copy()
+        
         # Convert latitude and longitude to numeric types
-        if 'latitude' in site_df.columns:
-            site_df['latitude'] = pd.to_numeric(site_df['latitude'], errors='coerce')
-        if 'longitude' in site_df.columns:
-            site_df['longitude'] = pd.to_numeric(site_df['longitude'], errors='coerce')
+        if 'latitude' in sites_df.columns:
+            sites_df['latitude'] = pd.to_numeric(sites_df['latitude'], errors='coerce')
+        if 'longitude' in sites_df.columns:
+            sites_df['longitude'] = pd.to_numeric(sites_df['longitude'], errors='coerce')
         
-        # Map columns to our desired schema
-        column_mapping = {
-            'sitename': 'site_name',
-            'latitude': 'latitude',
-            'longitude': 'longitude',
-            'county': 'county',
-            'riverbasin': 'river_basin',
-            'mod_ecoregion': 'ecoregion'
-        }
+        # Drop duplicates (should already be unique, but safety check)
+        sites_df = sites_df.drop_duplicates(subset=['site_name']).copy()
         
-        # Check which columns are available
-        available_columns = {k: v for k, v in column_mapping.items() if k in site_df.columns}
+        logger.info(f"Processed {len(sites_df)} unique sites with database schema columns")
+        logger.info(f"Using columns: {list(sites_df.columns)}")
         
-        if 'sitename' not in available_columns:
-            logger.error("Required column 'sitename' not found in site data file")
-            return pd.DataFrame()
-        
-        # Select and rename columns
-        sites_df = site_df[[col for col in available_columns.keys()]].copy()
-        sites_df.rename(columns=available_columns, inplace=True)
-        
-        # Drop duplicates based on site_name (now that site names are cleaned)
-        sites_df.drop_duplicates(subset=['site_name'], inplace=True)
-        
-        # Fill any missing lat/long with a default value if needed
-        if 'latitude' in sites_df.columns and 'longitude' in sites_df.columns:
-            sites_df = sites_df.fillna({'latitude': 0, 'longitude': 0})
-        
-        logger.info(f"Extracted information for {len(sites_df)} unique sites")
-        
-        # Save the processed data using the utility function
-        save_processed_data(sites_df, 'site')
+        # Save the processed data
+        save_processed_data(sites_df, 'consolidated_sites_for_db')
         
         return sites_df
     
@@ -111,8 +107,8 @@ def extract_site_metadata_from_csv(file_path, data_type):
     Now uses enhanced data loading with automatic site name cleaning.
     
     Args:
-        file_path: Path to the CSV file
-        data_type: Type of data ('chemical', 'fish', 'macro', 'habitat')
+        file_path: Path to the CSV file (not used when using load_csv_data)
+        data_type: Type of data ('chemical', 'fish', 'macro', 'habitat', 'updated_chemical')
     
     Returns:
         DataFrame with unique sites and their metadata
@@ -124,15 +120,8 @@ def extract_site_metadata_from_csv(file_path, data_type):
         elif data_type in ['chemical', 'fish', 'macro', 'habitat']:
             df = load_csv_data(data_type, clean_site_names=True)
         else:
-            # Fallback to direct loading for unknown types
-            if data_type == 'updated_chemical':
-                df = pd.read_csv(file_path, encoding='cp1252')
-                from data_processing.data_loader import clean_site_names_column
-                df = clean_site_names_column(df, 'Site Name', log_changes=True)
-            else:
-                df = pd.read_csv(file_path)
-                from data_processing.data_loader import clean_site_names_column
-                df = clean_site_names_column(df, 'SiteName', log_changes=True)
+            logger.error(f"Unknown data type: {data_type}")
+            return pd.DataFrame()
         
         if df.empty:
             logger.warning(f"No data loaded for {data_type}")
@@ -140,10 +129,9 @@ def extract_site_metadata_from_csv(file_path, data_type):
         
         # Clean column names
         df = clean_column_names(df)
-        # Debug: print actual column names
-        print(f"DEBUG - Cleaned columns for {data_type}: {list(df.columns)}")
-        print(f"DEBUG - Looking for site column: {mapping['site_col']}")
-        print(f"DEBUG - Site column found: {mapping['site_col'] in df.columns}")
+        
+        # DEBUG: Print columns after cleaning (before mapping)
+        print(f"DEBUG - {data_type}: Cleaned columns: {list(df.columns)}")
         
         # Define column mappings for each data type
         column_mappings = {
@@ -195,6 +183,12 @@ def extract_site_metadata_from_csv(file_path, data_type):
             
         mapping = column_mappings[data_type]
         
+        # DEBUG: Print mapping and column check (after mapping is defined)
+        print(f"DEBUG - {data_type}: Looking for site column: '{mapping['site_col']}'")
+        print(f"DEBUG - {data_type}: Site column found: {mapping['site_col'] in df.columns}")
+        if mapping['site_col'] not in df.columns:
+            print(f"DEBUG - {data_type}: Available columns: {list(df.columns)}")
+        
         # Check if site name column exists
         if mapping['site_col'] not in df.columns:
             logger.error(f"Site name column '{mapping['site_col']}' not found in {data_type} data")
@@ -202,6 +196,9 @@ def extract_site_metadata_from_csv(file_path, data_type):
         
         # Get unique sites (site names are already cleaned by load_csv_data)
         unique_sites = df.drop_duplicates(subset=[mapping['site_col']])
+        
+        # DEBUG: Print site extraction results
+        print(f"DEBUG - {data_type}: Found {len(unique_sites)} unique sites")
         
         # Build the result DataFrame
         result_data = {
@@ -218,8 +215,11 @@ def extract_site_metadata_from_csv(file_path, data_type):
         ]:
             if col_name and col_name in df.columns:
                 result_data[meta_type] = unique_sites[col_name]
+                print(f"DEBUG - {data_type}: Found metadata column '{col_name}' for {meta_type}")
             else:
                 result_data[meta_type] = None
+                if col_name:  # Only log if we were expecting the column
+                    print(f"DEBUG - {data_type}: Missing expected column '{col_name}' for {meta_type}")
         
         result_df = pd.DataFrame(result_data)
         
@@ -233,6 +233,8 @@ def extract_site_metadata_from_csv(file_path, data_type):
         
     except Exception as e:
         logger.error(f"Error extracting site metadata from {data_type}: {e}")
+        import traceback
+        print(f"DEBUG - {data_type}: Full traceback: {traceback.format_exc()}")
         return pd.DataFrame()
 
 def find_missing_sites(sites_df):
@@ -405,85 +407,23 @@ def get_site_id(site_name):
         close_db_connection(conn)
 
 def process_site_data():
-    """
-    Main function to process site data and store in database.
-    This now includes checking all other CSV files for missing sites.
-    
-    Returns:
-        bool: True if processing was successful, False otherwise
-    """
     try:
         # Create sites table
         create_sites_table()
         
-        # Step 1: Load primary site data from sites CSV
-        logger.info("Step 1: Loading primary site data from sites CSV")
+        # Load consolidated site data
+        logger.info("Loading consolidated site data from master_sites.csv")
         sites_df = load_site_data()
         
         if sites_df.empty:
-            logger.error("Failed to extract site data from CSV file")
+            logger.error("Failed to load consolidated site data")
             return False
         
-        # Insert primary sites into database
-        primary_sites_count = insert_sites_into_db(sites_df)
-        logger.info(f"Inserted {primary_sites_count} primary sites from sites CSV")
+        # Insert all sites into database
+        sites_count = insert_sites_into_db(sites_df)
         
-        # Step 2: Check other CSV files for missing sites
-        logger.info("Step 2: Checking other CSV files for missing sites")
-        
-        # Define the other data files to check - using data_type names now
-        data_files_to_check = [
-            ('chemical', None),  # Will use load_csv_data
-            ('updated_chemical', None),  # Will use load_csv_data with encoding
-            ('fish', None),  # Will use load_csv_data
-            ('habitat', None),  # Will use load_csv_data
-            ('macro', None)  # Will use load_csv_data
-        ]
-        
-        total_additional_sites = 0
-        
-        for data_type, _ in data_files_to_check:
-            logger.info(f"Checking {data_type} file for missing sites")
-            
-            # Extract site metadata from this file using enhanced loader
-            file_sites_df = extract_site_metadata_from_csv(None, data_type)  # file_path not needed anymore
-            
-            if file_sites_df.empty:
-                logger.info(f"No sites found in {data_type} file")
-                continue
-            
-            # Check which sites are missing from our database
-            missing_sites = find_missing_sites(file_sites_df)
-            
-            if not missing_sites.empty:
-                logger.info(f"Found {len(missing_sites)} missing sites in {data_type} file")
-                
-                # Insert missing sites with available metadata
-                additional_count = insert_sites_into_db(missing_sites)
-                total_additional_sites += additional_count
-                
-                # Log what metadata was available/missing for these sites
-                for _, site in missing_sites.iterrows():
-                    available_meta = []
-                    missing_meta = []
-                    for col in ['latitude', 'longitude', 'county', 'river_basin', 'ecoregion']:
-                        if pd.notna(site[col]):
-                            available_meta.append(col)
-                        else:
-                            missing_meta.append(col)
-                    
-                    logger.info(f"Added site '{site['site_name']}' from {data_type} with: {', '.join(available_meta) if available_meta else 'name only'}")
-                    if missing_meta:
-                        logger.debug(f"  Missing metadata: {', '.join(missing_meta)}")
-            else:
-                logger.info(f"No missing sites found in {data_type} file")
-        
-        # Step 3: Final summary
-        total_sites = primary_sites_count + total_additional_sites
         logger.info(f"Site processing complete!")
-        logger.info(f"Total sites in database: {total_sites}")
-        logger.info(f"  - From primary sites CSV: {primary_sites_count}")
-        logger.info(f"  - Added from other files: {total_additional_sites}")
+        logger.info(f"Total sites in database: {sites_count}")
         
         return True
             

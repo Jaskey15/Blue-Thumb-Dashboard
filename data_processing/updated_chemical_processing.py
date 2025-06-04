@@ -52,29 +52,36 @@ NUTRIENT_COLUMN_MAPPINGS = {
     }
 }
 
+# Key changes needed in updated_chemical_processing.py
+
 def load_updated_chemical_data():
     """
-    Load the updated chemical data CSV file.
+    Load the CLEANED updated chemical data CSV file.
     
     Returns:
-        DataFrame: Raw data from the updated chemical CSV
+        DataFrame: Raw data from the cleaned updated chemical CSV
     """
     try:
-        # Get the file path - adjust this to match where your updated CSV is located
-        base_dir = os.path.dirname(os.path.dirname(__file__))
-        file_path = os.path.join(base_dir, 'data', 'raw', 'updated_chemical_data.csv')
+        cleaned_file_path = os.path.join(
+            os.path.dirname(os.path.dirname(__file__)), 
+            'data', 'processed', 'cleaned_updated_chemical_data.csv'
+        )
         
-        # Load the CSV without any date parsing initially
-        df = pd.read_csv(file_path, encoding='cp1252') 
+        if not os.path.exists(cleaned_file_path):
+            logger.error("cleaned_updated_chemical_data.csv not found. Run CSV cleaning first.")
+            return pd.DataFrame()
         
-        logger.info(f"Successfully loaded {len(df)} rows from updated chemical data")
+        # Load the CSV 
+        df = pd.read_csv(cleaned_file_path, low_memory=False) 
+        
+        logger.info(f"Successfully loaded {len(df)} rows from cleaned updated chemical data")
         
         return df
         
     except Exception as e:
-        logger.error(f"Error loading updated chemical data: {e}")
+        logger.error(f"Error loading cleaned updated chemical data: {e}")
         return pd.DataFrame()
-
+    
 def parse_sampling_dates(df):
     """
     Parse the sampling date column that contains both date and time.

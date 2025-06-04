@@ -3,10 +3,6 @@ consolidate_sites.py - Site Consolidation Pipeline
 
 This script consolidates sites from all cleaned CSV files using name-based consolidation.
 Creates a master sites table with best available metadata from priority sources.
-
-Phase 2A: Name-based consolidation (coordinate-based merging happens later)
-
-Usage: python consolidate_sites.py
 """
 
 import os
@@ -61,11 +57,11 @@ CSV_CONFIGS = [
     {
         'file': 'cleaned_updated_chemical_data.csv',
         'site_column': 'Site Name',
-        'lat_column': None,  # Not available in updated chemical
-        'lon_column': None,  # Not available in updated chemical
-        'county_column': None,
-        'basin_column': None,
-        'ecoregion_column': None,
+        'lat_column': 'lat', 
+        'lon_column': 'lon', 
+        'county_column': 'CountyName',
+        'basin_column': None, # Not available in this file
+        'ecoregion_column': None, # Not available in this file
         'description': 'Updated chemical data'
     },
     {

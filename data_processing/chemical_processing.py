@@ -42,6 +42,7 @@ def get_sites_with_chemical_data():
     """Return a list of sites that have chemical data."""
     conn = get_connection()
     try:
+        # Database query stays the same
         query = """
         SELECT DISTINCT s.site_name 
         FROM sites s
@@ -52,14 +53,25 @@ def get_sites_with_chemical_data():
         cursor.execute(query)
         sites = [row[0] for row in cursor.fetchall()]
         
-        # If no sites found in database, fall back to CSV data
+        # If no sites found in database, fall back to CLEANED CSV data
         if not sites:
-            sites = get_unique_sites('chemical')
+            cleaned_path = os.path.join(
+                os.path.dirname(os.path.dirname(__file__)), 
+                'data', 'processed', 'cleaned_chemical_data.csv'
+            )
+            df = pd.read_csv(cleaned_path)
+            sites = df['SiteName'].dropna().unique().tolist()
             
         return sites
     except Exception as e:
         logger.error(f"Error getting sites with chemical data: {e}")
-        return get_unique_sites('chemical')  # Fall back to CSV data
+        # Fallback to cleaned data
+        cleaned_path = os.path.join(
+            os.path.dirname(os.path.dirname(__file__)), 
+            'data', 'processed', 'cleaned_chemical_data.csv'
+        )
+        df = pd.read_csv(cleaned_path)
+        return df['SiteName'].dropna().unique().tolist()
     finally:
         close_connection(conn)
 
@@ -378,7 +390,7 @@ def load_chemical_data_to_db(site_name=None):
 
 def process_chemical_data_from_csv(site_name=None):
     """
-    Process chemical data from CSV file without database integration.
+    Process chemical data from CLEANED CSV file without database integration.
     
     Args:
         site_name: Optional site name to filter data for
@@ -387,21 +399,35 @@ def process_chemical_data_from_csv(site_name=None):
         Tuple of (cleaned_dataframe, key_parameters, reference_values)
     """
     try:
-        # Define columns to load
+        # NEW: Load from cleaned CSV instead of using data_loader
+        cleaned_chemical_path = os.path.join(
+            os.path.dirname(os.path.dirname(__file__)), 
+            'data', 'processed', 'cleaned_chemical_data.csv'
+        )
+        
+        if not os.path.exists(cleaned_chemical_path):
+            logger.error("cleaned_chemical_data.csv not found. Run CSV cleaning first.")
+            return pd.DataFrame(), KEY_PARAMETERS, get_reference_values()
+        
+        # Define columns to load (same as before)
         cols_to_load = [
             'SiteName', 'Date', 'DO.Saturation', 'pH.Final.1', 
             'Nitrate.Final.1', 'Nitrite.Final.1', 'Ammonia.Final.1',
             'OP.Final.1', 'Chloride.Final.1'
         ]
         
-        # Load chemical data using data_loader's function
-        chemical_data = load_csv_data('chemical', usecols=cols_to_load, parse_dates=['Date'])
+        # Load cleaned chemical data
+        chemical_data = pd.read_csv(
+            cleaned_chemical_path,
+            usecols=cols_to_load,
+            parse_dates=['Date']
+        )
         
         if chemical_data.empty:
-            logger.error("Failed to load chemical data")
+            logger.error("Failed to load cleaned chemical data")
             return pd.DataFrame(), KEY_PARAMETERS, get_reference_values()
             
-        logger.info(f"Successfully loaded data with {len(chemical_data)} rows")
+        logger.info(f"Successfully loaded data with {len(chemical_data)} rows from cleaned CSV")
         
         # Filter by site name if provided
         if site_name:
@@ -413,15 +439,15 @@ def process_chemical_data_from_csv(site_name=None):
                 return pd.DataFrame(), KEY_PARAMETERS, get_reference_values()
     
     except Exception as e:
-        logger.error(f"Error loading chemical data: {e}")
+        logger.error(f"Error loading cleaned chemical data: {e}")
         return pd.DataFrame(), KEY_PARAMETERS, get_reference_values()
 
-    # Clean column names using data_loader's function
+    # Clean column names using data_loader's function (same as before)
     chemical_data = clean_column_names(chemical_data)
 
     logger.info(f"Cleaned column names: {', '.join(chemical_data.columns)}")
     
-    # Map of expected columns to actual columns in the data
+    # Map of expected columns to actual columns in the data (same as before)
     column_mapping = {
         'sitename': 'Site_Name',
         'dosaturation': 'do_percent',  
@@ -433,7 +459,7 @@ def process_chemical_data_from_csv(site_name=None):
         'chloridefinal1': 'Chloride',  
     }
     
-    # Rename columns for clarity
+    # Rename columns for clarity (same as before)
     renamed_columns = {}
     for old_col, new_col in column_mapping.items():
         if old_col in chemical_data.columns:
@@ -443,15 +469,15 @@ def process_chemical_data_from_csv(site_name=None):
     df_clean = chemical_data.rename(columns=renamed_columns)
     logger.debug(f"Columns renamed: {', '.join(renamed_columns.keys())} -> {', '.join(renamed_columns.values())}")
     
-    # Define chemical parameter columns for processing
+    # Define chemical parameter columns for processing (same as before)
     chemical_columns = [col for col in [
         'do_percent', 'pH', 'Nitrate', 'Nitrite', 'Ammonia', 'Phosphorus', 'Chloride'
     ] if col in df_clean.columns]
     
-    # Remove rows where all chemical parameters are null
+    # Remove rows where all chemical parameters are null (same as before)
     df_clean = remove_empty_chemical_rows(df_clean, chemical_columns)
     
-    # Ensure Date column exists and is datetime
+    # Ensure Date column exists and is datetime (same as before)
     if 'date' in df_clean.columns:
         df_clean.rename(columns={'date': 'Date'}, inplace=True)
     
@@ -462,15 +488,15 @@ def process_chemical_data_from_csv(site_name=None):
         # Convert to datetime if it's not already
         df_clean['Date'] = pd.to_datetime(df_clean['Date'])
 
-    # Extract additional time components
+    # Extract additional time components (same as before)
     df_clean['Year'] = df_clean['Date'].dt.year
     df_clean['Month'] = df_clean['Date'].dt.month
     logger.debug("Date columns processed and time components extracted")
 
-    # Apply BDL conversions using shared utility
+    # Apply BDL conversions using shared utility (same as before)
     df_clean = apply_bdl_conversions(df_clean)
  
-    # Convert all numeric columns
+    # Convert all numeric columns (same as before)
     numeric_conversion_count = 0 
     for col in chemical_columns:
         if col in df_clean.columns:
@@ -479,18 +505,18 @@ def process_chemical_data_from_csv(site_name=None):
     
     logger.debug(f"Converted {numeric_conversion_count} columns to numeric type")
     
-    # Validate data quality using shared utility (removes invalid values)
+    # Validate data quality using shared utility (removes invalid values) (same as before)
     df_clean = validate_chemical_data(df_clean, remove_invalid=True)
         
-    # Calculate total nitrogen using shared utility
+    # Calculate total nitrogen using shared utility (same as before)
     df_clean = calculate_soluble_nitrogen(df_clean)
 
-    # Check for missing values in final dataframe
+    # Check for missing values in final dataframe (same as before)
     missing_values = df_clean.isnull().sum().sum()
     if missing_values > 0:
         logger.warning(f"Final dataframe contains {missing_values} missing values")
 
-    # Save processed data 
+    # Save processed data (same as before)
     save_processed_data(df_clean, 'chemical_data')
 
     logger.info(f"Data processing complete. Output dataframe has {len(df_clean)} rows and {len(df_clean.columns)} columns")
