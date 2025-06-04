@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+import re
 from utils import setup_logging
 
 # Initialize logger
@@ -17,6 +18,7 @@ os.makedirs(PROCESSED_DATA_DIR, exist_ok=True)
 DATA_FILES = {
     'site': os.path.join(RAW_DATA_DIR, 'site_data.csv'),
     'chemical': os.path.join(RAW_DATA_DIR, 'chemical_data.csv'),
+    'updated_chemical': os.path.join(RAW_DATA_DIR, 'updated_chemical_data.csv'),  
     'fish': os.path.join(RAW_DATA_DIR, 'fish_data.csv'),
     'macro': os.path.join(RAW_DATA_DIR, 'macro_data.csv'),
     'habitat': os.path.join(RAW_DATA_DIR, 'habitat_data.csv')
@@ -59,15 +61,75 @@ def check_file_exists(file_path):
         logger.error(f"File not found: {file_path}")
     return exists
 
-def load_csv_data(data_type, usecols=None, dtype=None, parse_dates=None):
+def clean_site_name(site_name):
     """
-    Load data from a CSV file.
+    Clean and standardize site names.
+    
+    Args:
+        site_name: Raw site name string
+    
+    Returns:
+        str: Cleaned site name
+    """
+    if pd.isna(site_name):
+        return site_name
+    
+    # Convert to string and strip leading/trailing whitespace
+    cleaned = str(site_name).strip()
+    
+    # Replace multiple spaces with single space
+    cleaned = re.sub(r'\s+', ' ', cleaned)
+    
+    return cleaned
+
+def clean_site_names_column(df, site_column='sitename', log_changes=True):
+    """
+    Clean site names in a DataFrame column and optionally log changes.
+    
+    Args:
+        df: DataFrame containing site names
+        site_column: Name of the column containing site names
+        log_changes: Whether to log the changes made
+    
+    Returns:
+        DataFrame: DataFrame with cleaned site names
+    """
+    if site_column not in df.columns:
+        logger.warning(f"Site column '{site_column}' not found in DataFrame")
+        return df
+    
+    df_clean = df.copy()
+    changes_made = 0
+    
+    # Apply cleaning and track changes
+    for idx, original_name in df_clean[site_column].items():
+        cleaned_name = clean_site_name(original_name)
+        
+        if pd.notna(original_name) and str(original_name) != str(cleaned_name):
+            if log_changes:
+                logger.info(f"Cleaned site name: '{original_name}' -> '{cleaned_name}'")
+            changes_made += 1
+        
+        df_clean.at[idx, site_column] = cleaned_name
+    
+    if log_changes and changes_made > 0:
+        logger.info(f"Cleaned {changes_made} site names in {site_column} column")
+    elif log_changes:
+        logger.info(f"No site name changes needed in {site_column} column")
+    
+    return df_clean
+
+def load_csv_data(data_type, usecols=None, dtype=None, parse_dates=None, 
+                  clean_site_names=True, encoding=None):
+    """
+    Load data from a CSV file with optional site name cleaning.
     
     Args:
         data_type: Type of data ('site', 'chemical', 'fish', 'macro', 'habitat')
         usecols: List of columns to load (default: None, load all)
         dtype: Dictionary of column data types (default: None)
         parse_dates: List of columns to parse as dates (default: None)
+        clean_site_names: Whether to automatically clean site names (default: True)
     
     Returns:
         DataFrame: Loaded data or empty DataFrame if loading fails
@@ -86,10 +148,24 @@ def load_csv_data(data_type, usecols=None, dtype=None, parse_dates=None):
             usecols=usecols,
             dtype=dtype,
             parse_dates=parse_dates,
-            low_memory=False  # Avoid DtypeWarning for mixed types
+            encoding=encoding,
+            low_memory=False 
         )
         
         logger.info(f"Successfully loaded {len(df)} rows from {data_type} data")
+        
+        # Automatically clean site names if requested
+        if clean_site_names:
+            # Try to find the site name column
+            site_column = None
+            for col in df.columns:
+                if col.lower() in ['sitename', 'site_name', 'site name']:
+                    site_column = col
+                    break
+            
+            if site_column:
+                df = clean_site_names_column(df, site_column, log_changes=True)
+        
         return df
     
     except Exception as e:
@@ -174,6 +250,9 @@ def filter_data_by_site(df, site_name, site_column='sitename'):
     Returns:
         DataFrame: Filtered data for the specified site
     """
+    # Clean the site name for comparison
+    clean_site_name_to_match = clean_site_name(site_name)
+    
     # Check if the site column exists
     if site_column not in df.columns:
         # Try to find a column with 'site' in the name
@@ -185,8 +264,8 @@ def filter_data_by_site(df, site_name, site_column='sitename'):
             logger.error(f"No site column found in DataFrame")
             return pd.DataFrame()
     
-    # Filter the data
-    filtered_df = df[df[site_column].str.strip() == site_name.strip()]
+    # Filter the data using cleaned names for comparison
+    filtered_df = df[df[site_column].apply(clean_site_name) == clean_site_name_to_match]
     
     if filtered_df.empty:
         logger.warning(f"No data found for site: {site_name}")
@@ -206,7 +285,7 @@ def get_unique_sites(data_type, site_column='sitename'):
     Returns:
         list: List of unique site names
     """
-    df = load_csv_data(data_type)
+    df = load_csv_data(data_type, clean_site_names=True)  # Enable automatic site name cleaning
     
     if df.empty:
         return []
@@ -282,7 +361,7 @@ def get_date_range(data_type, date_column='Date'):
         
     # Load the data with the date column
     try:
-        df = load_csv_data(data_type, parse_dates=[date_column])
+        df = load_csv_data(data_type, parse_dates=[date_column], clean_site_names=False)  # Skip site cleaning for date range check
     except Exception as e:
         logger.error(f"Error loading {data_type} data for date range: {e}")
         return None, None

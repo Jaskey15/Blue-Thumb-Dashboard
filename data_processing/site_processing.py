@@ -2,7 +2,7 @@ import os
 import pandas as pd
 import sqlite3
 
-# Import from data_loader
+# Import from data_loader - using the enhanced functions
 from data_processing.data_loader import load_csv_data, clean_column_names, save_processed_data
 from utils import setup_logging
 
@@ -46,12 +46,12 @@ def create_sites_table():
 
 def load_site_data():
     """
-    Load site information from site_data.csv file.
+    Load site information from site_data.csv file using enhanced data_loader.
     Returns a DataFrame with essential site information.
     """
     try:
-        # Use the load_csv_data function from data_loader
-        site_df = load_csv_data('site')
+        # Use the enhanced load_csv_data function (site names automatically cleaned)
+        site_df = load_csv_data('site', clean_site_names=True)
         
         if site_df.empty:
             logger.error("Failed to load site data")
@@ -87,7 +87,7 @@ def load_site_data():
         sites_df = site_df[[col for col in available_columns.keys()]].copy()
         sites_df.rename(columns=available_columns, inplace=True)
         
-        # Drop duplicates based on site_name
+        # Drop duplicates based on site_name (now that site names are cleaned)
         sites_df.drop_duplicates(subset=['site_name'], inplace=True)
         
         # Fill any missing lat/long with a default value if needed
@@ -108,6 +108,7 @@ def load_site_data():
 def extract_site_metadata_from_csv(file_path, data_type):
     """
     Extract site metadata from a CSV file for sites not in the main sites table.
+    Now uses enhanced data loading with automatic site name cleaning.
     
     Args:
         file_path: Path to the CSV file
@@ -117,13 +118,32 @@ def extract_site_metadata_from_csv(file_path, data_type):
         DataFrame with unique sites and their metadata
     """
     try:
+        # Use enhanced data_loader for consistent loading and site name cleaning
         if data_type == 'updated_chemical':
-            df = pd.read_csv(file_path, encoding='cp1252')  # Same encoding as your updated_chemical_processing.py
+            df = load_csv_data('updated_chemical', encoding='cp1252', clean_site_names=True)
+        elif data_type in ['chemical', 'fish', 'macro', 'habitat']:
+            df = load_csv_data(data_type, clean_site_names=True)
         else:
-            df = pd.read_csv(file_path)  # Default encoding for other files
+            # Fallback to direct loading for unknown types
+            if data_type == 'updated_chemical':
+                df = pd.read_csv(file_path, encoding='cp1252')
+                from data_processing.data_loader import clean_site_names_column
+                df = clean_site_names_column(df, 'Site Name', log_changes=True)
+            else:
+                df = pd.read_csv(file_path)
+                from data_processing.data_loader import clean_site_names_column
+                df = clean_site_names_column(df, 'SiteName', log_changes=True)
+        
+        if df.empty:
+            logger.warning(f"No data loaded for {data_type}")
+            return pd.DataFrame()
         
         # Clean column names
         df = clean_column_names(df)
+        # Debug: print actual column names
+        print(f"DEBUG - Cleaned columns for {data_type}: {list(df.columns)}")
+        print(f"DEBUG - Looking for site column: {mapping['site_col']}")
+        print(f"DEBUG - Site column found: {mapping['site_col'] in df.columns}")
         
         # Define column mappings for each data type
         column_mappings = {
@@ -137,11 +157,11 @@ def extract_site_metadata_from_csv(file_path, data_type):
             },
             'updated_chemical': { 
                 'site_col': 'site_name',  
-                'lat_col': 'lat',
-                'lon_col': 'lon', 
-                'county_col': 'countyname',
-                'basin_col': None,  # Not available in updated chemical data
-                'ecoregion_col': None  # Not available in updated chemical data
+                'lat_col': 'lat',         
+                'lon_col': 'lon',         
+                'county_col': 'countyname', 
+                'basin_col': None,        # Not available in this file
+                'ecoregion_col': None     # Not available in this file
             },
             'fish': {
                 'site_col': 'sitename',
@@ -180,12 +200,12 @@ def extract_site_metadata_from_csv(file_path, data_type):
             logger.error(f"Site name column '{mapping['site_col']}' not found in {data_type} data")
             return pd.DataFrame()
         
-        # Get unique sites
+        # Get unique sites (site names are already cleaned by load_csv_data)
         unique_sites = df.drop_duplicates(subset=[mapping['site_col']])
         
         # Build the result DataFrame
         result_data = {
-            'site_name': unique_sites[mapping['site_col']].str.strip()
+            'site_name': unique_sites[mapping['site_col']]  # No need to strip - already cleaned
         }
         
         # Add available metadata columns
@@ -237,7 +257,7 @@ def find_missing_sites(sites_df):
         existing_sites = {row[0].strip().lower() for row in cursor.fetchall()}
         
         # Find sites that don't exist in database
-        # Use case-insensitive comparison and strip whitespace
+        # Since site names are now pre-cleaned, we can do more direct comparison
         mask = ~sites_df['site_name'].str.strip().str.lower().isin(existing_sites)
         missing_sites = sites_df[mask].copy()
         
@@ -411,27 +431,22 @@ def process_site_data():
         # Step 2: Check other CSV files for missing sites
         logger.info("Step 2: Checking other CSV files for missing sites")
         
-        # Define the other data files to check
-        base_data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'raw')
+        # Define the other data files to check - using data_type names now
         data_files_to_check = [
-            ('chemical', os.path.join(base_data_dir, 'chemical_data.csv')),
-            ('updated_chemical', os.path.join(base_data_dir, 'updated_chemical_data.csv')),
-            ('fish', os.path.join(base_data_dir, 'fish_data.csv')),
-            ('habitat', os.path.join(base_data_dir, 'habitat_data.csv')),
-            ('macro', os.path.join(base_data_dir, 'macro_data.csv'))
+            ('chemical', None),  # Will use load_csv_data
+            ('updated_chemical', None),  # Will use load_csv_data with encoding
+            ('fish', None),  # Will use load_csv_data
+            ('habitat', None),  # Will use load_csv_data
+            ('macro', None)  # Will use load_csv_data
         ]
         
         total_additional_sites = 0
         
-        for data_type, file_path in data_files_to_check:
-            if not os.path.exists(file_path):
-                logger.warning(f"{data_type} file not found: {file_path}")
-                continue
-                
+        for data_type, _ in data_files_to_check:
             logger.info(f"Checking {data_type} file for missing sites")
             
-            # Extract site metadata from this file
-            file_sites_df = extract_site_metadata_from_csv(file_path, data_type)
+            # Extract site metadata from this file using enhanced loader
+            file_sites_df = extract_site_metadata_from_csv(None, data_type)  # file_path not needed anymore
             
             if file_sites_df.empty:
                 logger.info(f"No sites found in {data_type} file")
@@ -475,7 +490,7 @@ def process_site_data():
     except Exception as e:
         logger.error(f"Error processing site data: {e}")
         return False
-    
+
 def cleanup_unused_sites():
     """
     Remove sites from the database that have no data in any monitoring tables.

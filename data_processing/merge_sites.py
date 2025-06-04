@@ -165,49 +165,6 @@ def delete_duplicate_site(cursor, site_id, site_name):
     cursor.execute("DELETE FROM sites WHERE site_id = ?", (site_id,))
     logger.info(f"Deleted duplicate site: {site_name} (ID: {site_id})")
 
-def cleanup_site_names():
-    """Clean up site names by removing extra spaces and normalizing formatting."""
-    logger.info("Starting site name cleanup...")
-    
-    conn = get_connection()
-    cursor = conn.cursor()
-    
-    try:
-        # Get all sites
-        cursor.execute("SELECT site_id, site_name FROM sites ORDER BY site_name")
-        all_sites = cursor.fetchall()
-        
-        logger.info(f"Found {len(all_sites)} sites to process")
-        
-        sites_cleaned = 0
-        
-        for site_id, original_name in all_sites:
-            # Clean the site name
-            cleaned_name = original_name.strip()
-            
-            # Only update if there's a change
-            if cleaned_name != original_name:
-                try:
-                    cursor.execute("UPDATE sites SET site_name = ? WHERE site_id = ?", (cleaned_name, site_id))
-                    sites_cleaned += 1
-                    logger.debug(f"Cleaned site name: '{original_name}' -> '{cleaned_name}'")
-                    
-                except sqlite3.IntegrityError as e:
-                    logger.error(f"Cannot clean site name '{original_name}' -> '{cleaned_name}': {e}")
-                    # Continue with other sites rather than failing completely
-                    continue
-        
-        conn.commit()
-        logger.info(f"Successfully cleaned {sites_cleaned} site names")
-        return True
-        
-    except Exception as e:
-        conn.rollback()
-        logger.error(f"Error during site name cleanup: {e}")
-        return False
-    finally:
-        close_connection(conn)
-
 def merge_duplicate_sites():
     """
     Main function to merge sites with the same coordinates and clean up site names.
