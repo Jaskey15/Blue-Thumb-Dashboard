@@ -1,0 +1,325 @@
+event_id,sample_id,db_site,bt_site,db_date,bt_date,date_diff,validation_status,bt_record_found
+1,51653,Ballard Creek: Wainscott,Ballard Creek: Wainscott,2013-07-16,2013-07-16,0.0,VALID_MATCH,True
+2,25847,Bandy Creek: Pleasant Hill Road,Bandy Creek:  Pleasant Hill Road,2002-08-21,2002-08-21,0.0,VALID_MATCH,True
+3,37348,Bandy Creek: Pleasant Hill Road,Bandy Creek:  Pleasant Hill Road,2007-06-04,2007-06-04,0.0,VALID_MATCH,True
+4,41757,Baron Fork River: Welling Road,Baron Fork River:  Welling Road,2008-08-04,2008-08-04,0.0,VALID_MATCH,True
+5,51650,Baron Fork River: Welling Road,Baron Fork River:  Welling Road,2013-07-11,2013-07-11,0.0,VALID_MATCH,True
+6,58629,Baron Fork River: Welling Road,Baron Fork River:  Welling Road,2017-10-16,2017-10-16,0.0,VALID_MATCH,True
+7,33762,Bear Creek: Miller Ranch,Bear Creek:  Miller Ranch,2005-08-24,2005-08-24,0.0,VALID_MATCH,True
+8,60620,Beaver Creek: N 4370 Rd,Beaver Creek: N 4370 Rd.,2018-09-15,2018-09-13,2.0,VALID_MATCH,True
+9,60202,Bishop Creek Tributary: Basket 12,Bishop Creek Tributary: Basket 12,2018-06-08,2018-06-08,0.0,VALID_MATCH,True
+10,33758,Bishop Creek: Constitution Street,Bishop Creek:  Constitution Street,2005-08-10,2005-08-10,0.0,VALID_MATCH,True
+11,44246,Bishop Creek: Constitution Street,Bishop Creek:  Constitution Street,2009-08-25,2009-08-25,0.0,VALID_MATCH,True
+12,53924,Bishop Creek: Constitution Street,Bishop Creek:  Constitution Street,2014-09-09,2014-09-09,0.0,VALID_MATCH,True
+13,60203,Bishop Creek: Constitution Street,Bishop Creek:  Constitution Street,2018-06-12,2018-06-12,0.0,VALID_MATCH,True
+14,49700,Bishop Creek: Eastwoods Park,Bishop Creek:  Eastwoods Park,2012-06-29,2012-06-29,0.0,VALID_MATCH,True
+15,60205,Bishop Creek: Eastwoods Park,Bishop Creek:  Eastwoods Park,2018-06-18,2018-06-18,0.0,VALID_MATCH,True
+16,49144,Bishop Creek: Lindsey Street,Bishop Creek:  Lindsey Street,2011-07-26,2011-07-26,0.0,VALID_MATCH,True
+17,48346,Bixby Creek: Riverview,Bixby Creek:  Riverview,2010-08-23,2010-08-23,0.0,VALID_MATCH,True
+18,33825,Black Fork of Poteau River: CR D1513,Black Fork of Poteau River:  CR D1513,2005-09-30,2005-09-30,0.0,VALID_MATCH,True
+19,36250,Black Fork of Poteau River: CR D1513,Black Fork of Poteau River:  CR D1513,2006-08-23,2006-08-23,0.0,VALID_MATCH,True
+20,35737,Blackboy Creek: Limestone Crossing (aka Bigheart Creek),Blackboy Creek:  Limestone Crossing (aka Bigheart,2010-06-21,2010-06-21,0.0,VALID_MATCH,True
+21,48221,Blackboy Creek: Limestone Crossing (aka Bigheart Creek),Blackboy Creek:  Limestone Crossing (aka Bigheart,2010-06-21,2010-06-21,0.0,VALID_MATCH,True
+22,37352,Bluff Creek: Battiest,Bluff Creek:  Battiest,2007-06-11,2007-06-11,0.0,VALID_MATCH,True
+23,48469,Bluff Creek: Battiest,Bluff Creek:  Battiest,2007-06-11,2007-06-11,0.0,VALID_MATCH,True
+24,56728,Bluff Creek: Battiest,Bluff Creek:  Battiest,2016-08-08,2016-08-08,0.0,VALID_MATCH,True
+25,31145,Bluff Creek: NW 150th,Bluff Creek:  NW 150th,2004-09-17,2004-09-17,0.0,VALID_MATCH,True
+26,44249,Bluff Creek: NW 150th,Bluff Creek:  NW 150th,2009-08-26,2009-08-26,0.0,VALID_MATCH,True
+27,53923,Bluff Creek: NW 150th,Bluff Creek:  NW 150th,2014-09-08,2014-09-08,0.0,VALID_MATCH,True
+31,33760,Boomer Creek: McElroy,Boomer Creek:  McElroy,2005-08-18,2005-08-18,0.0,VALID_MATCH,True
+32,48538,Brookhaven Creek: North of Main,Brookhaven Creek:  North of Main,2010-08-16,2010-08-16,0.0,VALID_MATCH,True
+33,48345,Brookhaven Creek: North of Main,Brookhaven Creek:  North of Main,2010-08-16,2010-08-16,0.0,VALID_MATCH,True
+34,60211,Brookhaven Creek: North of Main,Brookhaven Creek:  North of Main,2018-07-18,2018-07-18,0.0,VALID_MATCH,True
+37,33822,Buckhorn Creek: Binderim Road,Buckhorn Creek:  Binderim Road,2005-09-20,2005-09-20,0.0,VALID_MATCH,True
+38,33817,Buffalo Creek: Ballard,Buffalo Creek:  Ballard,2005-09-01,2005-09-01,0.0,VALID_MATCH,True
+39,48863,Buffalo Creek: Ballard,Buffalo Creek:  Ballard,2011-06-30,2011-06-30,0.0,VALID_MATCH,True
+40,48472,Buffalo Creek: Ballard,Buffalo Creek:  Ballard,2011-06-30,2011-06-30,0.0,VALID_MATCH,True
+41,44195,Buffalo Creek: Cosby,Buffalo Creek:  Cosby,2009-06-25,2009-06-25,0.0,VALID_MATCH,True
+42,37895,Buffalo Creek: Hwy 74B,Buffalo Creek:  HWY 74B,2007-07-09,2007-07-09,0.0,VALID_MATCH,True
+43,37353,Campbell Creek: OCU Property,Campbell Creek:  OCU Property,2007-06-13,2007-06-13,0.0,VALID_MATCH,True
+44,48464,Campbell Creek: OCU Property,Campbell Creek:  OCU Property,2011-06-17,2011-06-17,0.0,VALID_MATCH,True
+45,38161,Caston Creek: CR 149,,2007-08-01,,,NO_SITE_MATCH,False
+46,48864,Caston Creek: CR 149,,2011-09-16,,,NO_SITE_MATCH,False
+47,48341,Cedar Hollow Creek: Nickel Preserve,Cedar Hollow Creek:  Nickel Preserve,2010-08-09,2010-08-09,0.0,VALID_MATCH,True
+48,58621,Cedar Hollow Creek: Nickel Preserve,Cedar Hollow Creek:  Nickel Preserve,2017-06-26,2017-06-26,0.0,VALID_MATCH,True
+53,62326,Chisholm Creek: NW 186 & Western,Chisholm Creek: NW 186th,2019-07-26,2019-07-26,0.0,VALID_MATCH,True
+54,55659,Chisholm Creek: Sorghum Mill Rd,Chisholm Creek: Sorghum Mill Rd.,2015-06-03,2015-06-03,0.0,VALID_MATCH,True
+55,63597,Clear Boggy Creek: Hwy 377,Clear Boggy Creek: Hwy 377,2020-07-15,2020-07-15,0.0,VALID_MATCH,True
+56,63593,Clear Boggy Creek: Winter Smith Bridge,Lake Creek:  Wintersmith Bridge,2020-06-19,2020-06-19,0.0,VALID_MATCH,True
+58,48467,Coal Creek: EW 137 Road (Mail Route Road),Coal Creek:  EW 137 Road (Mail Route Rd.),2011-06-22,2011-06-22,0.0,VALID_MATCH,True
+59,25848,Coal Creek: Hwy 11,Coal Creek:  Hwy 11,2002-08-23,2002-08-23,0.0,VALID_MATCH,True
+60,38173,Coal Creek: Hwy 11,Coal Creek:  Hwy 11,2007-08-20,2007-08-20,0.0,VALID_MATCH,True
+61,49688,Coal Creek: Hwy 11,Coal Creek:  Hwy 11,2012-06-11,2012-06-11,0.0,VALID_MATCH,True
+62,49691,Coal Creek: Hwy 11,Coal Creek:  Hwy 11,2012-06-11,2012-06-11,0.0,VALID_MATCH,True
+63,56751,Coal Creek: Hwy 11,Coal Creek:  Hwy 11,2016-08-19,2016-08-19,0.0,VALID_MATCH,True
+65,55665,Cow Creek: Hwy 51,Cow Creek:  Hwy 51,2015-06-25,2015-06-25,0.0,VALID_MATCH,True
+66,55662,Cow Creek: Hwy 51,Cow Creek:  Hwy 51,2015-06-25,2015-06-25,0.0,VALID_MATCH,True
+67,62330,Cow Creek: Hwy 51,Cow Creek:  Hwy 51,2019-08-07,2019-08-07,0.0,VALID_MATCH,True
+68,62331,Cow Creek: Hwy 51,Cow Creek:  Hwy 51,2019-08-07,2019-08-07,0.0,VALID_MATCH,True
+69,38174,Crow Creek: Zink Park,Crow Creek:  Zink Park,2007-08-21,2007-08-21,0.0,VALID_MATCH,True
+70,49690,Crow Creek: Zink Park,Crow Creek:  Zink Park,2012-06-13,2012-06-13,0.0,VALID_MATCH,True
+71,56716,Crow Creek: Zink Park,Crow Creek:  Zink Park,2016-07-11,2016-07-11,0.0,VALID_MATCH,True
+72,41756,Crutcho Creek: I-40,Crutcho Creek:  I-40,2008-07-24,2008-07-24,0.0,VALID_MATCH,True
+73,53915,Crutcho Creek: I-40,Crutcho Creek:  I-40,2014-08-27,2014-08-27,0.0,VALID_MATCH,True
+74,60213,Crutcho Creek: I-40,Crutcho Creek:  I-40,2018-07-23,2018-07-23,0.0,VALID_MATCH,True
+75,41755,Deep Fork River: Britton Road,Deep Fork River:  Britton Road,2008-07-23,2008-07-23,0.0,VALID_MATCH,True
+76,49696,Deep Fork River: Britton Road,Deep Fork River:  Britton Road,2012-06-25,2012-06-25,0.0,VALID_MATCH,True
+77,33759,Deep Fork River: E 0930 Road,Deep Fork River:  E 0930 Road,2005-08-12,2005-08-12,0.0,VALID_MATCH,True
+78,36248,Deep Fork River: Hwy 56 Bridge,Deep Fork River:  Hwy 56 Bridge,2006-08-11,2006-08-11,0.0,VALID_MATCH,True
+79,48468,Deep Fork River: Hwy 56 Bridge,Deep Fork River:  Hwy 56 Bridge,2011-06-23,2011-06-23,0.0,VALID_MATCH,True
+80,31146,Deep Fork River: River Bend,Deep Fork River:  River Bend,2004-09-20,2004-09-20,0.0,VALID_MATCH,True
+81,35750,Deep Fork River: Rocky Shoals,Deep Fork River:  Rocky Shoals,2006-07-08,2006-07-08,0.0,VALID_MATCH,True
+82,25852,Deep Fork River: Wilshire (Site # 110),Deep Fork River:  Wilshire (Site # 110),2002-09-05,2002-09-05,0.0,VALID_MATCH,True
+86,62327,Deer Creek: Coffee Creek Rd.,Deer Creek: Coffee Creek Rd.,2019-07-27,2019-07-27,0.0,VALID_MATCH,True
+83,36251,Deer Creek: Hwy 4,Deer Creek:  Hwy 4,2006-08-23,2006-08-23,0.0,VALID_MATCH,True
+84,44245,Deer Creek: Meridian Avenue,Deer Creek:  Meridian Avenue,2009-08-17,2009-08-17,0.0,VALID_MATCH,True
+85,53907,Deer Creek: Meridian Avenue,Deer Creek:  Meridian Avenue,2014-08-20,2014-08-20,0.0,VALID_MATCH,True
+87,48327,Delaware Creek: Camp Simpson Witch Hole,Delaware Creek:  Camp Simpson Upstream,2010-07-23,2010-07-23,0.0,VALID_MATCH,True
+88,23156,Delaware Creek: Hwy 97 Bridge,Delaware Creek:  Hwy 97 Bridge,2001-06-12,2001-06-12,0.0,VALID_MATCH,True
+89,35152,Delaware Creek: Hwy 97 Bridge,Delaware Creek:  Hwy 97 Bridge,2010-06-22,2010-06-22,0.0,VALID_MATCH,True
+90,48222,Delaware Creek: Hwy 97 Bridge,Delaware Creek:  Hwy 97 Bridge,2010-06-22,2010-06-22,0.0,VALID_MATCH,True
+91,48462,Doe Creek: Yearling,Doe Creek:  Yearling,2011-06-02,2011-06-02,0.0,VALID_MATCH,True
+92,48342,Double Spring Creek: W 730 Road,Double Spring Creek:  W 730 Road,2010-08-10,2010-08-10,0.0,VALID_MATCH,True
+93,44189,Duck Creek: Myers Park,Duck Creek:  Myers Park,2009-06-17,2009-06-17,0.0,VALID_MATCH,True
+94,44214,East Cache Creek: Big Green,East Cache Creek:  Big Green,2009-07-15,2009-07-15,0.0,VALID_MATCH,True
+95,51645,East Cache Creek: Big Green,East Cache Creek:  Big Green,2013-06-26,2013-06-26,0.0,VALID_MATCH,True
+96,62332,East Cache Creek: Big Green,East Cache Creek:  Big Green,2019-08-14,2019-08-14,0.0,VALID_MATCH,True
+99,23157,Elm Creek Wetlands: East Creek,Elm Creek Wetlands:  East Creek,2001-06-20,2001-06-20,0.0,VALID_MATCH,True
+100,55658,Elm Creek: Indian Hills Road,Elm Creek:  Indian Hills Road,2015-06-02,2015-06-02,0.0,VALID_MATCH,True
+101,63592,Elm Creek: Indian Hills Road,Elm Creek:  Indian Hills Road,2020-06-17,2020-06-17,0.0,VALID_MATCH,True
+102,31149,Ewers Creek: D0418 Road,Ewers Creek:  D0418 Road,2004-09-30,2004-09-30,0.0,VALID_MATCH,True
+103,49705,Ewers Creek: D0418 Road,Ewers Creek:  D0418 Road,2012-07-09,2012-07-09,0.0,VALID_MATCH,True
+104,33763,Feather Creek: Old Hwy 51,Feather Creek:  Old Hwy 51,2005-08-25,2005-08-25,0.0,VALID_MATCH,True
+105,44201,Feather Creek: Old Hwy 51,Feather Creek:  Old Hwy 51,2009-07-02,2009-07-02,0.0,VALID_MATCH,True
+106,53896,Feather Creek: Old Hwy 51,Feather Creek:  Old Hwy 51,2014-07-21,2014-07-21,0.0,VALID_MATCH,True
+107,63600,Feather Creek: Old Hwy 51,Feather Creek:  Old Hwy 51,2020-08-03,2020-08-03,0.0,VALID_MATCH,True
+108,30960,Flat Rock Creek: Hwy 75,Flat Rock Creek:  Hwy 75,2004-08-24,2004-08-24,0.0,VALID_MATCH,True
+109,37912,Flat Rock Creek: Hwy 75,Flat Rock Creek:  Hwy 75,2007-07-24,2007-07-24,0.0,VALID_MATCH,True
+110,49713,Flat Rock Creek: Hwy 75,Flat Rock Creek:  Hwy 75,2012-07-19,2012-07-19,0.0,VALID_MATCH,True
+111,41758,"Flint Creek: Fiddlers Bend, Above Illinois River","Flint Creek:  Fiddlers Bend, Above Illinois River",2008-08-05,2008-08-05,0.0,VALID_MATCH,True
+112,51654,"Flint Creek: Fiddlers Bend, Above Illinois River","Flint Creek:  Fiddlers Bend, Above Illinois River",2013-07-17,2013-07-17,0.0,VALID_MATCH,True
+113,37350,Fourche Maline Creek: Black Loop,Fourche Maline Creek:  Black Loop,2007-06-07,2007-06-07,0.0,VALID_MATCH,True
+114,48474,Fourche Maline Creek: Black Loop,Fourche Maline Creek:  Black Loop,2011-07-06,2011-07-06,0.0,VALID_MATCH,True
+115,36252,Fourche Maline Creek: Centerpoint Road,Fourche Maline Creek:  Centerpoint Road,2006-08-24,2006-08-24,0.0,VALID_MATCH,True
+116,23869,Fourche Maline Creek: Robbers Cave State Park,Fourche Maline Creek:  Robbers Cave State Park,2001-07-27,2001-07-27,0.0,VALID_MATCH,True
+117,37349,Fourche Maline Creek: Robbers Cave State Park,Fourche Maline Creek:  Robbers Cave State Park,2007-06-06,2007-06-06,0.0,VALID_MATCH,True
+118,44191,Fourmile Creek: Adams Park,Fourmile Creek:  Adams Park,2009-06-19,2009-06-19,0.0,VALID_MATCH,True
+119,53884,Fourmile Creek: Adams Park,Fourmile Creek:  Adams Park,2014-06-02,2014-06-02,0.0,VALID_MATCH,True
+120,62328,Fourmile Creek: Adams Park,Fourmile Creek:  Adams Park,2019-07-29,2019-07-29,0.0,VALID_MATCH,True
+121,38170,Fred Creek: Evanston,Fred Creek:  Evanston,2007-08-16,2007-08-16,0.0,VALID_MATCH,True
+122,55664,Fred Creek: Evanston,Fred Creek:  Evanston,2015-06-30,2015-06-30,0.0,VALID_MATCH,True
+123,53921,Guy James Creek: NW Eubanks St.,Guy James Creek: NW Eubanks St.,2014-08-29,2014-08-29,0.0,VALID_MATCH,True
+124,60204,Guy James Creek: NW Eubanks St.,Guy James Creek: NW Eubanks St.,2018-06-14,2018-06-14,0.0,VALID_MATCH,True
+125,62501,Guy Sandy Creek,Guy Sandy Creek,2021-01-19,2020-06-29,204.0,DATE_MISMATCH,False
+126,63590,Guy Sandy Creek,Guy Sandy Creek,2021-01-19,2020-06-29,204.0,DATE_MISMATCH,False
+127,63594,Guy Sandy Creek,Guy Sandy Creek,2021-01-19,2020-06-29,204.0,DATE_MISMATCH,False
+128,25849,Haikey Creek: 121st Street,Haikey Creek:  121st Street,2002-08-26,2002-08-26,0.0,VALID_MATCH,True
+129,37917,Haikey Creek: 121st Street,Haikey Creek:  121st Street,2007-07-25,2007-07-25,0.0,VALID_MATCH,True
+130,35736,Harlow Creek: Edison,Harlow Creek:  Edison,2006-06-08,2006-06-08,0.0,VALID_MATCH,True
+137,25850,Honey Creek: Berry Bluff,Honey Creek:  Berry Bluff,2002-08-27,2002-08-27,0.0,VALID_MATCH,True
+138,30959,Honey Creek: Needham,Honey Creek:  Needham,2004-08-18,2004-08-18,0.0,VALID_MATCH,True
+139,38166,Jimmy Creek: Prose,Jimmy Creek:  Prose,2007-08-08,2007-08-08,0.0,VALID_MATCH,True
+140,53883,Jimmy Creek: Prose,Jimmy Creek:  Prose,2014-05-27,2014-05-27,0.0,VALID_MATCH,True
+143,44190,Lariat Creek: E 940 (American Horse Road),Lariat Creek:  E 940 (American Horse Road),2009-06-18,2009-06-18,0.0,VALID_MATCH,True
+144,31144,Little Beaver Creek: E 0030 Road,Little Beaver Creek:  E 0030 Road,2004-09-07,2004-09-07,0.0,VALID_MATCH,True
+145,29125,Little Deep Fork (2): N 3650,Little Deep Fork  (2):  N 3650,2003-08-15,2003-08-15,0.0,VALID_MATCH,True
+146,56996,Little Horse Creek,,2018-01-29,,,NO_SITE_MATCH,False
+147,65648,Little Horse Creek,,2021-07-14,,,NO_SITE_MATCH,False
+148,38162,Little Mountain Trib. of Mountain Creek: N 4660,,2007-08-02,,,NO_SITE_MATCH,False
+149,49160,Little Mountain Trib. of Mountain Creek: N 4660,,2011-08-09,,,NO_SITE_MATCH,False
+150,48220,Little Polecat Creek: Jones,Little Polecat Creek:  Jones,2010-06-17,2010-06-17,0.0,VALID_MATCH,True
+151,53891,Little River: SW 34th Street,Little River:  SW 34th St.,2014-07-07,2014-07-07,0.0,VALID_MATCH,True
+152,60212,Little River: SW 34th Street,Little River:  SW 34th St.,2018-07-19,2018-07-19,0.0,VALID_MATCH,True
+153,36255,Little Sandy Creek: Chamber Loop,Little Sandy Creek:  Chamber Loop,2006-09-20,2006-09-20,0.0,VALID_MATCH,True
+154,48217,Little Sandy Creek: Chamber Loop,Little Sandy Creek:  Chamber Loop,2006-09-20,2006-09-20,0.0,VALID_MATCH,True
+155,55731,Little Sandy Creek: Chamber Loop,Little Sandy Creek:  Chamber Loop,2015-08-04,2015-08-04,0.0,VALID_MATCH,True
+156,36256,Little Sandy Creek: Hwy 99,Little Sandy Creek:  Hwy 99,2010-07-22,2010-07-22,0.0,VALID_MATCH,True
+157,48326,Little Sandy Creek: Hwy 99,Little Sandy Creek:  Hwy 99,2010-07-22,2010-07-22,0.0,VALID_MATCH,True
+158,63591,Little Sandy Creek: Hwy 99,Little Sandy Creek:  Hwy 99,2020-06-11,2020-06-11,0.0,VALID_MATCH,True
+159,44198,Little Stillwater Creek: Hwy 51 (Diamond Valley Church),,2009-06-30,,,NO_SITE_MATCH,False
+160,28043,Little Wewoka Creek,Little Wewoka Creek,2004-01-21,2018-07-16,5290.0,DATE_MISMATCH,False
+161,40698,Little Wewoka Creek,Little Wewoka Creek,2010-01-11,2018-07-16,3108.0,DATE_MISMATCH,False
+162,52138,Little Wewoka Creek,Little Wewoka Creek,2014-10-13,2018-07-16,1372.0,DATE_MISMATCH,False
+163,60209,Little Wewoka Creek,Little Wewoka Creek,2020-01-21,2018-07-16,554.0,DATE_MISMATCH,False
+164,60186,Little Wewoka Creek,Little Wewoka Creek,2020-01-21,2018-07-16,554.0,DATE_MISMATCH,False
+165,25678,Lost Creek,Lost Creek,2001-09-19,2001-09-19,0.0,VALID_MATCH,True
+166,44188,Lost Creek: Woody,Lost Creek:  Woody,2009-06-15,2009-06-15,0.0,VALID_MATCH,True
+167,44228,Lost Creek: Woody,Lost Creek:  Woody,2009-06-15,2009-06-15,0.0,VALID_MATCH,True
+168,38165,Medicine Creek: Apache (Stayer),Medicine Creek:  Apache (Stayer),2007-08-07,2007-08-07,0.0,VALID_MATCH,True
+169,53898,Medicine Creek: Apache (Stayer),Medicine Creek:  Apache (Stayer),2014-08-16,2014-08-06,10.0,DATE_MISMATCH,False
+170,49699,Merkle Creek: Brooks Street,Merkle Creek:  Brooks Street,2012-06-28,2012-06-28,0.0,VALID_MATCH,True
+171,51681,Middle Creek: Buzzard Roost Ranch,Middle Creek:  Buzzard Roost Ranch,2013-07-25,2013-09-04,41.0,DATE_MISMATCH,False
+172,51656,Middle Creek: Buzzard Roost Ranch,Middle Creek:  Buzzard Roost Ranch,2013-07-25,2013-09-04,41.0,DATE_MISMATCH,False
+173,60206,Middle Creek: Buzzard Roost Ranch,Middle Creek:  Buzzard Roost Ranch,2018-07-02,2018-07-02,0.0,VALID_MATCH,True
+174,25846,Mill Creek: McClure Park,Mill Creek:  McClure Park,2002-08-19,2002-08-19,0.0,VALID_MATCH,True
+175,37911,Mill Creek: McClure Park,Mill Creek:  McClure Park,2007-07-23,2007-07-23,0.0,VALID_MATCH,True
+176,48239,Mill Creek: North Daube Ranch Road,Mill Creek:  N Daube Ranch Road,2010-07-21,2010-07-21,0.0,VALID_MATCH,True
+177,30961,Mingo Creek: 46th Street North,Mingo Creek:  46th Street North,2004-08-25,2004-08-25,0.0,VALID_MATCH,True
+178,38171,Mingo Creek: 46th Street North,Mingo Creek:  46th Street North,2007-08-17,2007-08-17,0.0,VALID_MATCH,True
+179,56753,Mingo Creek: 46th Street North,Mingo Creek:  46th Street North,2016-08-24,2016-08-24,0.0,VALID_MATCH,True
+180,44196,Minnehaha Creek: Canton,Minnehaha Creek:  Canton,2009-06-26,2009-06-26,0.0,VALID_MATCH,True
+181,29123,Mooser Creek: Pepsi,Mooser Creek:  Pepsi,2003-08-06,2003-08-06,0.0,VALID_MATCH,True
+182,35740,Mooser Creek: Pepsi,Mooser Creek:  Pepsi,2006-06-15,2006-06-15,0.0,VALID_MATCH,True
+183,48226,Mooser Creek: Pepsi,Mooser Creek:  Pepsi,2006-06-15,2006-06-15,0.0,VALID_MATCH,True
+184,55663,Mooser Creek: Pepsi,Mooser Creek:  Pepsi,2015-06-29,2015-06-29,0.0,VALID_MATCH,True
+185,63596,Mooser Creek: Pepsi,Mooser Creek:  Pepsi,2020-07-08,2020-07-08,0.0,VALID_MATCH,True
+186,29122,Mooser Creek: South Haven,Mooser Creek:  South Haven,2003-08-04,2003-08-04,0.0,VALID_MATCH,True
+187,60617,Morris Creek: Gillham,Morris Creek: Gillham,2018-08-02,2018-08-02,0.0,VALID_MATCH,True
+188,49161,Mountain Creek: D 4655 (Kennedy Bridge),Mountain Creek:  D 4655 (Kennedy Bridge),2011-08-09,2011-08-09,0.0,VALID_MATCH,True
+189,49162,Mountain Creek: E 1400 Road (Shiloh Crossing),Mountain Creek:  E 1400 Rd (Shiloh Crossing),2011-08-10,2011-08-10,0.0,VALID_MATCH,True
+190,33818,Mud Creek: E 2170 Road,Mud Creek:  E 2170 Road,2005-09-01,2005-09-01,0.0,VALID_MATCH,True
+191,48470,Mud Creek: E 2170 Road,Mud Creek:  E 2170 Road,2011-06-28,2011-06-28,0.0,VALID_MATCH,True
+192,32952,Mustang Creek: Morgan Road,Mustang Creek:  Morgan Road,2005-06-20,2005-06-20,0.0,VALID_MATCH,True
+193,44218,Mustang Creek: Morgan Road,Mustang Creek:  Morgan Road,2009-07-17,2009-07-17,0.0,VALID_MATCH,True
+194,62318,Mustang Creek: Morgan Road,Mustang Creek:  Morgan Road,2019-07-09,2019-07-09,0.0,VALID_MATCH,True
+195,35738,Nickel Creek: 91st Street,Nickel Creek:  91st Street,2006-06-14,2006-06-14,0.0,VALID_MATCH,True
+196,48227,Nickel Creek: 91st Street,Nickel Creek:  91st Street,2006-06-14,2006-06-14,0.0,VALID_MATCH,True
+197,55747,Nickel Creek: 91st Street,Nickel Creek:  91st Street,2015-08-17,2015-08-17,0.0,VALID_MATCH,True
+198,49698,North Fork Creek: Estates Park Bridge,North Fork Creek:  Estates Park bridge,2012-06-27,2012-06-27,0.0,VALID_MATCH,True
+200,33823,Panther Creek: Hwy 49,Panther Creek:  Hwy 49,2005-09-26,2005-09-26,0.0,VALID_MATCH,True
+201,44185,Panther Creek: Hwy 49,Panther Creek:  Hwy 49,2009-06-10,2009-06-10,0.0,VALID_MATCH,True
+202,44238,Park Hill Branch Creek: Murrell Home,Park Hill Branch Creek:  Murrell Home,2009-08-05,2009-08-05,0.0,VALID_MATCH,True
+203,51648,Park Hill Branch Creek: Murrell Home,Park Hill Branch Creek:  Murrell Home,2013-07-09,2013-07-09,0.0,VALID_MATCH,True
+204,58628,Park Hill Branch Creek: Murrell Home,Park Hill Branch Creek:  Murrell Home,2017-08-30,2017-08-30,0.0,VALID_MATCH,True
+206,23158,Polecat Creek: 33rd West,Polecat Creek:  33rd West,2001-06-27,2001-06-27,0.0,VALID_MATCH,True
+207,35751,Polecat Creek: 33rd West,Polecat Creek:  33rd West,2006-07-05,2006-07-05,0.0,VALID_MATCH,True
+208,35746,Polecat Creek: 33rd West,Polecat Creek:  33rd West,2006-07-05,2006-07-05,0.0,VALID_MATCH,True
+209,52619,Polecat Creek: 33rd West,Polecat Creek:  33rd West,2013-10-07,2006-07-10,2646.0,DATE_MISMATCH,False
+210,48328,Polecat Creek: 49th West Ave,Polecat Creek:  49th West Avenue,2010-07-26,2010-07-26,0.0,VALID_MATCH,True
+211,29124,"Posey Creek: Sandusky Avenue, Yale Place",Posey Creek:  Sandusky Avenue,2003-08-13,2003-08-13,0.0,VALID_MATCH,True
+212,37919,"Posey Creek: Sandusky Avenue, Yale Place",Posey Creek:  Sandusky Avenue,2007-07-27,2007-07-27,0.0,VALID_MATCH,True
+213,38176,"Posey Creek: Sandusky Avenue, Yale Place",Posey Creek:  Sandusky Avenue,2007-07-27,2007-07-27,0.0,VALID_MATCH,True
+214,30962,Post Oak Creek: Indiahoma Road,Post Oak Creek:  Indiahoma Road,2004-08-26,2004-08-26,0.0,VALID_MATCH,True
+215,44184,Post Oak Creek: Indiahoma Road,Post Oak Creek:  Indiahoma Road,2009-06-09,2009-06-09,0.0,VALID_MATCH,True
+216,36253,Quapaw Creek: Scott,,2006-08-25,,,NO_SITE_MATCH,False
+217,38175,Ranch Creek: Owasso,Ranch Creek:  Owasso,2007-08-22,2007-08-22,0.0,VALID_MATCH,True
+218,49689,Ranch Creek: Owasso,Ranch Creek:  Owasso,2012-06-12,2012-06-12,0.0,VALID_MATCH,True
+219,33820,Rawhide Creek: Squires (N 2230),Rawhide Creek:  Squires (N 2230),2005-09-14,2005-09-14,0.0,VALID_MATCH,True
+220,44187,Relay Creek: Stevenson,Relay Creek:  Stevenson,2009-06-12,2009-06-12,0.0,VALID_MATCH,True
+221,25712,Rock Creek: 40' Swimming Hole,Rock Creek:  40' Swimming Hole,2002-08-20,2002-08-20,0.0,VALID_MATCH,True
+222,41754,Rock Creek: 40' Swimming Hole,Rock Creek:  40' Swimming Hole,2008-07-22,2008-07-22,0.0,VALID_MATCH,True
+223,51644,Rock Creek: 40' Swimming Hole,Rock Creek:  40' Swimming Hole,2013-06-25,2013-06-25,0.0,VALID_MATCH,True
+224,37920,Rock Creek: Hwy 33,Rock Creek:  Hwy 33,2007-07-31,2007-07-31,0.0,VALID_MATCH,True
+225,53887,Rock Creek: Hwy 33,Rock Creek:  Hwy 33,2014-06-24,2014-06-24,0.0,VALID_MATCH,True
+226,33821,Rock Creek: Oklahoma Street,Rock Creek:  Oklahoma Street,2005-09-19,2005-09-19,0.0,VALID_MATCH,True
+227,41753,Rock Creek: Oklahoma Street,Rock Creek:  Oklahoma Street,2008-07-21,2008-07-21,0.0,VALID_MATCH,True
+228,51643,Rock Creek: Oklahoma Street,Rock Creek:  Oklahoma Street,2013-06-24,2013-06-24,0.0,VALID_MATCH,True
+229,58627,Rock Creek: Oklahoma Street,Rock Creek:  Oklahoma Street,2020-07-23,2020-07-23,0.0,VALID_MATCH,True
+230,63599,Rock Creek: Oklahoma Street,Rock Creek:  Oklahoma Street,2020-07-23,2020-07-23,0.0,VALID_MATCH,True
+233,41749,Sand Creek: Osage Hills State Park,Sand Creek:  Osage Hills State Park,2008-07-08,2008-07-08,0.0,VALID_MATCH,True
+234,53890,Sand Creek: Osage Hills State Park,Sand Creek:  Osage Hills State Park,2014-07-01,2014-07-01,0.0,VALID_MATCH,True
+235,63604,Sand Creek: Osage Hills State Park,Sand Creek:  Osage Hills State Park,2020-08-10,2020-08-10,0.0,VALID_MATCH,True
+236,48330,Sandy Creek: Propst,Sandy Creek:  Propst,2010-07-29,2010-07-29,0.0,VALID_MATCH,True
+237,60621,Sans Bois Creek,Sans Bois Creek,2018-09-14,2018-09-14,0.0,VALID_MATCH,True
+238,49152,Sharp Creek: Smith Grove,Sharp Creek:  Smith Grove,2011-08-01,2011-08-01,0.0,VALID_MATCH,True
+239,55660,Sharp Creek: Smith Grove,Sharp Creek:  Smith Grove,2011-08-01,2011-08-01,0.0,VALID_MATCH,True
+240,63603,Sharp Creek: Smith Grove,Sharp Creek:  Smith Grove,2020-08-08,2020-08-08,0.0,VALID_MATCH,True
+241,49153,Sharp Creek: Smith Silo,Sharp Creek:  Smith Silo,2011-08-01,2011-08-01,0.0,VALID_MATCH,True
+242,55661,Sharp Creek: Smith Silo,Sharp Creek:  Smith Silo,2011-08-01,2011-08-01,0.0,VALID_MATCH,True
+243,63602,Sharp Creek: Smith Silo,Sharp Creek:  Smith Silo,2020-08-08,2020-08-08,0.0,VALID_MATCH,True
+244,49146,Sixmile Creek: Kouba Farm,Sixmile Creek:  Kouba,2011-07-27,2011-07-27,0.0,VALID_MATCH,True
+245,53885,Sixmile Creek: Kouba Farm,Sixmile Creek:  Kouba,2011-07-27,2011-07-27,0.0,VALID_MATCH,True
+246,30958,Smith Hollow Creek: Adam Thirsty Road,Smith Hollow Creek:  Adam Thirsty Road,2004-08-16,2004-08-16,0.0,VALID_MATCH,True
+247,48463,Soldier Creek: County Road 74,,2011-06-03,,,NO_SITE_MATCH,False
+248,35741,Soldier Creek: Hwy 66,Soldier Creek:  Hwy 66,2006-06-19,2006-06-19,0.0,VALID_MATCH,True
+249,56748,Soldier Creek: Hwy 66,Soldier Creek:  Hwy 66,2020-08-05,2020-08-05,0.0,VALID_MATCH,True
+250,63601,Soldier Creek: Hwy 66,Soldier Creek:  Hwy 66,2020-08-05,2020-08-05,0.0,VALID_MATCH,True
+251,63595,Soldier Creek: Reno Ave.,Soldier Creek:  Reno Avenue,2020-07-01,2020-07-01,0.0,VALID_MATCH,True
+252,49707,South Fork Cavalry Creek: Byrd,South Fork Cavalry:  Byrd,2012-07-11,2012-07-11,0.0,VALID_MATCH,True
+253,49697,South Quapaw Creek: Meeker Lake Coutfall,South Quapaw Creek:  Meeker Lake Outfall,2012-06-26,2012-06-26,0.0,VALID_MATCH,True
+254,29176,Spring Creek: Cavalier Road,Spring Creek:  Cavalier Road,2003-09-15,2003-09-15,0.0,VALID_MATCH,True
+255,48344,Spring Creek: Cavalier Road,Spring Creek:  Cavalier Road,2010-08-12,2010-08-12,0.0,VALID_MATCH,True
+256,55750,Spring Creek: Coopers,Spring Creek:  Cooper's,2015-08-21,2015-08-24,3.0,VALID_MATCH,True
+257,41760,Spring Creek: Fram Site,Spring Creek:  Fram,2008-09-02,2008-09-02,0.0,VALID_MATCH,True
+258,51649,Spring Creek: Fram Site,Spring Creek:  Fram,2013-07-10,2013-07-10,0.0,VALID_MATCH,True
+259,51651,Spring Creek: Fram Site,Spring Creek:  Fram,2013-07-10,2013-07-10,0.0,VALID_MATCH,True
+260,58622,Spring Creek: Fram Site,Spring Creek:  Fram,2017-07-31,2017-07-31,0.0,VALID_MATCH,True
+261,48465,Spring Creek: Horinek,Spring Creek:  Horinek,2011-06-20,2011-06-20,0.0,VALID_MATCH,True
+262,53886,Spring Creek: Horinek,Spring Creek:  Horinek,2011-06-20,2011-06-20,0.0,VALID_MATCH,True
+263,25845,Spring Creek: I-35,Spring Creek:  I-35,2001-09-24,2001-09-24,0.0,VALID_MATCH,True
+264,36254,Spring Creek: I-35,Spring Creek:  I-35,2006-08-28,2006-08-28,0.0,VALID_MATCH,True
+265,35151,Spring Creek: I-35,Spring Creek:  I-35,2006-08-28,2006-08-28,0.0,VALID_MATCH,True
+266,48232,Spring Creek: I-35,Spring Creek:  I-35,2006-08-28,2006-08-28,0.0,VALID_MATCH,True
+267,53902,Spring Creek: I-35,Spring Creek:  I-35,2014-08-11,2014-08-11,0.0,VALID_MATCH,True
+268,60210,Spring Creek: I-35,Spring Creek:  I-35,2018-07-17,2018-07-17,0.0,VALID_MATCH,True
+272,53901,Spring Creek: Martin Park,Spring Creek:  Martin Park,2014-08-08,2014-08-08,0.0,VALID_MATCH,True
+273,62324,Spring Creek: Martin Park,Spring Creek:  Martin Park,2019-07-24,2019-07-24,0.0,VALID_MATCH,True
+274,49706,Spring Creek: Oklahoma Ave.,Spring Creek:  Oklahoma Avenue,2012-07-10,2012-07-10,0.0,VALID_MATCH,True
+269,65674,Spring Creek: Rocky Ford,Spring Creek: Rocky Ford,2021-09-08,2022-07-14,309.0,DATE_MISMATCH,False
+270,44236,Spring Creek: Rooney,Spring Creek:  Rooney,2009-08-04,2009-08-04,0.0,VALID_MATCH,True
+271,22890,"Spring Creek: Timberlake, Downstream",,2001-06-21,,,NO_SITE_MATCH,False
+275,48466,Spunky Creek: Berry Sports Complex,Spunky Creek:  Berry Sports Complex,2011-06-21,2011-06-21,0.0,VALID_MATCH,True
+276,30957,Spunky Creek: Hwy 412,Spunky Creek:  Hwy 412,2004-08-09,2004-08-09,0.0,VALID_MATCH,True
+277,38168,Spunky Creek: Hwy 412,Spunky Creek:  Hwy 412,2007-08-13,2007-08-13,0.0,VALID_MATCH,True
+278,55667,Spunky Creek: Hwy 412,Spunky Creek:  Hwy 412,2015-07-20,2015-07-20,0.0,VALID_MATCH,True
+279,48218,Stage Stand Creek: Hwy 81,Stage Stand Creek:  Hwy 81,2010-06-11,2010-06-11,0.0,VALID_MATCH,True
+280,38164,Sugar Creek: CR 1320,Sugar Creek:  CR 1320,2007-08-06,2007-08-06,0.0,VALID_MATCH,True
+281,48475,Sugar Creek: CR 1320,Sugar Creek:  CR 1320,2011-07-14,2011-07-14,0.0,VALID_MATCH,True
+282,49712,Summerfield Creek: S. 4510 Road,Summerfield Creek: S. 4510 Road,2012-07-17,2012-07-17,0.0,VALID_MATCH,True
+283,49711,Summerfield Creek: S. 4510 Road,Summerfield Creek: S. 4510 Road,2012-07-17,2012-07-17,0.0,VALID_MATCH,True
+284,41748,Sycamore Creek: D 4685,Sycamore Creek:  D 4685,2008-06-30,2008-06-30,0.0,VALID_MATCH,True
+288,25851,Tahlequah Town Branch: Basin Street,Tahlequah Town Branch:  Basin Street,2002-08-28,2002-08-28,0.0,VALID_MATCH,True
+289,41750,Tahlequah Town Branch: Basin Street,Tahlequah Town Branch:  Basin Street,2008-07-16,2008-07-16,0.0,VALID_MATCH,True
+290,51640,Tahlequah Town Branch: Basin Street,Tahlequah Town Branch:  Basin Street,2013-06-11,2013-06-11,0.0,VALID_MATCH,True
+291,58624,Tahlequah Town Branch: Basin Street,Tahlequah Town Branch:  Basin Street,2017-08-02,2017-08-02,0.0,VALID_MATCH,True
+292,25844,Tahlequah Town Branch: Spring Street,Tahlequah Town Branch:  Spring Street,2001-09-13,2001-09-13,0.0,VALID_MATCH,True
+293,41751,Tahlequah Town Branch: Spring Street,Tahlequah Town Branch:  Spring Street,2008-07-17,2008-07-17,0.0,VALID_MATCH,True
+294,51647,Tahlequah Town Branch: Spring Street,Tahlequah Town Branch:  Spring Street,2013-07-08,2013-07-08,0.0,VALID_MATCH,True
+295,58623,Tahlequah Town Branch: Spring Street,Tahlequah Town Branch:  Spring Street,2017-08-01,2017-08-01,0.0,VALID_MATCH,True
+296,38163,Taloka Creek: N 4430,Taloka Creek:  N 4430,2007-08-03,2007-08-03,0.0,VALID_MATCH,True
+297,60565,Taloka Creek: N 4430,Taloka Creek:  N 4430,2020-01-13,2007-08-03,4546.0,DATE_MISMATCH,False
+298,56752,Tenmile Creek: Davis,Tenmile Creek:  Davis,2012-06-18,2012-06-18,0.0,VALID_MATCH,True
+299,56715,Tiger Creek: Woods,Tiger Creek: E. Woods St.,2016-06-29,2016-06-29,0.0,VALID_MATCH,True
+300,29127,Travertine Creek: Central Campground,Travertine Creek:  Central Campground,2003-08-25,2003-08-25,0.0,VALID_MATCH,True
+301,56725,Turkey Creek,Turkey Creek,2016-08-03,2016-08-03,0.0,VALID_MATCH,True
+302,30255,Tyner Creek: TB4,,2003-07-28,,,NO_SITE_MATCH,False
+303,27966,Tyner Creek: TB4,,2003-07-28,,,NO_SITE_MATCH,False
+304,30445,Tyner Creek: TB4,,2003-07-28,,,NO_SITE_MATCH,False
+305,30250,Tyner Creek: TB4,,2003-07-28,,,NO_SITE_MATCH,False
+306,31038,Tyner Creek: TB4,,2003-07-28,,,NO_SITE_MATCH,False
+307,31775,Tyner Creek: TB4,,2003-07-28,,,NO_SITE_MATCH,False
+308,32975,Tyner Creek: TB4,,2003-07-28,,,NO_SITE_MATCH,False
+309,58626,Tyner Creek: TB4,,2017-08-10,,,NO_SITE_MATCH,False
+310,58620,Unknown Trib to Arkansas River,Unnamed Trib to Arkansas River,2017-06-19,2017-06-19,0.0,VALID_MATCH,True
+311,62323,Unnamed Trib of North Canadian River: Chisholm Trail Park,Trib. To N. Canadian River: Chisholm Trail Park,2019-07-23,2019-07-23,0.0,VALID_MATCH,True
+312,48223,Unnamed Trib to Bird Creek: EW 136 Road,,2010-06-23,,,NO_SITE_MATCH,False
+313,48225,Unnamed Trib to Bird Creek: NS 371 / EW 134 (Dump Ground Road),,2010-06-25,,,NO_SITE_MATCH,False
+314,37918,Unnamed Trib to Harlow Creek: Golden Acres,,2007-07-26,,,NO_SITE_MATCH,False
+315,49695,Unnamed Trib to Harlow Creek: Golden Acres,,2012-06-21,,,NO_SITE_MATCH,False
+316,38169,Unnamed Trib to Little Joe Creek: LaFortune Park,,2007-08-14,,,NO_SITE_MATCH,False
+318,48231,Unnamed Trib. To Walnut Creek: Rockwell Avenue,,2010-07-07,,,NO_SITE_MATCH,False
+319,51657,Unnamed Tributary of Twin Hills Creek: S. 71st E. Ave.,Trib. To Twin Hills Creek: S. 71st E. Ave.,2013-07-30,2013-07-30,0.0,VALID_MATCH,True
+320,41752,Wall Trip Branch to the Baron Fork: Chicken Creek,,2008-07-18,,,NO_SITE_MATCH,False
+321,36245,Walnut Creek: Purcell,Walnut Creek:  Purcell,2006-08-08,2006-08-08,0.0,VALID_MATCH,True
+322,31148,Washita River: Black Kettle,Washita River:  Black Kettle,2004-09-29,2004-09-29,0.0,VALID_MATCH,True
+323,44193,Washita River: Black Kettle,Washita River:  Black Kettle,2009-06-23,2009-06-23,0.0,VALID_MATCH,True
+324,31147,Washita River: McClure (N 2070),Washita River:  McClure (N 2070),2004-09-28,2004-09-28,0.0,VALID_MATCH,True
+325,44192,Washita River: McClure (N 2070),Washita River:  McClure (N 2070),2009-06-22,2009-06-22,0.0,VALID_MATCH,True
+326,33826,Washita River: Riverside,Washita River:  Riverside,2005-09-28,2005-09-28,0.0,VALID_MATCH,True
+327,62319,West Cache Creek,West Cache Creek,2019-07-11,2019-07-11,0.0,VALID_MATCH,True
+328,33824,West Cache Creek: Boulder Picnic Area,West Cache Creek:  Boulder Picnic Area,2005-09-27,2005-09-27,0.0,VALID_MATCH,True
+329,44216,West Cache Creek: Boulder Picnic Area,West Cache Creek:  Boulder Picnic Area,2009-07-14,2009-07-14,0.0,VALID_MATCH,True
+330,44209,West Cache Creek: Boulder Picnic Area,West Cache Creek:  Boulder Picnic Area,2009-07-14,2009-07-14,0.0,VALID_MATCH,True
+331,35745,West Elm Creek: S.E. 164th,West Elm Creek:  SE 149th,2010-07-28,2005-08-18,1805.0,DATE_MISMATCH,False
+332,48329,West Elm Creek: S.E. 164th,West Elm Creek:  SE 149th,2010-07-28,2005-08-18,1805.0,DATE_MISMATCH,False
+335,31143,Wewoka Creek: Lima (N 3610),Wewoka Creek:  Lima (N 3610),2004-09-01,2004-09-01,0.0,VALID_MATCH,True
+336,36246,Wewoka Creek: Lima (N 3610),Wewoka Creek:  Lima (N 3610),2006-08-09,2006-08-09,0.0,VALID_MATCH,True
+337,35775,"Whitewater Creek: D 4650, Scott","Whitewater Creek:  D4650, Scott",2006-07-25,2006-07-25,0.0,VALID_MATCH,True
+338,35774,Whitewater Creek: E 330 Road,Whitewater Creek:  E 330 Road,2006-07-24,2006-07-24,0.0,VALID_MATCH,True
+339,56993,Whitewater Creek: E 330 Road,Whitewater Creek:  E 330 Road,2017-01-17,2006-07-24,3830.0,DATE_MISMATCH,False
+340,65652,Whitewater Creek: E 330 Road,Whitewater Creek:  E 330 Road,2021-07-26,2006-07-24,5481.0,DATE_MISMATCH,False
+341,33755,Wildhorse Creek: N 3520 Road,Wildhorse Creek:  N 3520 Road,2005-08-03,2005-08-03,0.0,VALID_MATCH,True
+348,56724,Wolf Creek: Gore Blvd.,Wolf Creek:  Gore Blvd.,2016-07-28,2016-07-28,0.0,VALID_MATCH,True
+349,56720,Wolf Creek: Gore Blvd.,Wolf Creek:  Gore Blvd.,2016-07-28,2016-07-28,0.0,VALID_MATCH,True
+350,62320,Wolf Creek: Gore Blvd.,Wolf Creek:  Gore Blvd.,2016-07-28,2016-07-28,0.0,VALID_MATCH,True
+342,38167,Wolf Creek: McMahon Soccer Park,Wolf Creek:  McMahon Soccer Park,2007-08-09,2007-08-09,0.0,VALID_MATCH,True
+343,53899,Wolf Creek: McMahon Soccer Park,Wolf Creek:  McMahon Soccer Park,2014-08-07,2014-08-07,0.0,VALID_MATCH,True
+344,62322,Wolf Creek: McMahon Soccer Park,Wolf Creek:  McMahon Soccer Park,2019-07-16,2019-07-10,6.0,VALID_MATCH,True
+345,58993,Wolf Creek: US Hwy 283,,2018-01-16,,,NO_SITE_MATCH,False
+346,33819,Wolf Creek: US Hwy 46,Wolf Creek:  Hwy 46,2005-09-13,2005-09-13,0.0,VALID_MATCH,True
+347,44194,Wolf Creek: US Hwy 46,Wolf Creek:  Hwy 46,2009-06-24,2009-06-24,0.0,VALID_MATCH,True
+351,37351,"Woods Creek: Hwy 63, Whitesboro","Woods Creek:  Hwy 63, Whitesboro",2011-07-01,2011-07-01,0.0,VALID_MATCH,True
+352,48473,"Woods Creek: Hwy 63, Whitesboro","Woods Creek:  Hwy 63, Whitesboro",2011-07-01,2011-07-01,0.0,VALID_MATCH,True
+353,33764,Yashoo Creek: Little River NWR,Yashoo Creek:  Little River NWR,2005-08-31,2005-08-31,0.0,VALID_MATCH,True
+354,48471,Yashoo Creek: Little River NWR,Yashoo Creek:  Little River NWR,2011-06-29,2011-06-29,0.0,VALID_MATCH,True
+355,56729,Yashoo Creek: Little River NWR,Yashoo Creek:  Little River NWR,2016-08-09,2016-08-09,0.0,VALID_MATCH,True
