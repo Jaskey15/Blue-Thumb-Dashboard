@@ -277,15 +277,9 @@ def insert_metrics_data(cursor, macro_df, event_id_map):
                     metrics_count += 1
             
             # Determine biological condition
-            biological_condition = None
+            biological_condition = "Unknown" # Default fallback
             
-            # First: Try to use pre-calculated biological_condition from CSV
-            if 'biological_condition' in row and pd.notna(row['biological_condition']):
-                biological_condition = str(row['biological_condition']).strip()
-                logger.debug(f"Using pre-calculated biological_condition: {biological_condition}")
-            
-            # Second: Calculate if no pre-calculated value exists
-            elif 'comparison_to_reference' in row and pd.notna(row['comparison_to_reference']):
+            if 'comparison_to_reference' in row and pd.notna(row['comparison_to_reference']):
                 comparison_value = float(row['comparison_to_reference']) * 100  # Convert to percentage
                 
                 if comparison_value >= 83:
@@ -297,17 +291,9 @@ def insert_metrics_data(cursor, macro_df, event_id_map):
                 else:
                     biological_condition = "Severely Impaired"
                     
-                logger.info(f"Calculated biological_condition: {biological_condition} (score: {comparison_value}%)")
-            
+                logger.debug(f"Calculated biological_condition: {biological_condition} (score: {comparison_value}%)")
             else:
-                logger.warning(f"Cannot determine biological condition for sample_id={sample_id}, habitat={habitat} - missing required data")
-                biological_condition = "Unknown"
-            
-            # Validate biological condition against expected values
-            valid_conditions = ["Severely Impaired", "Moderately Impaired", "Slightly Impaired", "Non-impaired", "Unknown"]
-            if biological_condition not in valid_conditions:
-                logger.error(f"Invalid biological_condition '{biological_condition}' for sample_id={sample_id}. Using 'Unknown'.")
-                biological_condition = "Unknown"
+                logger.warning(f"Cannot determine biological condition for sample_id={sample_id}, habitat={habitat} - missing comparison_to_reference data")
             
             # Insert summary score
             if all(col in row for col in ['total_score', 'comparison_to_reference']) and biological_condition:
