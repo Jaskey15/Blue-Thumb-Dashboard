@@ -201,54 +201,6 @@ def remove_invalid_biological_values(df, invalid_values=None, score_columns=None
     
     return df_clean
 
-def validate_score_ranges(df, score_columns=None, min_score=0, max_score=None):
-    """
-    Validate that biological scores are within expected ranges.
-    
-    Args:
-        df: DataFrame with biological data
-        score_columns: List of score columns to validate (default: columns ending with '_score')
-        min_score: Minimum valid score (default: 0)
-        max_score: Maximum valid score (default: None, no upper limit)
-        
-    Returns:
-        DataFrame: DataFrame with validation warnings logged
-    """
-    if df.empty:
-        return df
-    
-    if score_columns is None:
-        score_columns = [col for col in df.columns if col.endswith('_score')]
-    
-    # Filter to existing columns
-    existing_score_columns = [col for col in score_columns if col in df.columns]
-    
-    validation_issues = 0
-    
-    for col in existing_score_columns:
-        # Check minimum values
-        if min_score is not None:
-            below_min = (df[col] < min_score) & df[col].notna()
-            below_min_count = below_min.sum()
-            if below_min_count > 0:
-                logger.warning(f"Found {below_min_count} values in '{col}' below minimum ({min_score})")
-                validation_issues += below_min_count
-        
-        # Check maximum values
-        if max_score is not None:
-            above_max = (df[col] > max_score) & df[col].notna()
-            above_max_count = above_max.sum()
-            if above_max_count > 0:
-                logger.warning(f"Found {above_max_count} values in '{col}' above maximum ({max_score})")
-                validation_issues += above_max_count
-    
-    if validation_issues == 0:
-        logger.info("All score values are within expected ranges")
-    else:
-        logger.warning(f"Found {validation_issues} total validation issues in score columns")
-    
-    return df
-
 def convert_columns_to_numeric(df, columns=None, errors='coerce'):
     """
     Convert specified columns to numeric type with error handling.

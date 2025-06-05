@@ -5,7 +5,6 @@ from data_processing.data_loader import load_csv_data, clean_column_names, save_
 from data_processing.biological_utils import (
     insert_collection_events,
     remove_invalid_biological_values,
-    validate_score_ranges,
     convert_columns_to_numeric
 )
 from utils import setup_logging
@@ -140,9 +139,6 @@ def process_fish_csv_data(site_name=None):
         
         # Convert score columns to numeric
         fish_df = convert_columns_to_numeric(fish_df)
-        
-        # Validate score ranges (biological scores typically 0-10 or similar)
-        fish_df = validate_score_ranges(fish_df, min_score=0, max_score=10)
         
         # Validate IBI scores (check if total_score matches sum of component scores)
         fish_df = validate_ibi_scores(fish_df)
@@ -323,8 +319,41 @@ def insert_metrics_data(cursor, fish_df, event_id_map):
                     ))
                     metrics_count += 1
             
+            # Determine integrity class - use CSV value first, calculate as fallback
+            integrity_class = "Unknown"  # Default fallback
+
+            # Primary: Use pre-calculated integrity_class from CSV
+            if 'integrity_class' in row and pd.notna(row['integrity_class']) and str(row['integrity_class']).strip():
+                integrity_class = str(row['integrity_class']).strip()
+                logger.debug(f"Using pre-calculated integrity_class: {integrity_class} for sample_id={sample_id}")
+            else:
+                # Fallback: Calculate using simplified cutoffs
+                if 'comparison_to_reference' in row and pd.notna(row['comparison_to_reference']):
+                    comparison_value = float(row['comparison_to_reference']) * 100  # Convert to percentage
+                    
+                    if comparison_value >= 97:
+                        integrity_class = "Excellent"
+                    elif comparison_value >= 76:
+                        integrity_class = "Good"
+                    elif comparison_value >= 60:
+                        integrity_class = "Fair"
+                    elif comparison_value >= 47:
+                        integrity_class = "Poor"
+                    else:
+                        integrity_class = "Very Poor"
+                        
+                    logger.info(f"Calculated integrity_class: {integrity_class} (score: {comparison_value}%) for sample_id={sample_id}")
+                else:
+                    logger.warning(f"Cannot determine integrity class for sample_id={sample_id} - missing both integrity_class and comparison_to_reference data")
+
+            # Validate the integrity class value
+            valid_classes = ["Excellent", "Good", "Fair", "Poor", "Very Poor"]
+            if integrity_class not in valid_classes:
+                logger.warning(f"Invalid integrity_class '{integrity_class}' for sample_id={sample_id}, setting to Unknown")
+                integrity_class = "Unknown"
+
             # Insert summary score
-            if all(col in row for col in ['total_score', 'comparison_to_reference', 'integrity_class']):
+            if all(col in row for col in ['total_score', 'comparison_to_reference']) and integrity_class != "Unknown":
                 cursor.execute('''
                     INSERT INTO fish_summary_scores
                     (event_id, total_score, comparison_to_reference, integrity_class)
@@ -333,7 +362,7 @@ def insert_metrics_data(cursor, fish_df, event_id_map):
                     event_id,
                     row['total_score'],
                     row['comparison_to_reference'],
-                    row['integrity_class']
+                    integrity_class  # Use determined integrity_class (CSV first, calculated fallback)
                 ))
                 summary_count += 1
             else:

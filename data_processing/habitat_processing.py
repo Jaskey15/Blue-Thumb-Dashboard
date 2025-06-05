@@ -37,8 +37,7 @@ def load_habitat_data(site_name=None):
             assessment_id_map = insert_habitat_assessments(cursor, habitat_df)
             
             # Insert metrics and summary scores
-            insert_habitat_metrics(cursor, habitat_df, assessment_id_map)
-            insert_habitat_summary_scores(cursor, habitat_df, assessment_id_map)
+            insert_metrics_data(cursor, habitat_df, assessment_id_map)
             
             conn.commit()
             logger.info("Habitat data loaded successfully")
@@ -207,14 +206,14 @@ def insert_habitat_assessments(cursor, habitat_df):
         logger.error(f"Error inserting habitat assessments: {e}")
         return {}
 
-def insert_habitat_metrics(cursor, habitat_df, assessment_id_map):
+def insert_metrics_data(cursor, habitat_df, assessment_id_map):
     """
-    Insert habitat metrics data into the database.
+    Insert habitat metrics and summary scores into the database.
     
     Args:
         cursor: Database cursor
         habitat_df: DataFrame with habitat data
-        assessment_id_map: Dictionary mapping sample_ids to assessment_ids
+        assessment_id_map: Dictionary mapping sample_id to assessment_id
     
     Returns:
         int: Number of metrics records inserted
@@ -242,25 +241,28 @@ def insert_habitat_metrics(cursor, habitat_df, assessment_id_map):
             logger.error("No habitat metrics columns found in data")
             return 0
             
-        # Check for required sample_id column
-        if 'sample_id' not in habitat_df.columns:
-            logger.error("Missing required column 'sample_id'")
-            return 0
-            
-        # Track metrics inserted
-        metrics_inserted = 0
+        # Track counts
+        metrics_count = 0
+        summary_count = 0
         
-        # For each assessment, insert metrics
-        for _, row in habitat_df.iterrows():
-            # Get assessment_id using sample_id
-            sample_id = row['sample_id']
-            
-            if sample_id not in assessment_id_map:
+        # For each unique sample, insert metrics and summary
+        for sample_id, sample_df in habitat_df.groupby('sample_id'):
+            # Skip if no sample_id or not in assessment_id_map
+            if pd.isna(sample_id) or sample_id not in assessment_id_map:
+                if not pd.isna(sample_id):
+                    logger.warning(f"No assessment_id found for sample_id={sample_id}")
                 continue
                 
             assessment_id = assessment_id_map[sample_id]
-                
-            # Insert each available metric
+            
+            # Clear existing data for this assessment (to handle updates)
+            cursor.execute('DELETE FROM habitat_metrics WHERE assessment_id = ?', (assessment_id,))
+            cursor.execute('DELETE FROM habitat_summary_scores WHERE assessment_id = ?', (assessment_id,))
+            
+            # Get the data (first row in case of duplicates)
+            row = sample_df.iloc[0]
+            
+            # Insert metrics for this assessment
             for metric_name in available_metrics:
                 if pd.notna(row.get(metric_name)):
                     try:
@@ -276,120 +278,69 @@ def insert_habitat_metrics(cursor, habitat_df, assessment_id_map):
                             display_name,
                             float(row[metric_name])
                         ))
-                        metrics_inserted += 1
+                        metrics_count += 1
                     except Exception as e:
                         logger.error(f"Error inserting metric {metric_name}: {e}")
-        
-        logger.info(f"Inserted {metrics_inserted} habitat metrics")
-        return metrics_inserted
-        
-    except Exception as e:
-        logger.error(f"Error inserting habitat metrics: {e}")
-        return 0
-
-def insert_habitat_summary_scores(cursor, habitat_df, assessment_id_map):
-    """
-    Insert habitat summary scores into the database.
-    
-    Args:
-        cursor: Database cursor
-        habitat_df: DataFrame with habitat data
-        assessment_id_map: Dictionary mapping sample_ids to assessment_ids
-    
-    Returns:
-        int: Number of summary records inserted
-    """
-    try:
-        # Check if required columns exist
-        required_columns = ['sample_id', 'total_score', 'habitat_grade']
-        missing_columns = [col for col in required_columns if col not in habitat_df.columns]
-        if missing_columns:
-            logger.error(f"Missing required columns: {', '.join(missing_columns)}")
-            return 0
             
-        # Check for duplicate column names - this could be causing our issue
-        duplicate_columns = habitat_df.columns[habitat_df.columns.duplicated()].tolist()
-        if duplicate_columns:
-            logger.warning(f"Duplicate column names detected: {duplicate_columns}")
+            # Determine habitat grade - use CSV value first, calculate as fallback
+            habitat_grade = "Unknown"  # Default fallback
             
-            # Create a clean DataFrame with unique column names
-            clean_df = habitat_df.copy()
-            clean_df.columns = pd.Series(clean_df.columns).map(lambda x: f"{x}_{clean_df.columns.get_loc(x)}" if x in duplicate_columns else x)
-            habitat_df = clean_df
-            
-        # Track summaries inserted
-        summaries_inserted = 0
-        
-        # Process unique sample_ids to avoid duplicates
-        unique_assessments = habitat_df.drop_duplicates(subset=['sample_id']).copy()
-        
-        # For each unique assessment, insert summary scores
-        for idx, row in unique_assessments.iterrows():
-            try:
-                # Get assessment_id using sample_id
-                sample_id = row['sample_id']
-                
-                if sample_id not in assessment_id_map:
-                    logger.warning(f"Sample ID {sample_id} not found in assessment map")
-                    continue
+            # Primary: Use pre-calculated habitat_grade from CSV
+            if 'habitat_grade' in row and pd.notna(row['habitat_grade']) and str(row['habitat_grade']).strip():
+                habitat_grade = str(row['habitat_grade']).strip()
+                logger.debug(f"Using pre-calculated habitat_grade: {habitat_grade} for sample_id={sample_id}")
+            else:
+                # Fallback: Calculate using grade cutoffs
+                if 'total_score' in row and pd.notna(row['total_score']):
+                    total_score = float(row['total_score'])
                     
-                assessment_id = assessment_id_map[sample_id]
-                
-                # Handle the total_score regardless of whether it's a Series or scalar
-                if isinstance(row['total_score'], pd.Series):
-                    # If it's a Series, take the first value
-                    logger.warning(f"total_score is a Series for sample_id {sample_id}, using first value")
-                    # Get the first numeric value
-                    total_score_values = [v for v in row['total_score'] if isinstance(v, (int, float)) or 
-                                         (isinstance(v, str) and v.replace('.', '', 1).isdigit())]
-                    if total_score_values:
-                        total_score = float(total_score_values[0])
-                        total_score = round(total_score)
+                    if total_score >= 90:
+                        habitat_grade = "A"
+                    elif total_score >= 80:
+                        habitat_grade = "B"
+                    elif total_score >= 70:
+                        habitat_grade = "C"
+                    elif total_score >= 60:
+                        habitat_grade = "D"
                     else:
-                        # Fallback to the first value and try to convert it
-                        try:
-                            total_score = float(row['total_score'].iloc[0])
-                            total_score = round(total_score)
-                        except:
-                            logger.error(f"Could not convert any total_score values to float for sample_id {sample_id}")
-                            continue
+                        habitat_grade = "F"
+                        
+                    logger.info(f"Calculated habitat_grade: {habitat_grade} (score: {total_score}) for sample_id={sample_id}")
                 else:
-                    # If it's already a scalar value
-                    try:
-                        total_score = float(row['total_score'])
-                        total_score = round(total_score)
-                    except:
-                        logger.error(f"Could not convert total_score to float for sample_id {sample_id}")
-                        continue
-                
-                # Get habitat grade
-                if isinstance(row['habitat_grade'], pd.Series):
-                    logger.warning(f"habitat_grade is a Series for sample_id {sample_id}, using first value")
-                    habitat_grade = str(row['habitat_grade'].iloc[0])
-                else:
-                    habitat_grade = str(row['habitat_grade'])
-                
-                # Insert summary scores
-                cursor.execute('''
-                    INSERT INTO habitat_summary_scores
-                    (assessment_id, total_score, habitat_grade)
-                    VALUES (?, ?, ?)
-                ''', (
-                    assessment_id,
-                    total_score,
-                    habitat_grade
-                ))
-                
-                summaries_inserted += 1
-                
-            except Exception as e:
-                logger.error(f"Error processing row at index {idx} for sample_id {sample_id if 'sample_id' in row else 'unknown'}: {e}")
+                    logger.warning(f"Cannot determine habitat grade for sample_id={sample_id} - missing both habitat_grade and total_score data")
+            
+            # Validate the habitat grade value
+            valid_grades = ["A", "B", "C", "D", "F"]
+            if habitat_grade not in valid_grades:
+                logger.warning(f"Invalid habitat_grade '{habitat_grade}' for sample_id={sample_id}, setting to Unknown")
+                habitat_grade = "Unknown"
+            
+            # Insert summary score
+            if 'total_score' in row and pd.notna(row['total_score']) and habitat_grade != "Unknown":
+                try:
+                    total_score = float(row['total_score'])
+                    total_score = round(total_score)
+                    
+                    cursor.execute('''
+                        INSERT INTO habitat_summary_scores
+                        (assessment_id, total_score, habitat_grade)
+                        VALUES (?, ?, ?)
+                    ''', (
+                        assessment_id,
+                        total_score,
+                        habitat_grade  # Use our determined habitat_grade (CSV first, calculated fallback)
+                    ))
+                    summary_count += 1
+                except Exception as e:
+                    logger.error(f"Error inserting summary score for sample_id={sample_id}: {e}")
+            else:
+                logger.warning(f"Missing required data for summary scores for sample_id={sample_id}")
         
-        logger.info(f"Inserted {summaries_inserted} habitat summary scores")
-        return summaries_inserted
+        logger.info(f"Inserted {metrics_count} habitat metrics and {summary_count} summary records")
+        return metrics_count
         
     except Exception as e:
-        logger.error(f"Error inserting habitat summary scores: {e}")
+        logger.error(f"Error inserting metrics data: {e}")
         return 0
 
 def get_habitat_dataframe(site_name=None):

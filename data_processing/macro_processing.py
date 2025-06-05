@@ -5,7 +5,6 @@ from data_processing.data_loader import load_csv_data, clean_column_names, save_
 from data_processing.biological_utils import (
     insert_collection_events,
     remove_invalid_biological_values,
-    validate_score_ranges,
     convert_columns_to_numeric
 )
 from utils import setup_logging
@@ -127,10 +126,7 @@ def process_macro_csv_data(site_name=None):
         
         # Convert score columns to numeric
         macro_df = convert_columns_to_numeric(macro_df)
-        
-        # Validate score ranges (biological scores typically 0-10 or similar)
-        macro_df = validate_score_ranges(macro_df, min_score=0, max_score=10)
-        
+            
         # Calculate total score by summing individual metric scores
         metric_score_cols = [
             'taxa_richness_score', 
