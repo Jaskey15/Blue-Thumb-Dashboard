@@ -198,6 +198,7 @@ def create_tables():
         event_id INTEGER PRIMARY KEY,
         site_id INTEGER NOT NULL,
         sample_id INTEGER,
+        collection_date TEXT NOT NULL,  
         season TEXT CHECK (season IN ('Summer', 'Winter')),
         year INTEGER NOT NULL,
         habitat TEXT CHECK (habitat IN ('Riffle', 'Vegetation', 'Woody')),

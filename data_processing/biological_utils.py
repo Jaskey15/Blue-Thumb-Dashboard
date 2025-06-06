@@ -214,11 +214,6 @@ def convert_columns_to_numeric(df, columns=None, errors='coerce'):
     Returns:
         DataFrame: DataFrame with converted columns
     """
-    logger.info("=== DEBUG: Starting convert_columns_to_numeric ===")
-    logger.info(f"DEBUG: Input DataFrame shape: {df.shape}")
-    logger.info(f"DEBUG: Input column names: {list(df.columns)}")
-    logger.info(f"DEBUG: Input column types: {[type(col) for col in df.columns]}")
-    
     if df.empty:
         return df
     
@@ -231,25 +226,17 @@ def convert_columns_to_numeric(df, columns=None, errors='coerce'):
         numeric_patterns = ['_score', '_value', 'year', 'sample_id', 'comparison_to_reference']
         columns = []
         for col in df_converted.columns:
-            logger.info(f"DEBUG: Checking column: {col} (type: {type(col)})")
             try:
                 if any(pattern in str(col).lower() for pattern in numeric_patterns):
                     columns.append(col)
-                    logger.info(f"DEBUG: Column {col} matches numeric pattern")
-                else:
-                    logger.info(f"DEBUG: Column {col} does not match any numeric pattern")
             except Exception as e:
-                logger.error(f"DEBUG: Error checking column {col}: {e}")
-    
-    logger.info(f"DEBUG: Columns selected for conversion: {columns}")
+                logger.warning(f"Error checking column {col}: {e}")
     
     # Filter to existing columns
     existing_columns = [col for col in columns if col in df_converted.columns]
-    logger.info(f"DEBUG: Existing columns for conversion: {existing_columns}")
     
     for col in existing_columns:
         try:
-            logger.info(f"DEBUG: Converting column {col} (type: {type(col)})")
             original_dtype = df_converted[col].dtype
             df_converted[col] = pd.to_numeric(df_converted[col], errors=errors)
             
@@ -262,5 +249,4 @@ def convert_columns_to_numeric(df, columns=None, errors='coerce'):
     if conversion_count > 0:
         logger.info(f"Successfully converted {conversion_count} columns to numeric type")
     
-    logger.info("=== DEBUG: Finished convert_columns_to_numeric ===")
     return df_converted

@@ -183,6 +183,7 @@ def insert_macro_collection_events(cursor, macro_df):
         column_mapping = {
             'site_id': 'site_name',  
             'sample_id': 'sample_id',
+            'collection_date': 'collection_date_str',  # Add collection_date
             'season': 'season',
             'year': 'year',
             'habitat': 'habitat'
@@ -315,7 +316,7 @@ def insert_metrics_data(cursor, macro_df, event_id_map):
         return 0
 
 def get_macroinvertebrate_dataframe():
-   """Query to get macroinvertebrate data with years and seasons"""
+   """Query to get macroinvertebrate data with collection dates, years and seasons"""
    conn = None
    try:
        conn = get_connection()
@@ -323,8 +324,10 @@ def get_macroinvertebrate_dataframe():
        SELECT 
            m.event_id,
            s.site_name,
+           e.collection_date,
            e.year,
            e.season,
+           e.habitat,
            m.total_score,
            m.comparison_to_reference,
            m.biological_condition
@@ -335,9 +338,13 @@ def get_macroinvertebrate_dataframe():
        JOIN 
            sites s ON e.site_id = s.site_id
        ORDER BY 
-           e.season, e.year
+           s.site_name, e.collection_date
        '''
        macro_df = pd.read_sql_query(macro_query, conn)
+       
+       # Convert collection_date to datetime for better handling
+       if 'collection_date' in macro_df.columns:
+           macro_df['collection_date'] = pd.to_datetime(macro_df['collection_date'])
        
        # Validation of the dataframe
        if macro_df.empty:
@@ -380,8 +387,10 @@ def get_macro_metrics_data_for_table(site_name=None):
         SELECT 
             s.site_name,
             e.event_id,
+            e.collection_date,
             e.year,
             e.season,
+            e.habitat,
             m.metric_name,
             m.raw_value,
             m.metric_score
@@ -398,8 +407,10 @@ def get_macro_metrics_data_for_table(site_name=None):
         SELECT 
             s.site_name,
             e.event_id,
+            e.collection_date,
             e.year,
             e.season,
+            e.habitat,
             s.total_score,
             s.comparison_to_reference,
             s.biological_condition
@@ -421,12 +432,18 @@ def get_macro_metrics_data_for_table(site_name=None):
             params.append(site_name)
         
         # Add order by clause
-        metrics_query += ' ORDER BY s.site_name, e.season, e.year, m.metric_name'
-        summary_query += ' ORDER BY st.site_name, e.season, e.year'
+        metrics_query += ' ORDER BY s.site_name, e.collection_date, e.season, m.metric_name'
+        summary_query += ' ORDER BY st.site_name, e.collection_date, e.season'
         
         # Execute queries
         metrics_df = pd.read_sql_query(metrics_query, conn, params=params)
         summary_df = pd.read_sql_query(summary_query, conn, params=params)
+        
+        # Convert collection_date to datetime
+        if 'collection_date' in metrics_df.columns:
+            metrics_df['collection_date'] = pd.to_datetime(metrics_df['collection_date'])
+        if 'collection_date' in summary_df.columns:
+            summary_df['collection_date'] = pd.to_datetime(summary_df['collection_date'])
         
         logger.debug(f"Retrieved macro metrics data: {len(metrics_df)} metric records and {summary_df.shape[0]} summary records")
         
