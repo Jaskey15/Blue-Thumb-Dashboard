@@ -7,6 +7,166 @@ from utils import setup_logging
 # Set up component-specific logging
 logger = setup_logging("habitat_processing", category="processing")
 
+def resolve_habitat_duplicates(habitat_df):
+    """
+    Resolve habitat duplicate assessments by averaging all numeric metrics and scores.
+    
+    Args:
+        habitat_df: DataFrame with habitat data (after column mapping)
+        
+    Returns:
+        DataFrame with duplicates resolved through averaging
+    """
+    try:
+        # Define columns to average (after column mapping)
+        metric_columns = [
+            'instream_cover',
+            'pool_bottom_substrate', 
+            'pool_variability',
+            'canopy_cover',
+            'rocky_runs_riffles',
+            'flow',
+            'channel_alteration',
+            'channel_sinuosity',
+            'bank_stability',
+            'bank_vegetation_stability',
+            'streamside_cover'
+        ]
+        
+        # Filter to only columns that exist in the DataFrame
+        existing_metric_columns = [col for col in metric_columns if col in habitat_df.columns]
+        
+        if not existing_metric_columns and 'total_score' not in habitat_df.columns:
+            logger.warning("No habitat metric columns found for averaging")
+            return habitat_df
+        
+        # Group by site and date to find duplicates
+        grouped = habitat_df.groupby(['site_name', 'assessment_date'])
+        
+        # Separate duplicates from unique records
+        duplicate_groups = []
+        unique_records = []
+        
+        for (site_name, date_str), group in grouped:
+            if len(group) > 1:
+                duplicate_groups.append((site_name, date_str, group))
+            else:
+                unique_records.append(group)
+        
+        if not duplicate_groups:
+            logger.info("No habitat duplicate groups found")
+            return habitat_df
+        
+        logger.info(f"Found {len(duplicate_groups)} habitat duplicate groups to resolve")
+        
+        # Process each duplicate group
+        averaged_records = []
+        
+        for site_name, date_str, group in duplicate_groups:
+            # Convert date for logging (handle both string and datetime)
+            if isinstance(date_str, str):
+                date_for_logging = date_str
+            else:
+                date_for_logging = date_str.strftime('%Y-%m-%d') if pd.notna(date_str) else 'Unknown'
+                
+            logger.info(f"Averaging {len(group)} records for {site_name} on {date_for_logging}")
+            
+            # Calculate averages for specified columns
+            averaged_record = group.iloc[0].copy()  # Start with first record as template
+            
+            # Track original values for logging
+            original_total_scores = []
+            
+            # Average individual metrics (round to 1 decimal place)
+            for col in existing_metric_columns:
+                values = group[col].dropna()
+                
+                if len(values) > 0:
+                    avg_value = values.mean()
+                    averaged_record[col] = round(avg_value, 1)
+                else:
+                    averaged_record[col] = None
+            
+            # Average total score (round to nearest integer)
+            if 'total_score' in habitat_df.columns:
+                total_values = group['total_score'].dropna()
+                
+                if len(total_values) > 0:
+                    avg_total = total_values.mean()
+                    averaged_record['total_score'] = round(avg_total)
+                    original_total_scores = total_values.tolist()
+                else:
+                    averaged_record['total_score'] = None
+            
+            # Calculate new habitat grade based on averaged total score (1-100 scale)
+            if pd.notna(averaged_record['total_score']):
+                averaged_record['habitat_grade'] = calculate_habitat_grade(averaged_record['total_score'])
+            else:
+                averaged_record['habitat_grade'] = "Unknown"
+            
+            # Log the averaging details
+            if original_total_scores:
+                original_scores_str = ', '.join([f"{score:.1f}" for score in original_total_scores])
+                logger.info(f"  {site_name} ({date_for_logging}): Total scores [{original_scores_str}] → "
+                           f"{averaged_record['total_score']} (Grade: {averaged_record['habitat_grade']})")
+            
+            averaged_records.append(averaged_record)
+        
+        # Combine unique records with averaged records
+        if unique_records:
+            unique_df = pd.concat(unique_records, ignore_index=True)
+        else:
+            unique_df = pd.DataFrame()
+        
+        if averaged_records:
+            averaged_df = pd.DataFrame(averaged_records)
+            if not unique_df.empty:
+                result_df = pd.concat([unique_df, averaged_df], ignore_index=True)
+            else:
+                result_df = averaged_df
+        else:
+            result_df = unique_df
+        
+        # Log summary
+        original_count = len(habitat_df)
+        final_count = len(result_df)
+        duplicates_resolved = original_count - final_count
+        
+        logger.info(f"Habitat duplicate resolution complete:")
+        logger.info(f"  - Original records: {original_count}")
+        logger.info(f"  - Final records: {final_count}")
+        logger.info(f"  - Duplicates resolved: {duplicates_resolved}")
+        
+        return result_df
+        
+    except Exception as e:
+        logger.error(f"Error resolving habitat duplicates: {e}")
+        return habitat_df
+
+def calculate_habitat_grade(total_score):
+    """
+    Calculate habitat grade based on total score (1-100 scale).
+    
+    Args:
+        total_score: Numeric total score (1-100 scale)
+        
+    Returns:
+        str: Letter grade (A, B, C, D, F)
+    """
+    if pd.isna(total_score):
+        return "Unknown"
+    
+    if total_score > 90:
+        return "A"
+    elif total_score >= 80:
+        return "B"
+    elif total_score >= 70:
+        return "C"
+    elif total_score >= 60:
+        return "D"
+    else:
+        return "F"
+
 def load_habitat_data(site_name=None):
     """
     Load habitat data from CSV into the database.
@@ -111,6 +271,9 @@ def process_habitat_csv_data(site_name=None):
                 valid_mapping[matching_cols[0]] = v
                 
         habitat_df = habitat_df.rename(columns=valid_mapping)
+        
+        # RESOLVE DUPLICATES - NEW STEP
+        habitat_df = resolve_habitat_duplicates(habitat_df)
         
         # Filter by site name if provided
         if site_name:
@@ -269,6 +432,9 @@ def insert_metrics_data(cursor, habitat_df, assessment_id_map):
                         # Format metric name for display
                         display_name = metric_name.replace('_', ' ').title()
                         
+                        # Round individual metrics to 1 decimal place for database storage
+                        metric_value = round(float(row[metric_name]), 1)
+                        
                         cursor.execute('''
                             INSERT INTO habitat_metrics 
                             (assessment_id, metric_name, score)
@@ -276,38 +442,14 @@ def insert_metrics_data(cursor, habitat_df, assessment_id_map):
                         ''', (
                             assessment_id,
                             display_name,
-                            float(row[metric_name])
+                            metric_value
                         ))
                         metrics_count += 1
                     except Exception as e:
                         logger.error(f"Error inserting metric {metric_name}: {e}")
             
-            # Determine habitat grade - use CSV value first, calculate as fallback
-            habitat_grade = "Unknown"  # Default fallback
-            
-            # Primary: Use pre-calculated habitat_grade from CSV
-            if 'habitat_grade' in row and pd.notna(row['habitat_grade']) and str(row['habitat_grade']).strip():
-                habitat_grade = str(row['habitat_grade']).strip()
-                logger.debug(f"Using pre-calculated habitat_grade: {habitat_grade} for sample_id={sample_id}")
-            else:
-                # Fallback: Calculate using grade cutoffs
-                if 'total_score' in row and pd.notna(row['total_score']):
-                    total_score = float(row['total_score'])
-                    
-                    if total_score >= 90:
-                        habitat_grade = "A"
-                    elif total_score >= 80:
-                        habitat_grade = "B"
-                    elif total_score >= 70:
-                        habitat_grade = "C"
-                    elif total_score >= 60:
-                        habitat_grade = "D"
-                    else:
-                        habitat_grade = "F"
-                        
-                    logger.info(f"Calculated habitat_grade: {habitat_grade} (score: {total_score}) for sample_id={sample_id}")
-                else:
-                    logger.warning(f"Cannot determine habitat grade for sample_id={sample_id} - missing both habitat_grade and total_score data")
+            # Use the habitat grade from our duplicate resolution (which may be newly calculated)
+            habitat_grade = row.get('habitat_grade', "Unknown")
             
             # Validate the habitat grade value
             valid_grades = ["A", "B", "C", "D", "F"]
@@ -318,8 +460,8 @@ def insert_metrics_data(cursor, habitat_df, assessment_id_map):
             # Insert summary score
             if 'total_score' in row and pd.notna(row['total_score']) and habitat_grade != "Unknown":
                 try:
-                    total_score = float(row['total_score'])
-                    total_score = round(total_score)
+                    # Round total score to nearest integer for database storage
+                    total_score = round(float(row['total_score']))
                     
                     cursor.execute('''
                         INSERT INTO habitat_summary_scores
@@ -328,7 +470,7 @@ def insert_metrics_data(cursor, habitat_df, assessment_id_map):
                     ''', (
                         assessment_id,
                         total_score,
-                        habitat_grade  # Use our determined habitat_grade (CSV first, calculated fallback)
+                        habitat_grade
                     ))
                     summary_count += 1
                 except Exception as e:

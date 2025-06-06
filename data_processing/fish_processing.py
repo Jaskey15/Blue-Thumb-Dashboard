@@ -96,7 +96,7 @@ def find_bt_site_match(db_site_name, bt_sites, threshold=0.9):
 
 def categorize_and_process_duplicates(fish_df, bt_df):
     """
-    NEW FUNCTION: Categorize duplicates as replicates vs true duplicates and process accordingly.
+    Categorize duplicates as replicates vs true duplicates and process accordingly.
     
     Args:
         fish_df: DataFrame with fish data
