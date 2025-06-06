@@ -52,28 +52,36 @@ class TestScoreAveraging(unittest.TestCase):
             'integrity_class': ['Good', 'Good', 'Fair', 'Poor', 'Fair', 'Good']
         })
         
-        # Sample BT field work data for testing
+        # FIXED: Sample BT field work data with proper REP structure
         self.sample_bt_data = pd.DataFrame({
-            'Name': ['Blue Creek at Highway 9', 'Red River at Bridge', 'Some Other Site'],
-            'Date': ['5/15/2023', '7/10/2023, 7/12/2023', '6/1/2023'],
-            'M/F/H': ['M', 'M, REP', 'M'],
-            'Date_Clean': [datetime(2023, 5, 15), datetime(2023, 7, 10), datetime(2023, 6, 1)],
-            'Site_Clean': ['Blue Creek at Highway 9', 'Red River at Bridge', 'Some Other Site'],
-            'Year': [2023, 2023, 2023],
-            'Is_REP': [False, True, False]
+            'Name': [
+                'Blue Creek at Highway 9',      # Original collection
+                'Red River at Bridge',          # Original collection  
+                'Red River at Bridge',          # REP collection (same site/year)
+                'Some Other Site'
+            ],
+            'Date': [
+                '5/15/2023',
+                '7/10/2023', 
+                '7/12/2023',                    # Different date for REP
+                '6/1/2023'
+            ],
+            'M/F/H': ['M', 'M', 'REP', 'M'],
+            'Date_Clean': [
+                datetime(2023, 5, 15),
+                datetime(2023, 7, 10),
+                datetime(2023, 7, 12),          # Different date for REP
+                datetime(2023, 6, 1)
+            ],
+            'Site_Clean': [
+                'Blue Creek at Highway 9',
+                'Red River at Bridge', 
+                'Red River at Bridge',          # Same site as above
+                'Some Other Site'
+            ],
+            'Year': [2023, 2023, 2023, 2023],
+            'Is_REP': [False, False, True, False]  # Only the REP collection is True
         })
-        
-        # Add the REP date as a separate row
-        rep_row = pd.DataFrame({
-            'Name': ['Red River at Bridge'],
-            'Date': ['7/12/2023'],
-            'M/F/H': ['REP'],
-            'Date_Clean': [datetime(2023, 7, 12)],
-            'Site_Clean': ['Red River at Bridge'],
-            'Year': [2023],
-            'Is_REP': [True]
-        })
-        self.sample_bt_data = pd.concat([self.sample_bt_data, rep_row], ignore_index=True)
 
     def test_load_bt_field_work_dates_file_exists(self):
         """Test loading BT field work dates when file exists."""
@@ -198,20 +206,17 @@ Red River at Bridge,7/12/2023,REP"""
 
     def test_categorize_and_process_duplicates_with_rep_data(self):
         """Test duplicate processing when REP data is available."""
-        # Mock the BT data to have REP information for Red River
         bt_data_with_rep = self.sample_bt_data.copy()
         
         result = categorize_and_process_duplicates(self.sample_fish_data, bt_data_with_rep)
         
-        # Should process Red River as replicates (keep both samples with different dates)
-        # and Blue Creek as duplicates (average them)
         red_river_samples = result[result['site_name'] == 'Red River at Bridge']
         blue_creek_samples = result[result['site_name'] == 'Blue Creek at Highway 9']
         
         # Red River should have 2 samples (replicates with different dates)
         self.assertEqual(len(red_river_samples), 2)
         
-        # Blue Creek should have 1 sample (duplicates averaged)
+        # Blue Creek should have 1 sample (duplicates averaged - no REP data)
         self.assertEqual(len(blue_creek_samples), 1)
 
     def test_categorize_and_process_duplicates_year_buffer(self):
@@ -267,7 +272,6 @@ Red River at Bridge,7/12/2023,REP"""
 
     def test_integration_full_pipeline(self):
         """Integration test for the full duplicate processing pipeline."""
-        # Test the complete flow from raw data to processed results
         original_count = len(self.sample_fish_data)
         
         # Process with BT data
@@ -280,8 +284,11 @@ Red River at Bridge,7/12/2023,REP"""
         self.assertLess(len(result_with_bt), original_count)
         self.assertLess(len(result_without_bt), original_count)
         
-        # Results should be different between the two approaches
-        self.assertNotEqual(len(result_with_bt), len(result_without_bt))
+        # FIXED: With proper REP data, results should be different
+        # With BT: Red River keeps 2 records, Blue Creek averages to 1 = 5 total
+        # Without BT: Both average to 1 each = 4 total
+        self.assertEqual(len(result_with_bt), 5)  # 2 Red River + 1 Blue Creek + 2 others
+        self.assertEqual(len(result_without_bt), 4)  # All duplicates averaged
 
     def test_edge_case_empty_input(self):
         """Test behavior with empty input data."""

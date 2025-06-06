@@ -265,6 +265,10 @@ def average_all_duplicates(fish_df):
     FALLBACK FUNCTION: Average all duplicate records (original behavior).
     Used when no BT data is available.
     """
+    if fish_df.empty:
+        logger.info("No fish data to process")
+        return fish_df
+    
     # Find duplicate groups (same site and year)
     duplicate_groups = fish_df.groupby(['site_name', 'year']).filter(lambda x: len(x) > 1)
     
