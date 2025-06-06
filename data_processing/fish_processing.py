@@ -1,7 +1,9 @@
 import pandas as pd
 import sqlite3
+import difflib
+import os
 from database.database import get_connection, close_connection
-from data_processing.data_loader import load_csv_data, clean_column_names, save_processed_data
+from data_processing.data_loader import load_csv_data, clean_column_names, save_processed_data, clean_site_name
 from data_processing.biological_utils import (
     insert_collection_events,
     remove_invalid_biological_values,
@@ -10,6 +12,194 @@ from data_processing.biological_utils import (
 from utils import setup_logging
 
 logger = setup_logging("fish_processing", category="processing")
+
+def load_bt_field_work_dates():
+    """
+    Load and process BT field work dates for fish collection validation.
+    
+    Returns:
+        DataFrame with cleaned BT field work data
+    """
+    try:
+        # Load the BT field work CSV
+        bt_path = os.path.join(
+            os.path.dirname(os.path.dirname(__file__)), 
+            'data', 'raw', 'BT_fish_collection_dates.csv'
+        )
+        
+        if not os.path.exists(bt_path):
+            logger.info("BT_fish_collection_dates.csv not found - skipping BT validation")
+            return pd.DataFrame()
+        
+        bt_df = pd.read_csv(bt_path)
+        logger.info(f"Loaded {len(bt_df)} BT field work records for date validation")
+        
+        # Clean and process the data
+        bt_df['Date_Clean'] = pd.to_datetime(bt_df['Date'], errors='coerce')
+        bt_df = bt_df.dropna(subset=['Date_Clean'])
+        
+        # Clean site names using same function as rest of pipeline
+        bt_df['Site_Clean'] = bt_df['Name'].apply(clean_site_name)
+        
+        # Add year for matching
+        bt_df['Year'] = bt_df['Date_Clean'].dt.year
+        
+        logger.info(f"Processed {len(bt_df)} valid BT field work records")
+        return bt_df
+        
+    except Exception as e:
+        logger.warning(f"Could not load BT field work dates: {e}")
+        return pd.DataFrame()
+
+def find_bt_site_match(db_site_name, bt_sites, threshold=0.9):
+    """
+    Find the best matching BT site name for a database site name.
+    
+    Args:
+        db_site_name: Site name from database
+        bt_sites: Set of cleaned BT site names
+        threshold: Similarity threshold for fuzzy matching
+        
+    Returns:
+        Best matching BT site name or None if no good match
+    """
+    # Try exact match first
+    if db_site_name in bt_sites:
+        return db_site_name
+    
+    # Try fuzzy matching
+    best_match = None
+    best_score = 0
+    
+    for bt_site in bt_sites:
+        score = difflib.SequenceMatcher(None, db_site_name.lower(), bt_site.lower()).ratio()
+        if score > threshold and score > best_score:
+            best_score = score
+            best_match = bt_site
+    
+    if best_match:
+        logger.debug(f"Fuzzy match ({best_score:.3f}): '{db_site_name}' → '{best_match}'")
+        return best_match
+    else:
+        return None
+
+def validate_and_correct_dates(fish_df, bt_df):
+    """
+    Validate and correct fish collection dates using BT field work data.
+    Sites without BT matches will keep their original dates and continue processing.
+    
+    Args:
+        fish_df: DataFrame with fish data
+        bt_df: DataFrame with BT field work data
+        
+    Returns:
+        DataFrame with corrected dates (ALL records preserved)
+    """
+    if bt_df.empty:
+        logger.info("No BT field work data available - all sites will keep original dates")
+        return fish_df
+    
+    fish_corrected = fish_df.copy()
+    bt_sites = set(bt_df['Site_Clean'].unique())
+    
+    # Track corrections
+    corrections_made = 0
+    no_bt_match = 0
+    multiple_bt_dates = 0
+    
+    logger.info(f"Starting BT validation for {len(fish_corrected)} fish records")
+    
+    # Process each fish record
+    for idx, row in fish_corrected.iterrows():
+        db_site = row['site_name']
+        db_year = row['year']
+        
+        # Find matching BT site
+        bt_site_match = find_bt_site_match(db_site, bt_sites)
+        
+        if not bt_site_match:
+            no_bt_match += 1
+            continue  # Keep original date, continue processing
+        
+        # Find BT records for this site and year
+        bt_matches = bt_df[
+            (bt_df['Site_Clean'] == bt_site_match) & 
+            (bt_df['Year'] == db_year)
+        ]
+        
+        if bt_matches.empty:
+            continue  # Keep original date
+        
+        # Handle multiple BT dates for same site/year
+        if len(bt_matches) > 1:
+            multiple_bt_dates += 1
+            latest_bt_record = bt_matches.loc[bt_matches['Date_Clean'].idxmax()]
+            bt_date = latest_bt_record['Date_Clean']
+        else:
+            bt_date = bt_matches.iloc[0]['Date_Clean']
+        
+        # Update the date if different
+        original_date = row['collection_date']
+        if pd.isna(original_date) or pd.to_datetime(original_date).date() != bt_date.date():
+            fish_corrected.at[idx, 'collection_date'] = bt_date
+            fish_corrected.at[idx, 'collection_date_str'] = bt_date.strftime('%Y-%m-%d')
+            corrections_made += 1
+    
+    logger.info(f"BT validation summary: {corrections_made} dates corrected, {no_bt_match} sites without BT match")
+    logger.info(f"✓ All {len(fish_corrected)} records preserved through BT validation")
+    
+    return fish_corrected
+
+def identify_and_average_duplicates(df):
+    """
+    Identify and average duplicate fish records (same site, same date).
+    This handles REP (repeat) collections by averaging comparison_to_reference scores.
+    """
+    # Find duplicate groups (same site and date)
+    duplicate_groups = df.groupby(['site_name', 'collection_date']).filter(lambda x: len(x) > 1)
+    
+    if duplicate_groups.empty:
+        logger.info("No duplicate records found")
+        return df
+    
+    logger.info(f"Found {len(duplicate_groups)} records that are duplicates")
+    
+    # Get unique records (not duplicates)
+    unique_records = df.groupby(['site_name', 'collection_date']).filter(lambda x: len(x) == 1)
+    
+    # Process each duplicate group
+    averaged_records = []
+    
+    for (site_name, date), group in duplicate_groups.groupby(['site_name', 'collection_date']):
+        logger.debug(f"Averaging {len(group)} records for {site_name} on {date}")
+        
+        # Average the comparison_to_reference values
+        comparison_values = group['comparison_to_reference'].dropna().tolist()
+        if comparison_values:
+            avg_comparison = sum(comparison_values) / len(comparison_values)
+        else:
+            avg_comparison = None
+        
+        # Use the first record as the base and update key values
+        averaged_row = group.iloc[0].copy()
+        averaged_row['comparison_to_reference'] = avg_comparison
+        
+        # Set individual metric scores to NULL since averaging 1,3,5 scale scores doesn't make sense
+        score_columns = [col for col in averaged_row.index if 'score' in str(col).lower() and col != 'comparison_to_reference']
+        for col in score_columns:
+            averaged_row[col] = None
+        
+        averaged_records.append(averaged_row)
+    
+    # Combine unique records with averaged duplicates
+    if averaged_records:
+        averaged_df = pd.DataFrame(averaged_records)
+        result_df = pd.concat([unique_records, averaged_df], ignore_index=True)
+    else:
+        result_df = unique_records
+    
+    logger.info(f"Duplicate averaging complete: {len(df)} → {len(result_df)} records")
+    return result_df
 
 def load_fish_data(site_name=None):
     """
@@ -34,7 +224,7 @@ def load_fish_data(site_name=None):
             fish_df = process_fish_csv_data(site_name)
             
             if fish_df.empty:
-                logger.warning(f"No fish data found for processing.")
+                logger.warning("No fish data found for processing.")
                 return pd.DataFrame()
                 
             # Insert collection events using shared utility
@@ -67,7 +257,7 @@ def load_fish_data(site_name=None):
 
 def process_fish_csv_data(site_name=None):
     """
-    Process fish data from cleaned CSV file.
+    Process fish data from cleaned CSV file with BT field work validation.
     
     Args:
         site_name: Optional site name to filter data for
@@ -76,6 +266,8 @@ def process_fish_csv_data(site_name=None):
         DataFrame with processed fish data
     """
     try:
+        logger.info("Starting fish data processing with BT validation")
+        
         # Load raw fish data from CLEANED CSV
         fish_df = load_csv_data('fish', parse_dates=['Date'])
         
@@ -83,7 +275,7 @@ def process_fish_csv_data(site_name=None):
             logger.error("Failed to load fish data from cleaned CSV.")
             return pd.DataFrame()
         
-        # Clean column names for consistency 
+        # Clean column names
         fish_df = clean_column_names(fish_df)
         
         # Map to standardized column names
@@ -111,7 +303,7 @@ def process_fish_csv_data(site_name=None):
             'fishscore': 'integrity_class'
         }
         
-        # Create a mapping with only columns that exist in the dataframe
+        # Apply column mapping
         valid_mapping = {}
         for k, v in column_mapping.items():
             matching_cols = [col for col in fish_df.columns if col.lower() == k.lower()]
@@ -133,18 +325,21 @@ def process_fish_csv_data(site_name=None):
             except Exception as e:
                 logger.error(f"Error processing dates: {e}")
         
-        # Use shared biological utilities for data cleaning
-        # Remove invalid values (-999, -99)
+        # BT Field Work Validation
+        bt_df = load_bt_field_work_dates()
+        fish_df = validate_and_correct_dates(fish_df, bt_df)
+        
+        # Identify and average duplicates
+        fish_df = identify_and_average_duplicates(fish_df)
+        
+        # Continue with standard processing
         fish_df = remove_invalid_biological_values(fish_df, invalid_values=[-999, -99])
-        
-        # Convert score columns to numeric
         fish_df = convert_columns_to_numeric(fish_df)
-        
-        # Validate IBI scores (check if total_score matches sum of component scores)
         fish_df = validate_ibi_scores(fish_df)
         
         save_processed_data(fish_df, 'fish_data')
 
+        logger.info(f"Fish processing complete: {len(fish_df)} final records")
         return fish_df
         
     except Exception as e:
@@ -162,7 +357,6 @@ def validate_ibi_scores(fish_df):
         DataFrame with validated data
     """
     try:
-        # Create a copy to avoid SettingWithCopyWarning
         df = fish_df.copy()
         
         # Calculate sum of component scores
@@ -187,26 +381,19 @@ def validate_ibi_scores(fish_df):
             
             if not mismatches.empty:
                 logger.warning(f"Found {len(mismatches)} records where total_score doesn't match sum of components.")
-                # Log some examples
-                for idx, row in mismatches.head(5).iterrows():
-                    logger.warning(f"Score mismatch at sample {row.get('sample_id')}: "
-                                  f"total_score={row.get('total_score')}, "
-                                  f"Sum of components={row.get('calculated_score')}")
-                
-                # Flag records with mismatches
                 df['score_validated'] = ~mismatch_mask
             else:
                 logger.info("All total_score values match sum of components.")
                 df['score_validated'] = True
             
-            # Drop the calculated column as we don't need it anymore
+            # Drop the calculated column
             df = df.drop(columns=['calculated_score'])
         
         return df
     
     except Exception as e:
         logger.error(f"Error validating IBI scores: {e}")
-        return fish_df  # Return original dataframe if validation fails
+        return fish_df
 
 def insert_fish_collection_events(cursor, fish_df):
     """
@@ -300,7 +487,7 @@ def insert_metrics_data(cursor, fish_df, event_id_map):
             # Get the data (first row in case of duplicates)
             row = sample_df.iloc[0]
             
-            # Insert metrics for this event
+            # Insert metrics for this event (only if scores are not None)
             for metric_name, raw_col, score_col in available_metrics:
                 if pd.notna(row.get(raw_col)) and pd.notna(row.get(score_col)):
                     # For proportion metrics, use raw value as result
@@ -320,12 +507,11 @@ def insert_metrics_data(cursor, fish_df, event_id_map):
                     metrics_count += 1
             
             # Determine integrity class - use CSV value first, calculate as fallback
-            integrity_class = "Unknown"  # Default fallback
+            integrity_class = "Unknown"
 
             # Primary: Use pre-calculated integrity_class from CSV
             if 'integrity_class' in row and pd.notna(row['integrity_class']) and str(row['integrity_class']).strip():
                 integrity_class = str(row['integrity_class']).strip()
-                logger.debug(f"Using pre-calculated integrity_class: {integrity_class} for sample_id={sample_id}")
             else:
                 # Fallback: Calculate using simplified cutoffs
                 if 'comparison_to_reference' in row and pd.notna(row['comparison_to_reference']):
@@ -341,10 +527,6 @@ def insert_metrics_data(cursor, fish_df, event_id_map):
                         integrity_class = "Poor"
                     else:
                         integrity_class = "Very Poor"
-                        
-                    logger.info(f"Calculated integrity_class: {integrity_class} (score: {comparison_value}%) for sample_id={sample_id}")
-                else:
-                    logger.warning(f"Cannot determine integrity class for sample_id={sample_id} - missing both integrity_class and comparison_to_reference data")
 
             # Validate the integrity class value
             valid_classes = ["Excellent", "Good", "Fair", "Poor", "Very Poor"]
@@ -362,7 +544,7 @@ def insert_metrics_data(cursor, fish_df, event_id_map):
                     event_id,
                     row['total_score'],
                     row['comparison_to_reference'],
-                    integrity_class  # Use determined integrity_class (CSV first, calculated fallback)
+                    integrity_class
                 ))
                 summary_count += 1
             else:
@@ -418,7 +600,6 @@ def get_fish_dataframe(site_name=None):
         # Execute query
         fish_df = pd.read_sql_query(fish_query, conn, params=params)
         
-        # Validation of the dataframe
         if fish_df.empty:
             if site_name:
                 logger.warning(f"No fish data found for site: {site_name}")
@@ -426,11 +607,6 @@ def get_fish_dataframe(site_name=None):
                 logger.warning("No fish data found in the database")
         else: 
             logger.info(f"Retrieved {len(fish_df)} fish collection records")
-
-            # Check for missing values
-            missing_values = fish_df.isnull().sum().sum()
-            if missing_values > 0:
-                logger.warning(f"Found {missing_values} missing values in the fish data")
     
         return fish_df
     except sqlite3.Error as e:
@@ -551,12 +727,12 @@ def get_sites_with_fish_data():
             close_connection(conn)
 
 if __name__ == "__main__":
-    # Skip verification, just try to load and see what happens
+    # Test loading fish data
     fish_df = load_fish_data()
     if not fish_df.empty:
         logger.info("Fish data summary:")
         logger.info(f"Number of records: {len(fish_df)}")
         sites = get_sites_with_fish_data()
-        logger.info(f"Sites with fish data: {', '.join(sites)}")
+        logger.info(f"Sites with fish data: {', '.join(sites[:10])}")  # Show first 10 sites
     else:
         logger.error("No fish data loaded. Check database setup.")
