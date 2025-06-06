@@ -119,6 +119,9 @@ def determine_preferred_site(group, updated_chemical_sites, chemical_data_sites)
     
     Returns: (preferred_site_row, sites_to_merge_list, reason)
     """
+    if group.empty:
+        return None, [], "Empty group"
+    
     sites_in_updated = group[group['site_name'].isin(updated_chemical_sites)]
     sites_in_chemical = group[group['site_name'].isin(chemical_data_sites)]
     
