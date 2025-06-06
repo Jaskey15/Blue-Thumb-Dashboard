@@ -236,15 +236,25 @@ class TestChemicalProcessing(unittest.TestCase):
         self.assertEqual(result_df.loc[0, 'do_percent'], 95.5)
         self.assertEqual(result_df.loc[0, 'pH'], 7.2)
 
-    @patch('data_processing.chemical_processing.pd.read_csv')
+    @patch('data_processing.chemical_processing.save_processed_data')
     @patch('data_processing.chemical_processing.os.path.exists')
-    def test_process_chemical_data_from_csv_basic(self, mock_exists, mock_read_csv):
+    @patch('data_processing.chemical_processing.pd.read_csv')
+    def test_process_chemical_data_from_csv_basic(self, mock_read_csv, mock_exists, mock_save_data):
         """Test basic CSV processing functionality."""
-        # Mock file existence and CSV loading
+        # Mock file existence
         mock_exists.return_value = True
+        
+        # Mock CSV reading
         mock_read_csv.return_value = self.sample_chemical_data
         
+        # Mock save to prevent file writes
+        mock_save_data.return_value = True
+        
         result_df, key_params, ref_values = process_chemical_data_from_csv()
+        
+        # Verify mocks were called
+        mock_read_csv.assert_called_once()
+        mock_save_data.assert_called_once()
         
         # Check that data was processed
         self.assertFalse(result_df.empty)
@@ -265,20 +275,34 @@ class TestChemicalProcessing(unittest.TestCase):
         # Check that reference values were returned
         self.assertIsInstance(ref_values, dict)
 
-    @patch('data_processing.chemical_processing.pd.read_csv')
+    @patch('data_processing.chemical_processing.save_processed_data')
     @patch('data_processing.chemical_processing.os.path.exists')
-    def test_process_chemical_data_site_filter(self, mock_exists, mock_read_csv):
+    @patch('data_processing.chemical_processing.pd.read_csv')
+    def test_process_chemical_data_site_filter(self, mock_read_csv, mock_exists, mock_save_data):
         """Test CSV processing with site name filter."""
+        # Mock file existence
         mock_exists.return_value = True
+        
+        # Mock CSV reading
         mock_read_csv.return_value = self.sample_chemical_data
         
+        # Mock save to prevent file writes
+        mock_save_data.return_value = True
+        
         result_df, _, _ = process_chemical_data_from_csv(site_name='Blue Creek at Highway 9')
+        
+        # Verify mocks were called
+        mock_read_csv.assert_called_once()
+        mock_save_data.assert_called_once()
         
         # Should only have one site's data
         self.assertEqual(len(result_df), 1)
         self.assertEqual(result_df.iloc[0]['Site_Name'], 'Blue Creek at Highway 9')
 
-    def test_integration_full_pipeline(self):
+    @patch('data_processing.chemical_processing.save_processed_data')
+    @patch('data_processing.chemical_processing.os.path.exists')
+    @patch('data_processing.chemical_processing.pd.read_csv')
+    def test_integration_full_pipeline(self, mock_read_csv, mock_exists, mock_save_data):
         """Integration test for the full chemical processing pipeline."""
         # Create comprehensive test data
         test_data = pd.DataFrame({
@@ -293,27 +317,35 @@ class TestChemicalProcessing(unittest.TestCase):
             'Chloride.Final.1': [25.0, 300.0]  # Second exceeds threshold
         })
         
-        with patch('data_processing.chemical_processing.pd.read_csv') as mock_read_csv:
-            with patch('data_processing.chemical_processing.os.path.exists') as mock_exists:
-                mock_exists.return_value = True
-                mock_read_csv.return_value = test_data
-            
-            result_df, key_params, ref_values = process_chemical_data_from_csv()
-            
-            # Verify processing steps occurred
-            self.assertFalse(result_df.empty)
-            self.assertEqual(len(result_df), 2)
-            
-            # Check BDL conversion occurred
-            # First site should have Nitrate converted from 0 to BDL value (0.3)
-            self.assertEqual(result_df.iloc[0]['Nitrate'], 0.3)
-            
-            # Check soluble nitrogen calculation
-            self.assertIn('soluble_nitrogen', result_df.columns)
-            
-            # Verify all sites processed
-            sites = result_df['Site_Name'].unique()
-            self.assertEqual(len(sites), 2)
+        # Mock file existence
+        mock_exists.return_value = True
+        
+        # Mock CSV reading
+        mock_read_csv.return_value = test_data
+        
+        # Mock save to prevent file writes
+        mock_save_data.return_value = True
+        
+        result_df, key_params, ref_values = process_chemical_data_from_csv()
+        
+        # Verify mocks were called
+        mock_read_csv.assert_called_once()
+        mock_save_data.assert_called_once()
+        
+        # Verify processing steps occurred
+        self.assertFalse(result_df.empty)
+        self.assertEqual(len(result_df), 2)
+        
+        # Check BDL conversion occurred
+        # First site should have Nitrate converted from 0 to BDL value (0.3)
+        self.assertEqual(result_df.iloc[0]['Nitrate'], 0.3)
+        
+        # Check soluble nitrogen calculation
+        self.assertIn('soluble_nitrogen', result_df.columns)
+        
+        # Verify all sites processed
+        sites = result_df['Site_Name'].unique()
+        self.assertEqual(len(sites), 2)
 
     def test_edge_case_empty_data(self):
         """Test behavior with empty input data."""
@@ -343,7 +375,6 @@ class TestChemicalProcessing(unittest.TestCase):
         
         # Soluble nitrogen should be calculated using BDL values
         self.assertFalse(pd.isna(result_df.loc[0, 'soluble_nitrogen']))
-
 
 if __name__ == '__main__':
     # Set up test discovery and run tests

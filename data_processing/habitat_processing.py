@@ -156,7 +156,7 @@ def calculate_habitat_grade(total_score):
     if pd.isna(total_score):
         return "Unknown"
     
-    if total_score > 90:
+    if total_score >= 90:
         return "A"
     elif total_score >= 80:
         return "B"
