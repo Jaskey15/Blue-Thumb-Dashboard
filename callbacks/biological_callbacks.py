@@ -1,15 +1,16 @@
 """
 Biological callbacks for the Tenmile Creek Water Quality Dashboard.
-This file contains callbacks specific to the biological data tab using generic search utilities.
+This file contains callbacks specific to the biological data tab.
 """
 
 import dash
-from dash import html, Input, Output, State, ALL
-from utils import setup_logging
+import dash_bootstrap_components as dbc
+from dash import html, dcc, Input, Output, State, ALL
+from utils import setup_logging, load_markdown_content, create_image_with_caption
+from config.data_definitions import FISH_DATA, MACRO_DATA
 from .helper_functions import (
-    create_biological_community_display, create_gallery_navigation_callback,
-    should_perform_search, is_item_clicked, extract_selected_item, 
-    create_search_visibility_response
+    should_perform_search, is_item_clicked, extract_selected_item,
+    create_empty_state, create_error_state, create_search_results
 )
 
 # Configure logging
@@ -35,7 +36,30 @@ def register_biological_callbacks(app):
     )
     def update_biological_search_visibility(selected_community):
         """Show/hide search section and reset state when community is selected."""
-        return create_search_visibility_response(bool(selected_community))
+        if selected_community:
+            # Show search section and enable inputs
+            return (
+                {'display': 'block', 'position': 'relative', 'marginBottom': '20px'},  # search_section_style
+                False,  # input_disabled
+                False,  # button_disabled
+                False,  # clear_disabled
+                "",     # search_value (clear)
+                None,   # selected_item (clear)
+                {'display': 'none'},  # results_style
+                []      # results_children (clear)
+            )
+        else:
+            # Hide search section and disable inputs
+            return (
+                {'display': 'none'},  # search_section_style
+                True,   # input_disabled
+                True,   # button_disabled
+                True,   # clear_disabled
+                "",     # search_value (clear)
+                None,   # selected_item (clear)
+                {'display': 'none'},  # results_style
+                []      # results_children (clear)
+            )
     
     # ===========================
     # 2. SITE SEARCH & SELECTION
@@ -65,47 +89,14 @@ def register_biological_callbacks(app):
                             className="p-2 text-muted")], {'display': 'block'}
             
             # Filter sites based on search
-            filtered_sites = [
+            search_term = search_value.lower().strip()
+            matching_sites = [
                 site for site in available_sites 
-                if search_value.lower() in site.lower()
+                if search_term in site.lower()
             ]
             
-            if not filtered_sites:
-                return [html.Div("No sites match your search.", 
-                            className="p-2 text-muted")], {'display': 'block'}
-            
-            # Create clickable list items with habitat/chemical-style formatting
-            result_items = []
-            for site in filtered_sites[:10]:  # Limit to 10 results
-                result_items.append(
-                    html.Div(
-                        site,
-                        id={'type': 'biological-site-option', 'site': site},
-                        style={
-                            'padding': '8px 12px',
-                            'cursor': 'pointer',
-                            'borderBottom': '1px solid #eee'
-                        },
-                        className="site-option",
-                        n_clicks=0
-                    )
-                )
-            
-            logger.info(f"Biological search for '{search_value}' found {len(filtered_sites)} sites")
-            return result_items, {
-                'display': 'block',
-                'position': 'absolute',
-                'top': '100%',
-                'left': '0',
-                'right': '0',
-                'backgroundColor': 'white',
-                'border': '1px solid #ccc',
-                'borderTop': 'none',
-                'maxHeight': '200px',
-                'overflowY': 'auto',
-                'zIndex': '1000',
-                'boxShadow': '0 2px 4px rgba(0,0,0,0.1)'
-            }
+            # Use shared function to create consistent search results
+            return create_search_results(matching_sites, 'biological', search_value)
             
         except Exception as e:
             logger.error(f"Error in biological search: {e}")
@@ -164,19 +155,17 @@ def register_biological_callbacks(app):
     def update_biological_display(selected_community, selected_site):
         """Update biological display based on selected community and site."""
         if not selected_community or not selected_site:
-            return html.Div([
-                html.P("Please select a community type and site to view biological data.", 
-                       className="text-muted mt-3")
-            ])
+            return create_empty_state("Please select a community type and site to view biological data.")
         
         try:
             return create_biological_community_display(selected_community, selected_site)
         except Exception as e:
             logger.error(f"Error creating biological display: {e}")
-            return html.Div([
-                html.Div(f"Error loading {selected_community} data for {selected_site}.", 
-                        className="alert alert-danger mt-3")
-            ])
+            return create_error_state(
+                f"Error Loading {selected_community.title()} Data",
+                f"Could not load {selected_community} data for {selected_site}. Please try again.",
+                str(e)
+            )
 
     # ===========================
     # 4. GALLERY NAVIGATION
@@ -205,3 +194,190 @@ def register_biological_callbacks(app):
         """Handle macroinvertebrate gallery navigation."""
         update_gallery = create_gallery_navigation_callback('macro')
         return update_gallery(prev_clicks, next_clicks, current_index)
+
+
+# ===========================================================================================
+# BIOLOGICAL-SPECIFIC DISPLAY FUNCTIONS
+# ===========================================================================================
+
+def create_species_display(item):
+    """
+    Create HTML layout for displaying a species.
+    
+    Args:
+        item: Dictionary with species information (name, image, description)
+        
+    Returns:
+        Dash HTML component for displaying the species
+    """
+    return html.Div([
+        # Image container with fixed height
+        html.Div(
+            html.Img(
+                src=item['image'],
+                style={'max-height': '300px', 'object-fit': 'contain', 'max-width': '100%'}
+            ),
+            style={
+                'height': '300px',  
+                'display': 'flex',
+                'align-items': 'center',
+                'justify-content': 'center'
+            }
+        ),
+        # Text container with fixed height
+        html.Div([
+            html.H5(item['name'], className="mt-3"),
+            html.P(item['description'], className="mt-2")
+        ], style={'min-height': '80px'})
+    ], style={'min-height': '400px'})
+
+def create_gallery_navigation_callback(gallery_type):
+    """
+    Create a callback function for species gallery navigation.
+    
+    Args:
+        gallery_type: Gallery type ('fish' or 'macro')
+        
+    Returns:
+        Function that handles gallery navigation for the specified type
+    """
+    # Get the appropriate data based on gallery type
+    data = FISH_DATA if gallery_type == 'fish' else MACRO_DATA
+    
+    def update_gallery(prev_clicks, next_clicks, current_index):
+        """
+        Update gallery based on previous/next button clicks.
+        
+        Args:
+            prev_clicks: Number of clicks on previous button
+            next_clicks: Number of clicks on next button
+            current_index: Current index in the gallery
+            
+        Returns:
+            Tuple of (gallery_display, new_index)
+        """
+        ctx = dash.callback_context
+        
+        # If no buttons clicked yet, show the first item
+        if not ctx.triggered:
+            return create_species_display(data[0]), 0
+        
+        # Determine which button was clicked
+        button_id = ctx.triggered[0]['prop_id'].split('.')[0]
+        
+        # Calculate new index based on which button was clicked
+        if f'prev-{gallery_type}-button' in button_id:
+            new_index = (current_index - 1) % len(data)
+        else:  # next button
+            new_index = (current_index + 1) % len(data)
+        
+        # Get the data for the new index
+        item = data[new_index]
+        
+        # Create the display for the current item
+        return create_species_display(item), new_index
+    
+    return update_gallery
+
+def create_biological_community_display(selected_community, selected_site):
+    """
+    Create a complete display for biological community data with visualizations.
+    
+    Args:
+        selected_community: Community type ('fish' or 'macro')
+        selected_site: Selected site name
+        
+    Returns:
+        Dash HTML component with the complete community display
+    """
+    try:
+        # Import required functions for visualization
+        if selected_community == 'fish':
+            from visualizations.fish_viz import create_fish_viz, create_fish_metrics_accordion
+            from data_processing.fish_processing import get_fish_dataframe
+            
+            # Get site-specific data to check if it exists
+            site_data = get_fish_dataframe(selected_site)
+            
+            if site_data.empty:
+                return create_empty_state(f"No fish data available for {selected_site}")
+            
+            # Create site-specific visualizations
+            viz_figure = create_fish_viz(selected_site)
+            metrics_accordion = create_fish_metrics_accordion(selected_site)
+            
+        elif selected_community == 'macro':
+            from visualizations.macro_viz import create_macro_viz, create_macro_metrics_accordion
+            from data_processing.macro_processing import get_macroinvertebrate_dataframe
+            
+            # Get all macro data first
+            all_macro_data = get_macroinvertebrate_dataframe()
+            
+            if all_macro_data.empty:
+                return create_empty_state("No macroinvertebrate data available in database")
+            
+            # Filter for the selected site
+            site_data = all_macro_data[all_macro_data['site_name'] == selected_site]
+            
+            if site_data.empty:
+                return create_empty_state(f"No macroinvertebrate data available for {selected_site}")
+            
+            # Create site-specific visualizations
+            viz_figure = create_macro_viz(selected_site)
+            metrics_accordion = create_macro_metrics_accordion(selected_site)
+            
+        else:
+            return create_error_state(
+                "Invalid Community Type",
+                f"'{selected_community}' is not a valid community type."
+            )
+
+        # Import gallery creation function
+        from layouts import create_species_gallery
+            
+        # Create unified layout for the community
+        content = html.Div([
+            # First row: Description on left, gallery on right
+            dbc.Row([
+                # Left column: Description
+                dbc.Col([
+                    load_markdown_content(f"biological/{selected_community}_description.md")
+                ], width=6),
+                
+                # Right column: Species gallery
+                dbc.Col([
+                    create_species_gallery(selected_community)
+                ], width=6, className="d-flex align-items-center"),
+            ], className="mb-4"),
+            
+            # Second row: Graph (full width)
+            dbc.Row([
+                dbc.Col([
+                    dcc.Graph(figure=viz_figure)
+                ], width=12)
+            ], className="mb-4"),
+            
+            # Third row: Accordion section for metrics tables
+            dbc.Row([
+                dbc.Col([
+                    metrics_accordion
+                ], width=12)
+            ], className="mb-4"),
+            
+            # Fourth row: Analysis section
+            dbc.Row([
+                dbc.Col([
+                    load_markdown_content(f"biological/{selected_community}_analysis.md")
+                ], width=12)
+            ], className="mb-4"),
+        ])
+        
+        return content
+        
+    except Exception as e:
+        logger.error(f"Error creating biological display for {selected_community} at {selected_site}: {e}")
+        return create_error_state(
+            f"Error Loading {selected_community.title()} Data",
+            f"Could not load {selected_community} data for {selected_site}. Please try again.",
+            str(e)
+        )
