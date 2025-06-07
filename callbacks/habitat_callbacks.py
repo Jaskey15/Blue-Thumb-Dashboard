@@ -1,13 +1,15 @@
 """
-Habitat callbacks for the Tenmile Creek Water Quality Dashboard.
+Habitat callbacks for the Blue Thumb Stream Health Dashboard.
 This file contains callbacks specific to the habitat data tab.
 """
 
 import dash
-from dash import html, Input, Output, State, ALL
+from dash import html, dcc, Input, Output, State, ALL
 from utils import setup_logging, get_sites_with_data
+from visualizations.habitat_viz import create_habitat_viz, create_habitat_metrics_accordion
 from .helper_functions import (
-    should_perform_search, is_item_clicked, extract_selected_item
+    should_perform_search, is_item_clicked, extract_selected_item,
+    create_empty_state, create_error_state, create_search_results
 )
 
 # Configure logging
@@ -41,51 +43,19 @@ def register_habitat_callbacks(app):
                 return [html.Div("No habitat data available.", 
                             className="p-2 text-warning")], {'display': 'block'}
             
-            # Filter sites based on search input (case-insensitive)
-            search_term = search_value.lower().strip()
-            matching_sites = [site for site in available_sites 
-                            if search_term in site.lower()]
+            # Filter sites based on search term (case-insensitive)
+            search_term_lower = search_value.lower()
+            matching_sites = [
+                site for site in available_sites 
+                if search_term_lower in site.lower()
+            ]
             
-            if not matching_sites:
-                return [html.Div(f"No sites found matching '{search_value}'.", 
-                            className="p-2 text-muted")], {'display': 'block'}
-            
-            # Create clickable list items with consistent styling
-            result_items = []
-            for site in matching_sites[:10]:  # Limit to 10 results
-                result_items.append(
-                    html.Div(
-                        site,
-                        id={'type': 'habitat-site-option', 'site': site},
-                        style={
-                            'padding': '8px 12px',
-                            'cursor': 'pointer',
-                            'borderBottom': '1px solid #eee'
-                        },
-                        className="site-option",
-                        n_clicks=0
-                    )
-                )
-            
-            logger.info(f"Habitat search for '{search_value}' found {len(matching_sites)} sites")
-            return result_items, {
-                'display': 'block',
-                'position': 'absolute',
-                'top': '100%',
-                'left': '0',
-                'right': '0',
-                'backgroundColor': 'white',
-                'border': '1px solid #ccc',
-                'borderTop': 'none',
-                'maxHeight': '200px',
-                'overflowY': 'auto',
-                'zIndex': '1000',
-                'boxShadow': '0 2px 4px rgba(0,0,0,0.1)'
-            }
+            # Use shared function to create consistent search results
+            return create_search_results(matching_sites, 'habitat', search_value)
             
         except Exception as e:
             logger.error(f"Error in habitat search: {e}")
-            return [html.Div("Error searching sites.", 
+            return [html.Div("Error performing search.", 
                         className="p-2 text-danger")], {'display': 'block'}
     
     @app.callback(
@@ -146,41 +116,62 @@ def register_habitat_callbacks(app):
     def update_habitat_content(selected_site):
         """Update habitat content based on selected site."""
         if not selected_site:
-            return _create_empty_state("Select a site above to view habitat assessment data.")
+            return create_empty_state("Select a site above to view habitat assessment data.")
         
         try:
             logger.info(f"Creating habitat display for {selected_site}")
             
-            # Import and use the existing helper function
-            from callbacks.helper_functions import create_habitat_display
-            return create_habitat_display(selected_site)
+            return _create_habitat_display(selected_site)
             
         except Exception as e:
             logger.error(f"Error creating habitat display for {selected_site}: {e}")
-            return _create_error_state(
+            return create_error_state(
                 "Error Loading Habitat Data",
                 f"Could not load habitat data for {selected_site}. Please try again.",
                 str(e)
             )
 
 # ===========================
-# HELPER FUNCTIONS
+# HABITAT-SPECIFIC FUNCTIONS
 # ===========================
 
-def _create_empty_state(message):
-    """Create a consistent empty state display."""
-    return html.Div(
-        html.P(message, className="text-center text-muted mt-5"),
-        style={'minHeight': '300px', 'display': 'flex', 'alignItems': 'center'}
-    )
-
-def _create_error_state(title, message, error_details):
-    """Create a consistent error state display."""
-    return html.Div([
-        html.H4(title, className="text-danger"),
-        html.P(message),
-        html.Details([
-            html.Summary("Error Details"),
-            html.Pre(error_details, style={"fontSize": "12px", "color": "red"})
-        ])
-    ])
+def _create_habitat_display(site_name):
+    """
+    Create the complete habitat display for a selected site.
+    
+    Args:
+        site_name (str): Name of the selected monitoring site
+        
+    Returns:
+        dash.html.Div: Complete habitat display layout
+    """
+    try:
+        # Create habitat visualization chart
+        habitat_fig = create_habitat_viz(site_name)
+        
+        # Create habitat metrics table in accordion
+        habitat_accordion = create_habitat_metrics_accordion(site_name)
+        
+        # Combine into layout - single column, stacked vertically
+        display = html.Div([
+            # Chart section - full width
+            dcc.Graph(
+                figure=habitat_fig,
+                config={'displayModeBar': False},
+                style={'height': '500px'}
+            ),
+            
+            # Metrics accordion section - full width
+            html.Div([
+                habitat_accordion
+            ], className="mb-4"),
+        ])   
+        return display
+        
+    except Exception as e:
+        logger.error(f"Error creating habitat display for {site_name}: {e}")
+        return create_error_state(
+            "Error Creating Habitat Display",
+            f"Could not create habitat visualization for {site_name}.",
+            str(e)
+        )
