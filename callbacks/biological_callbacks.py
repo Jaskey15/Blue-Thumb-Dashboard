@@ -8,8 +8,8 @@ from dash import html, Input, Output, State, ALL
 from utils import setup_logging
 from .helper_functions import (
     create_biological_community_display, create_gallery_navigation_callback,
-    should_perform_search, get_search_results, is_item_clicked, 
-    extract_selected_item, create_search_visibility_response
+    should_perform_search, is_item_clicked, extract_selected_item, 
+    create_search_visibility_response
 )
 
 # Configure logging
@@ -74,28 +74,49 @@ def register_biological_callbacks(app):
                 return [html.Div("No sites match your search.", 
                             className="p-2 text-muted")], {'display': 'block'}
             
-            # Create clickable buttons for results - with correct ID pattern
-            result_buttons = [
-                html.Button(
-                    site,
-                    id={'type': 'biological-site-button', 'site': site},  # Fixed ID pattern
-                    className="list-group-item list-group-item-action",
-                    style={'border': 'none', 'textAlign': 'left', 'width': '100%'}
+            # Create clickable list items with habitat/chemical-style formatting
+            result_items = []
+            for site in filtered_sites[:10]:  # Limit to 10 results
+                result_items.append(
+                    html.Div(
+                        site,
+                        id={'type': 'biological-site-option', 'site': site},
+                        style={
+                            'padding': '8px 12px',
+                            'cursor': 'pointer',
+                            'borderBottom': '1px solid #eee'
+                        },
+                        className="site-option",
+                        n_clicks=0
+                    )
                 )
-                for site in filtered_sites[:10]
-            ]
             
-            return result_buttons, {'display': 'block'}
+            logger.info(f"Biological search for '{search_value}' found {len(filtered_sites)} sites")
+            return result_items, {
+                'display': 'block',
+                'position': 'absolute',
+                'top': '100%',
+                'left': '0',
+                'right': '0',
+                'backgroundColor': 'white',
+                'border': '1px solid #ccc',
+                'borderTop': 'none',
+                'maxHeight': '200px',
+                'overflowY': 'auto',
+                'zIndex': '1000',
+                'boxShadow': '0 2px 4px rgba(0,0,0,0.1)'
+            }
             
         except Exception as e:
             logger.error(f"Error in biological search: {e}")
-            return [html.Div("Error performing search.", className="p-2 text-danger")], {'display': 'block'}
+            return [html.Div("Error performing search.", 
+                        className="p-2 text-danger")], {'display': 'block'}
     
     @app.callback(
         [Output('biological-selected-site', 'data', allow_duplicate=True),
          Output('biological-search-input', 'value', allow_duplicate=True),
          Output('biological-search-results', 'style', allow_duplicate=True)],
-        [Input({'type': 'biological-site-button', 'site': ALL}, 'n_clicks')],
+        [Input({'type': 'biological-site-option', 'site': ALL}, 'n_clicks')],
         [State('biological-selected-site', 'data')],
         prevent_initial_call=True
     )
@@ -127,6 +148,7 @@ def register_biological_callbacks(app):
     def clear_biological_search(n_clicks):
         """Clear search input and reset selections."""
         if n_clicks:
+            logger.info("Biological search cleared")
             return "", None, {'display': 'none'}
         return dash.no_update, dash.no_update, dash.no_update
     
@@ -169,8 +191,8 @@ def register_biological_callbacks(app):
     )
     def update_fish_gallery(prev_clicks, next_clicks, current_index):
         """Handle fish gallery navigation."""
-        gallery_function = create_gallery_navigation_callback('fish')
-        return gallery_function(prev_clicks, next_clicks, current_index)
+        update_gallery = create_gallery_navigation_callback('fish')
+        return update_gallery(prev_clicks, next_clicks, current_index)
     
     @app.callback(
         [Output('macro-gallery-container', 'children'),
@@ -180,6 +202,6 @@ def register_biological_callbacks(app):
         [State('current-macro-index', 'data')]
     )
     def update_macro_gallery(prev_clicks, next_clicks, current_index):
-        """Handle macro gallery navigation."""
-        gallery_function = create_gallery_navigation_callback('macro')
-        return gallery_function(prev_clicks, next_clicks, current_index)
+        """Handle macroinvertebrate gallery navigation."""
+        update_gallery = create_gallery_navigation_callback('macro')
+        return update_gallery(prev_clicks, next_clicks, current_index)
