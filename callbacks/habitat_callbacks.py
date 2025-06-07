@@ -3,30 +3,34 @@ Habitat callbacks for the Tenmile Creek Water Quality Dashboard.
 This file contains callbacks specific to the habitat data tab.
 """
 
-import json
 import dash
-from dash import html, Input, Output, State, dcc, ALL
-import dash_bootstrap_components as dbc
+from dash import html, Input, Output, State, ALL
 from utils import setup_logging, get_sites_with_data
+from .helper_functions import (
+    should_perform_search, is_item_clicked, extract_selected_item
+)
 
 # Configure logging
 logger = setup_logging("habitat_callbacks", category="callbacks")
 
 def register_habitat_callbacks(app):
-    """Register all habitat-related callbacks."""
+    """Register all habitat-related callbacks in logical workflow order."""
     
-    # Callback 1: Search results - show matching sites when search button is clicked OR Enter is pressed
+    # ===========================
+    # 1. SITE SEARCH & SELECTION
+    # ===========================
+    
     @app.callback(
         [Output('habitat-search-results', 'children'),
-        Output('habitat-search-results', 'style')],
+         Output('habitat-search-results', 'style')],
         [Input('habitat-search-button', 'n_clicks'),
-        Input('habitat-search-input', 'n_submit')],
-        State('habitat-search-input', 'value'),
+         Input('habitat-search-input', 'n_submit')],
+        [State('habitat-search-input', 'value')],
         prevent_initial_call=True
     )
     def update_habitat_search_results(button_clicks, enter_presses, search_value):
-        """Update search results based on search input."""
-        if (not button_clicks and not enter_presses) or not search_value or not search_value.strip():
+        """Filter and display sites based on search input."""
+        if not should_perform_search(button_clicks, enter_presses, search_value, True):
             return [], {'display': 'none'}
         
         try:
@@ -46,7 +50,7 @@ def register_habitat_callbacks(app):
                 return [html.Div(f"No sites found matching '{search_value}'.", 
                             className="p-2 text-muted")], {'display': 'block'}
             
-            # Create clickable list items (like chemical/biological tabs)
+            # Create clickable list items with consistent styling
             result_items = []
             for site in matching_sites[:10]:  # Limit to 10 results
                 result_items.append(
@@ -63,6 +67,7 @@ def register_habitat_callbacks(app):
                     )
                 )
             
+            logger.info(f"Habitat search for '{search_value}' found {len(matching_sites)} sites")
             return result_items, {
                 'display': 'block',
                 'position': 'absolute',
@@ -83,69 +88,34 @@ def register_habitat_callbacks(app):
             return [html.Div("Error searching sites.", 
                         className="p-2 text-danger")], {'display': 'block'}
     
-    # Callback 2: Site selection - handle clicking on a site from search results
     @app.callback(
         [Output('habitat-selected-site', 'data'),
-        Output('habitat-search-input', 'value'),
-        Output('habitat-search-results', 'style', allow_duplicate=True)],
-        [Input({'type': 'habitat-site-option', 'site': dash.dependencies.ALL}, 'n_clicks')],
+         Output('habitat-search-input', 'value'),
+         Output('habitat-search-results', 'style', allow_duplicate=True)],
+        [Input({'type': 'habitat-site-option', 'site': ALL}, 'n_clicks')],
         [State('habitat-selected-site', 'data')],
         prevent_initial_call=True
     )
-    def handle_habitat_site_selection(site_clicks, current_site):
+    def select_habitat_site(site_clicks, current_site):
         """Handle site selection from search results."""
-        # Check if any site was clicked
-        if not any(site_clicks) or not any(click for click in site_clicks if click):
+        if not is_item_clicked(site_clicks):
             return current_site, dash.no_update, dash.no_update
-        
-        # Get which button was clicked
-        ctx = dash.callback_context
-        if not ctx.triggered:
-            return current_site, dash.no_update, dash.no_update
-        
-        # Extract site name from the triggered button
-        triggered_id = ctx.triggered[0]['prop_id']
-        import json
-        button_data = json.loads(triggered_id.split('.')[0])
-        selected_site = button_data['site']
-        
-        logger.info(f"Habitat site selected: {selected_site}")
-        
-        return (
-            selected_site,  # Store selected site
-            selected_site,  # Update search input to show selected site
-            {'display': 'none'}  # Hide search results
-        )
-        
-    # Callback 3: Main display - show habitat visualization when site is selected
-    @app.callback(
-        Output('habitat-content-container', 'children'),
-        Input('habitat-selected-site', 'data'),
-        prevent_initial_call=True
-    )
-    def update_habitat_content(selected_site):
-        """Update habitat content based on selected site."""
-        if not selected_site:
-            return html.P("Select a site above to view habitat assessment data.", 
-                        className="text-center text-muted mt-5")
         
         try:
-            # Import helper function to create the display
-            from callbacks.helper_functions import create_habitat_display
-            return create_habitat_display(selected_site)
+            selected_site = extract_selected_item('site')
+            
+            logger.info(f"Habitat site selected: {selected_site}")
+            
+            return (
+                selected_site,  # Store selected site
+                selected_site,  # Update search input to show selected site
+                {'display': 'none'}  # Hide search results
+            )
             
         except Exception as e:
-            logger.error(f"Error creating habitat display for {selected_site}: {e}")
-            return html.Div([
-                html.H4("Error Loading Data", className="text-danger"),
-                html.P(f"Could not load habitat data for {selected_site}. Please try again."),
-                html.Details([
-                    html.Summary("Error Details"),
-                    html.Pre(str(e), style={"fontSize": "12px", "color": "red"})
-                ])
-            ])
+            logger.error(f"Error in habitat site selection: {e}")
+            return current_site, dash.no_update, dash.no_update
     
-    # Callback 4: Clear button - clear search input and reset selections
     @app.callback(
         [Output('habitat-search-input', 'value', allow_duplicate=True),
          Output('habitat-selected-site', 'data', allow_duplicate=True),
@@ -154,11 +124,63 @@ def register_habitat_callbacks(app):
         prevent_initial_call=True
     )
     def clear_habitat_search(n_clicks):
-        """Clear the habitat search input and reset selections"""
+        """Clear search input and reset all selections."""
         if n_clicks:
+            logger.info("Habitat search cleared")
             return (
                 "",  # Clear search input
                 None,  # Clear selected site
                 {'display': 'none'}  # Hide search results
             )
         return dash.no_update, dash.no_update, dash.no_update
+    
+    # ===========================
+    # 2. DATA VISUALIZATION
+    # ===========================
+    
+    @app.callback(
+        Output('habitat-content-container', 'children'),
+        Input('habitat-selected-site', 'data'),
+        prevent_initial_call=True
+    )
+    def update_habitat_content(selected_site):
+        """Update habitat content based on selected site."""
+        if not selected_site:
+            return _create_empty_state("Select a site above to view habitat assessment data.")
+        
+        try:
+            logger.info(f"Creating habitat display for {selected_site}")
+            
+            # Import and use the existing helper function
+            from callbacks.helper_functions import create_habitat_display
+            return create_habitat_display(selected_site)
+            
+        except Exception as e:
+            logger.error(f"Error creating habitat display for {selected_site}: {e}")
+            return _create_error_state(
+                "Error Loading Habitat Data",
+                f"Could not load habitat data for {selected_site}. Please try again.",
+                str(e)
+            )
+
+# ===========================
+# HELPER FUNCTIONS
+# ===========================
+
+def _create_empty_state(message):
+    """Create a consistent empty state display."""
+    return html.Div(
+        html.P(message, className="text-center text-muted mt-5"),
+        style={'minHeight': '300px', 'display': 'flex', 'alignItems': 'center'}
+    )
+
+def _create_error_state(title, message, error_details):
+    """Create a consistent error state display."""
+    return html.Div([
+        html.H4(title, className="text-danger"),
+        html.P(message),
+        html.Details([
+            html.Summary("Error Details"),
+            html.Pre(error_details, style={"fontSize": "12px", "color": "red"})
+        ])
+    ])
