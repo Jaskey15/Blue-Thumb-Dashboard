@@ -43,18 +43,6 @@ METRIC_ORDER = [
     'Proportion lithophilic spawners'
 ]
 
-REFERENCE_SCORES = {
-    'Total No. of species': 5,
-    'No. of sensitive benthic species': 5, 
-    'No. of sunfish species': 5,
-    'No. of intolerant species': 5,
-    'Proportion tolerant individuals': 1,
-    'Proportion insectivorous cyprinid': 1,
-    'Proportion lithophilic spawners': 3
-}
-
-REFERENCE_TOTAL_SCORE = 25  # Ouachita Mountains reference score
-
 def create_fish_viz(site_name=None):
     """
     Create fish community visualization for the app.
@@ -207,10 +195,7 @@ def format_fish_metrics_table(metrics_df, summary_df):
         
         # Create a dictionary to hold the table data
         table_data = {'Metric': METRIC_ORDER}
-        
-        # Add reference scores column
-        ref_scores = [str(REFERENCE_SCORES.get(metric, '-')) for metric in METRIC_ORDER]
-        
+                
         # Add columns for each year
         for year in years:
             year_metrics = metrics_df[metrics_df['year'] == year]
@@ -231,9 +216,6 @@ def format_fish_metrics_table(metrics_df, summary_df):
                     scores.append('-')
             
             table_data[str(year)] = scores
-        
-        # Add the reference column at the end
-        table_data['Reference'] = ref_scores
         
         # Create a DataFrame for the metrics
         metrics_table = pd.DataFrame(table_data)
@@ -257,9 +239,6 @@ def format_fish_metrics_table(metrics_df, summary_df):
                     summary_rows[str(year)] = ['-', '-', '-']
             else:
                 summary_rows[str(year)] = ['-', '-', '-']
-        
-        # Add reference values for summary rows
-        summary_rows['Reference'] = [REFERENCE_TOTAL_SCORE, '1.00', '']
         
         return metrics_table, summary_rows
     

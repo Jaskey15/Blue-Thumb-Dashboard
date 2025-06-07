@@ -34,26 +34,6 @@ CONDITION_THRESHOLDS = {
     'Moderately Impaired': 0.17
 }
 
-# Reference scores configuration
-REFERENCE_SCORES = {
-    'Summer': {
-        'Taxa Richness': 6,
-        'EPT Taxa Richness': 6,
-        'EPT Abundance': 6,
-        'HBI Score': 6,
-        '% Contribution Dominants': 6,
-        'Shannon-Weaver': 4
-    },
-    'Winter': {
-        'Taxa Richness': 6,
-        'EPT Taxa Richness': 6,
-        'EPT Abundance': 6,
-        'HBI Score': 6,
-        '% Contribution Dominants': 6,
-        'Shannon-Weaver': 2
-    }
-}
-
 # Metrics display order
 METRIC_ORDER = [
     'Taxa Richness',
@@ -231,14 +211,8 @@ def format_macro_metrics_table(metrics_df, summary_df, season):
         # Get unique years for this season
         years = sorted(season_metrics['year'].unique()) if not season_metrics.empty else []
         
-        # Get reference scores for this season
-        reference_scores = REFERENCE_SCORES[season]
-
         # Create a dictionary to hold the table data
         table_data = {'Metric': METRIC_ORDER}
-        
-        # Add reference scores column
-        ref_scores = [str(reference_scores.get(metric, '-')) for metric in METRIC_ORDER]
         
         # Add columns for each year
         for year in years:
@@ -259,9 +233,6 @@ def format_macro_metrics_table(metrics_df, summary_df, season):
                     scores.append('-')
             
             table_data[str(year)] = scores
-        
-        # Add the reference column at the end
-        table_data['Reference'] = ref_scores
         
         # Create a DataFrame for the metrics
         metrics_table = pd.DataFrame(table_data)
@@ -286,10 +257,6 @@ def format_macro_metrics_table(metrics_df, summary_df, season):
             else:
                 summary_rows[str(year)] = ['-', '-', '-']
 
-        # Add the reference column (dynamically calculated)
-        reference_total = sum(reference_scores.values())
-        summary_rows['Reference'] = [reference_total, '1.00', '']
-        
         return metrics_table, summary_rows
     
     except Exception as e:

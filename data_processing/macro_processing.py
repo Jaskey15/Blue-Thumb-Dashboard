@@ -258,7 +258,7 @@ def insert_metrics_data(cursor, macro_df, event_id_map):
             # Get the data (first row in case of duplicates)
             row = sample_df.iloc[0]
             
-            # Insert metrics for this event
+            # In the insert_metrics_data function, update the metrics insertion:
             for metric_name, raw_col, score_col in available_metrics:
                 if pd.notna(row.get(raw_col)) and pd.notna(row.get(score_col)):
                     cursor.execute('''
@@ -268,8 +268,8 @@ def insert_metrics_data(cursor, macro_df, event_id_map):
                     ''', (
                         event_id,
                         metric_name,
-                        row[raw_col],
-                        row[score_col]
+                        float(row[raw_col]),  
+                        int(row[score_col])  
                     ))
                     metrics_count += 1
             
@@ -300,8 +300,8 @@ def insert_metrics_data(cursor, macro_df, event_id_map):
                     VALUES (?, ?, ?, ?)
                 ''', (
                     event_id,
-                    row['total_score'],
-                    row['comparison_to_reference'],
+                    int(row['total_score']),             
+                    float(row['comparison_to_reference']), 
                     biological_condition
                 ))
                 summary_count += 1
@@ -405,7 +405,7 @@ def get_macro_metrics_data_for_table(site_name=None):
         # Base query for summary data
         summary_query = '''
         SELECT 
-            s.site_name,
+            st.site_name,
             e.event_id,
             e.collection_date,
             e.year,
