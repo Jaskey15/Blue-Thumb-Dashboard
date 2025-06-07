@@ -8,10 +8,11 @@ from dash import html, dcc, Input, Output, State, ALL
 from utils import setup_logging
 from config.data_definitions import SEASON_MONTHS
 from data_processing.chemical_processing import process_chemical_data
+from .tab_utilities import get_parameter_name, get_parameter_label
 from .helper_functions import (
     should_perform_search, is_item_clicked, extract_selected_item,
     create_empty_state, create_error_state, create_loading_state,
-    get_parameter_name, get_parameter_label, create_search_results
+    create_search_results
 )
 
 # Configure logging
@@ -203,105 +204,3 @@ def register_chemical_callbacks(app):
         return dash.no_update
 
 
-# ===========================================================================================
-# CHEMICAL-SPECIFIC VISUALIZATION FUNCTIONS
-# ===========================================================================================
-
-def _create_all_parameters_visualization(df_filtered, key_parameters, reference_values, highlight_thresholds):
-    """Create visualization for all chemical parameters."""
-    try:
-        if df_filtered.empty:
-            empty_state = create_empty_state("No data available for the selected time period.")
-            return empty_state, html.Div(), html.Div()
-        
-        # Import the visualization function
-        from visualizations.chemical_viz import create_all_parameters_figure
-        
-        # Create the comprehensive figure
-        fig = create_all_parameters_figure(df_filtered, key_parameters, reference_values, highlight_thresholds)
-        
-        # Create the graph component
-        graph = dcc.Graph(
-            figure=fig,
-            style={'height': '800px'},  # Make it taller for better readability
-            config={'displayModeBar': True, 'toImageButtonOptions': {'width': 1200, 'height': 800}}
-        )
-        
-        # Create explanation
-        explanation = html.Div([
-            html.H4("All Chemical Parameters"),
-            html.P("This view shows all chemical parameters measured at this site over time. "
-                  "Each parameter is normalized to allow comparison across different measurement scales.")
-        ])
-        
-        return graph, explanation, html.Div()  # No diagram for all parameters
-        
-    except Exception as e:
-        logger.error(f"Error creating all parameters view: {e}")
-        error_state = create_error_state(
-            "Visualization Error", 
-            "Could not create all parameters visualization.", 
-            str(e)
-        )
-        return error_state, html.Div(), html.Div()
-
-def _create_single_parameter_visualization(df_filtered, parameter, reference_values, highlight_thresholds):
-    """Create visualization for a single chemical parameter."""
-    try:
-        if df_filtered.empty or parameter not in df_filtered.columns:
-            empty_state = create_empty_state(f"No {parameter} data available for the selected time period.")
-            return empty_state, html.Div(), html.Div()
-        
-        # Import required functions
-        from visualizations.chemical_viz import create_time_series_plot
-        from config.data_definitions import CHEMICAL_DIAGRAMS, CHEMICAL_DIAGRAM_CAPTIONS
-        from utils import load_markdown_content, create_image_with_caption
-        
-        # Get parameter name for display
-        parameter_name = get_parameter_name(parameter)
-        
-        # Create the time series plot
-        fig = create_time_series_plot(
-            df_filtered, 
-            parameter, 
-            reference_values,
-            title=f"{parameter_name} Over Time",
-            y_label=get_parameter_label('chem', parameter),
-            highlight_thresholds=highlight_thresholds
-        )
-        
-        # Create graph component
-        graph = dcc.Graph(
-            figure=fig,
-            style={'height': '450px'}
-        )
-        
-        # Load explanation from markdown file
-        file_path = f"chemical/{parameter_name.lower().replace(' ', '_')}.md"
-        explanation = load_markdown_content(file_path)
-        
-        # Create diagram component if available
-        if parameter in CHEMICAL_DIAGRAMS:
-            diagram = html.Div([
-                create_image_with_caption(
-                    src=CHEMICAL_DIAGRAMS[parameter],
-                    caption=CHEMICAL_DIAGRAM_CAPTIONS.get(parameter, "")
-                )
-            ], className="d-flex h-100 align-items-center justify-content-center", 
-            style={'height': '100%'})
-        else:
-            diagram = html.Div(
-                "No diagram available for this parameter.", 
-                className="d-flex h-100 align-items-center justify-content-center"
-            )
-        
-        return graph, explanation, diagram
-        
-    except Exception as e:
-        logger.error(f"Error creating single parameter view for {parameter}: {e}")
-        error_state = create_error_state(
-            "Visualization Error", 
-            f"Could not create {parameter} visualization.", 
-            str(e)
-        )
-        return error_state, html.Div(), html.Div()

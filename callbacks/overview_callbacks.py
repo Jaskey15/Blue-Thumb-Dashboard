@@ -7,7 +7,7 @@ import dash
 import plotly.graph_objects as go
 from callbacks.helper_functions import get_parameter_name
 from dash import html, Input, Output, State  
-from .helper_functions import get_parameter_legend, get_site_count_message, get_parameter_label
+from .tab_utilities import get_parameter_legend, get_site_count_message, get_parameter_label
 from visualizations.map_viz import add_site_marker
 from utils import setup_logging
 
