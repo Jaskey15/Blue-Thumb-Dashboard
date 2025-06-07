@@ -4,10 +4,9 @@ This file contains callbacks specific to the biological data tab.
 """
 
 import dash
-import dash_bootstrap_components as dbc
 from dash import html, dcc, Input, Output, State, ALL
-from utils import setup_logging, load_markdown_content, create_image_with_caption
-from config.data_definitions import FISH_DATA, MACRO_DATA
+from utils import setup_logging
+from .tab_utilities import create_biological_community_display, create_gallery_navigation_callback
 from .helper_functions import (
     should_perform_search, is_item_clicked, extract_selected_item,
     create_empty_state, create_error_state, create_search_results

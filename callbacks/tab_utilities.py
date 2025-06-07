@@ -10,7 +10,8 @@ import dash
 from dash import html, dcc
 import dash_bootstrap_components as dbc
 from config.data_definitions import PARAMETER_DISPLAY_NAMES, PARAMETER_AXIS_LABELS, FISH_DATA, MACRO_DATA
-from utils import setup_logging, load_markdown_content, create_image_with_caption, create_empty_state, create_error_state
+from utils import setup_logging, load_markdown_content, create_image_with_caption
+from .helper_functions import create_empty_state, create_error_state
 
 logger = setup_logging("tab_utilities")
 
@@ -327,7 +328,7 @@ def create_biological_community_display(selected_community, selected_site):
 # CHEMICAL TAB UTILITIES
 # ===========================================================================================
 
-def _create_all_parameters_visualization(df_filtered, key_parameters, reference_values, highlight_thresholds):
+def create_all_parameters_visualization(df_filtered, key_parameters, reference_values, highlight_thresholds):
     """Create visualization for all chemical parameters."""
     try:
         if df_filtered.empty:
@@ -343,7 +344,7 @@ def _create_all_parameters_visualization(df_filtered, key_parameters, reference_
         # Create the graph component
         graph = dcc.Graph(
             figure=fig,
-            style={'height': '800px'},  # Make it taller for better readability
+            style={'height': '800px'},  
             config={'displayModeBar': True, 'toImageButtonOptions': {'width': 1200, 'height': 800}}
         )
         
@@ -354,7 +355,7 @@ def _create_all_parameters_visualization(df_filtered, key_parameters, reference_
                   "Each parameter is normalized to allow comparison across different measurement scales.")
         ])
         
-        return graph, explanation, html.Div()  # No diagram for all parameters
+        return graph, explanation, html.Div()  
         
     except Exception as e:
         logger.error(f"Error creating all parameters view: {e}")
@@ -365,7 +366,7 @@ def _create_all_parameters_visualization(df_filtered, key_parameters, reference_
         )
         return error_state, html.Div(), html.Div()
 
-def _create_single_parameter_visualization(df_filtered, parameter, reference_values, highlight_thresholds):
+def create_single_parameter_visualization(df_filtered, parameter, reference_values, highlight_thresholds):
     """Create visualization for a single chemical parameter."""
     try:
         if df_filtered.empty or parameter not in df_filtered.columns:
@@ -430,7 +431,7 @@ def _create_single_parameter_visualization(df_filtered, parameter, reference_val
 # HABITAT TAB UTILITIES
 # ===========================================================================================
 
-def _create_habitat_display(site_name):
+def create_habitat_display(site_name):
     """
     Create the complete habitat display for a selected site.
     

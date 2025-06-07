@@ -1,7 +1,6 @@
 import pandas as pd
 import plotly.graph_objects as go
 
-from callbacks.tab_utilities import get_parameter_name
 from database.database import get_connection, close_connection
 from utils import setup_logging
 

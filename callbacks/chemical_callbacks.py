@@ -6,9 +6,8 @@ This file contains callbacks specific to the chemical data tab.
 import dash
 from dash import html, dcc, Input, Output, State, ALL
 from utils import setup_logging
-from config.data_definitions import SEASON_MONTHS
 from data_processing.chemical_processing import process_chemical_data
-from .tab_utilities import get_parameter_name, get_parameter_label
+from .tab_utilities import create_all_parameters_visualization, create_single_parameter_visualization
 from .helper_functions import (
     should_perform_search, is_item_clicked, extract_selected_item,
     create_empty_state, create_error_state, create_loading_state,
@@ -156,11 +155,11 @@ def register_chemical_callbacks(app):
             
             # Create visualization based on parameter selection
             if selected_parameter == 'all':
-                graph, explanation, diagram = _create_all_parameters_visualization(
+                graph, explanation, diagram = create_all_parameters_visualization(
                     df_filtered, key_parameters, reference_values, highlight_thresholds
                 )
             else:
-                graph, explanation, diagram = _create_single_parameter_visualization(
+                graph, explanation, diagram = create_single_parameter_visualization(
                     df_filtered, selected_parameter, reference_values, highlight_thresholds
                 )
                 

@@ -6,7 +6,7 @@ This file contains callbacks specific to the habitat data tab.
 import dash
 from dash import html, dcc, Input, Output, State, ALL
 from utils import setup_logging, get_sites_with_data
-from visualizations.habitat_viz import create_habitat_viz, create_habitat_metrics_accordion
+from .tab_utilities import create_habitat_display
 from .helper_functions import (
     should_perform_search, is_item_clicked, extract_selected_item,
     create_empty_state, create_error_state, create_search_results
@@ -121,7 +121,7 @@ def register_habitat_callbacks(app):
         try:
             logger.info(f"Creating habitat display for {selected_site}")
             
-            return _create_habitat_display(selected_site)
+            return create_habitat_display(selected_site)
             
         except Exception as e:
             logger.error(f"Error creating habitat display for {selected_site}: {e}")
