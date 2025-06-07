@@ -654,3 +654,114 @@ def create_single_parameter_view(df_filtered, parameter, reference_values, highl
             html.Pre(str(e), style={"fontSize": "12px"})
         ])
         return error_component, html.Div(), html.Div()
+    
+
+# --------------------------------------------------------------------------------------
+# SHARED UI STATE FUNCTIONS
+# --------------------------------------------------------------------------------------
+
+def create_empty_state(message, min_height='300px'):
+    """
+    Create a consistent empty state display across all tabs.
+    
+    Args:
+        message: Message to display to the user
+        min_height: Minimum height for the container (default: '300px')
+        
+    Returns:
+        Dash HTML component with consistent empty state styling
+    """
+    return html.Div(
+        html.P(message, className="text-center text-muted mt-5"),
+        style={
+            'minHeight': min_height, 
+            'display': 'flex', 
+            'alignItems': 'center',
+            'justifyContent': 'center'
+        }
+    )
+
+def create_error_state(title, message, error_details=None):
+    """
+    Create a consistent error state display across all tabs.
+    
+    Args:
+        title: Error title/heading
+        message: User-friendly error message
+        error_details: Optional technical error details for debugging
+        
+    Returns:
+        Dash HTML component with consistent error state styling
+    """
+    error_components = [
+        html.H4(title, className="text-danger"),
+        html.P(message, className="mb-3")
+    ]
+    
+    # Add expandable error details if provided
+    if error_details:
+        error_components.append(
+            html.Details([
+                html.Summary("Error Details", className="text-muted"),
+                html.Pre(
+                    str(error_details), 
+                    style={
+                        "fontSize": "12px", 
+                        "color": "red",
+                        "backgroundColor": "#f8f9fa",
+                        "padding": "10px",
+                        "borderRadius": "4px",
+                        "marginTop": "10px"
+                    }
+                )
+            ])
+        )
+    
+    return html.Div(error_components, className="mt-3")
+
+def create_loading_state(message="Loading data..."):
+    """
+    Create a consistent loading state display across all tabs.
+    
+    Args:
+        message: Loading message to display
+        
+    Returns:
+        Dash HTML component with consistent loading state styling
+    """
+    return html.Div([
+        html.Div([
+            html.I(className="fas fa-spinner fa-spin fa-2x text-primary mb-3"),
+            html.P(message, className="text-muted")
+        ], className="text-center")
+    ], style={
+        'minHeight': '300px',
+        'display': 'flex',
+        'alignItems': 'center',
+        'justifyContent': 'center'
+    })
+
+def create_info_state(title, message, icon_class="fas fa-info-circle"):
+    """
+    Create a consistent info state display across all tabs.
+    
+    Args:
+        title: Info title/heading
+        message: Informational message
+        icon_class: CSS class for the icon (default: info circle)
+        
+    Returns:
+        Dash HTML component with consistent info state styling
+    """
+    return html.Div([
+        html.Div([
+            html.I(className=f"{icon_class} fa-2x text-info mb-3"),
+            html.H5(title, className="text-info"),
+            html.P(message, className="text-muted")
+        ], className="text-center")
+    ], style={
+        'minHeight': '200px',
+        'display': 'flex',
+        'alignItems': 'center',
+        'justifyContent': 'center'
+    })
