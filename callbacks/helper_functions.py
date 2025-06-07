@@ -6,9 +6,10 @@ This file contains reusable helper functions used across different callback modu
 import dash
 import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
+import json
 
 from dash import html, dcc
-from utils import load_markdown_content, create_image_with_caption, setup_logging
+from utils import load_markdown_content, create_image_with_caption, setup_logging, get_sites_with_data
 
 from config.data_definitions import (
     FISH_DATA, MACRO_DATA, CHEMICAL_DIAGRAMS, CHEMICAL_DIAGRAM_CAPTIONS,
@@ -17,6 +18,154 @@ from config.data_definitions import (
 
 # Configure logging
 logger = setup_logging("helper_callbacks", category="callbacks")
+
+# --------------------------------------------------------------------------------------
+# SEARCH AND SELECTION UTILITIES
+# --------------------------------------------------------------------------------------
+
+def should_perform_search(button_clicks, enter_presses, search_value, selection_value):
+    """
+    Check if search should be performed based on user inputs.
+    
+    Args:
+        button_clicks: Number of clicks on search button
+        enter_presses: Number of enter key presses in search input
+        search_value: Current value in search input
+        selection_value: Current dropdown/selection value
+        
+    Returns:
+        bool: True if search should proceed, False otherwise
+    """
+    return (button_clicks or enter_presses) and search_value and selection_value
+
+def get_search_results(search_value, data_type, max_results=10):
+    """
+    Get and format search results for any data type.
+    
+    Args:
+        search_value: String to search for
+        data_type: Type of data to search ('fish', 'macro', 'chemical', 'habitat', etc.)
+        max_results: Maximum number of results to return
+        
+    Returns:
+        tuple: (list of HTML components, dict with display style)
+    """
+    try:
+        # Get available items based on data type
+        available_items = get_sites_with_data(data_type)
+        
+        if not available_items:
+            return [html.Div(f"No sites found for {data_type} data.", 
+                        className="p-2 text-muted")], {'display': 'block'}
+        
+        # Filter items based on search
+        filtered_items = [
+            item for item in available_items 
+            if search_value.lower() in item.lower()
+        ]
+        
+        if not filtered_items:
+            return [html.Div("No sites match your search.", 
+                        className="p-2 text-muted")], {'display': 'block'}
+        
+        # Create clickable buttons for results
+        result_buttons = [
+            html.Button(
+                item,
+                id={'type': f'{data_type}-site-button', 'site': item},
+                className="list-group-item list-group-item-action",
+                style={'border': 'none', 'textAlign': 'left', 'width': '100%'}
+            )
+            for item in filtered_items[:max_results]
+        ]
+        
+        return result_buttons, {'display': 'block'}
+        
+    except Exception as e:
+        logger.error(f"Error in search for {data_type}: {e}")
+        return [html.Div("Error performing search.", 
+                    className="p-2 text-danger")], {'display': 'block'}
+
+def is_item_clicked(click_list):
+    """
+    Check if any item in a list of click counts was clicked.
+    
+    Args:
+        click_list: List of click counts from Dash ALL pattern matching
+        
+    Returns:
+        bool: True if any item was clicked, False otherwise
+    """
+    return any(click_list) and any(click for click in click_list if click)
+
+def extract_selected_item(item_key='site'):
+    """
+    Extract the selected item from Dash callback context.
+    
+    Args:
+        item_key: Key name to extract from the triggered component ID (default: 'site')
+        
+    Returns:
+        str: The selected item value
+        
+    Raises:
+        ValueError: If no callback was triggered or item key not found
+    """
+    ctx = dash.callback_context
+    if not ctx.triggered:
+        raise ValueError("No callback triggered")
+    
+    triggered_id = ctx.triggered[0]['prop_id']
+    item_info = json.loads(triggered_id.split('.')[0])
+    
+    if item_key not in item_info:
+        raise ValueError(f"Key '{item_key}' not found in triggered component")
+    
+    return item_info[item_key]
+
+def create_search_visibility_response(has_selection, reset_values=None):
+    """
+    Create a standardized response for search visibility callbacks.
+    
+    Args:
+        has_selection: Boolean indicating if a selection has been made
+        reset_values: Dictionary of default values to use when resetting
+        
+    Returns:
+        tuple: Standard response tuple for search visibility callbacks
+    """
+    if reset_values is None:
+        reset_values = {
+            'search_value': '',
+            'selected_item': None,
+            'results_style': {'display': 'none'},
+            'results_children': []
+        }
+    
+    if has_selection:
+        # Show search section and enable inputs
+        return (
+            {'display': 'block', 'position': 'relative', 'marginBottom': '20px'},  # search_section_style
+            False,  # input_disabled
+            False,  # button_disabled
+            False,  # clear_disabled
+            reset_values['search_value'],
+            reset_values['selected_item'],
+            reset_values['results_style'],
+            reset_values['results_children']
+        )
+    else:
+        # Hide search section and disable inputs
+        return (
+            {'display': 'none'},  # search_section_style
+            True,   # input_disabled
+            True,   # button_disabled
+            True,   # clear_disabled
+            reset_values['search_value'],
+            reset_values['selected_item'],
+            reset_values['results_style'],
+            reset_values['results_children']
+        )
 
 # --------------------------------------------------------------------------------------
 # LEGEND AND PARAMETER FUNCTIONS
@@ -50,66 +199,59 @@ def get_parameter_legend(param_type, param_name):
         elif param_name == 'soluble_nitrogen':
             return [
                 {"color": "#1e8449", "label": "Normal (<0.8 mg/L)"},
-                {"color": "#ff9800", "label": "Caution (0.8-1.5 mg/L)"},
-                {"color": "#e74c3c", "label": "Poor (>1.5 mg/L)"}
+                {"color": "#ff9800", "label": "Elevated (0.8-2.0 mg/L)"},
+                {"color": "#e74c3c", "label": "High (>2.0 mg/L)"}
             ]
         elif param_name == 'Phosphorus':
             return [
-                {"color": "#1e8449", "label": "Normal (<0.05 mg/L)"},
-                {"color": "#ff9800", "label": "Caution (0.05-0.1 mg/L)"},
-                {"color": "#e74c3c", "label": "Poor (>0.1 mg/L)"}
+                {"color": "#1e8449", "label": "Normal (<0.1 mg/L)"},
+                {"color": "#ff9800", "label": "Elevated (0.1-0.3 mg/L)"},
+                {"color": "#e74c3c", "label": "High (>0.3 mg/L)"}
             ]
         elif param_name == 'Chloride':
             return [
                 {"color": "#1e8449", "label": "Normal (<250 mg/L)"},
-                {"color": "#e74c3c", "label": "Poor (>250 mg/L)"}
+                {"color": "#ff9800", "label": "Elevated (250-500 mg/L)"},
+                {"color": "#e74c3c", "label": "High (>500 mg/L)"}
             ]
     
     # Biological parameter legends
     elif param_type == 'bio':
-        if param_name == 'Fish_IBI':
-            return [
-                {"color": "#1e8449", "label": "Excellent (>0.97)"},
-                {"color": "#7cb342", "label": "Good (0.80-0.97)"},
-                {"color": "#ff9800", "label": "Fair (0.67-0.80)"},
-                {"color": "#e74c3c", "label": "Poor (<0.67)"}
-            ]
-        elif param_name.startswith('Macro'):
-            return [
-                {"color": "#1e8449", "label": "Non-impaired (>0.83)"},
-                {"color": "#ff9800", "label": "Slightly Impaired (0.54-0.83)"},
-                {"color": "#f57c00", "label": "Moderately Impaired (0.17-0.54)"},
-                {"color": "#e74c3c", "label": "Severely Impaired (<0.17)"}
-            ]
+        return [
+            {"color": "#1e8449", "label": "Non-impaired (>0.79)"},
+            {"color": "#ff9800", "label": "Slightly Impaired (0.60-0.79)"},
+            {"color": "#e74c3c", "label": "Moderately Impaired (0.40-0.59)"},
+            {"color": "#8b0000", "label": "Severely Impaired (<0.40)"}
+        ]
     
     # Habitat parameter legends
     elif param_type == 'habitat':
         return [
-            {"color": "#1e8449", "label": "Grade A (>90)"},
-            {"color": "#7cb342", "label": "Grade B (80-89)"},
-            {"color": "#ff9800", "label": "Grade C (70-79)"},
-            {"color": "#e53e3e", "label": "Grade D (60-69)"},
-            {"color": "#e74c3c", "label": "Grade F (<60)"}
+            {"color": "#1e8449", "label": "Excellent (16-20)"},
+            {"color": "#ff9800", "label": "Good (11-15)"},
+            {"color": "#e74c3c", "label": "Fair (6-10)"},
+            {"color": "#8b0000", "label": "Poor (0-5)"}
         ]
     
-    # Default legend if parameter type/name not recognized
-    return [{"color": "red", "label": "Monitoring Site"}]
+    # Default legend if parameter not found
+    return [{"color": "#666", "label": "No data available"}]
 
-def get_parameter_label(parameter):
+def get_parameter_label(param_type, param_name):
     """
-    Return appropriate Y-axis label for a given parameter.
+    Get the appropriate y-axis label for a parameter.
     
     Args:
-        parameter: Parameter code
+        param_type: Type of parameter ('chem', 'bio', or 'habitat')
+        param_name: Specific parameter name
         
     Returns:
-        String with formatted label for the y-axis
+        str: Y-axis label for the parameter
     """
-    return PARAMETER_AXIS_LABELS.get(parameter, parameter)
+    return PARAMETER_AXIS_LABELS.get(param_name, param_name.replace('_', ' ').title())
 
 def get_parameter_name(parameter):
     """
-    Convert parameter code to human-readable name for explanations lookup.
+    Get the human-readable name for a parameter code.
     
     Args:
         parameter: Parameter code
@@ -214,110 +356,9 @@ def create_gallery_navigation_callback(gallery_type):
     
     return update_gallery
 
-def create_all_parameters_view(df_filtered, key_parameters, reference_values, highlight_thresholds):
-    """
-    Create a dashboard view showing all chemical parameters.
-    
-    Args:
-        df_filtered: Filtered dataframe with chemical data
-        key_parameters: List of key parameters to display
-        reference_values: Dictionary of reference values for parameters
-        highlight_thresholds: Boolean indicating whether to highlight threshold violations
-        
-    Returns:
-        Dash HTML component with the dashboard graph
-    """
-    from visualizations.chemical_viz import create_parameter_dashboard
-    
-    try:
-        fig = create_parameter_dashboard(
-            df_filtered, 
-            key_parameters, 
-            reference_values, 
-            highlight_thresholds, 
-            get_parameter_name
-        )
-        
-        return html.Div([
-            dcc.Graph(
-                figure=fig,
-                style={'width': '100%', 'height': '100%'}
-            )
-        ], className="mb-4")
-        
-    except Exception as e:
-        print(f"Error creating parameter dashboard: {e}")
-        return html.Div([
-            html.Div("Error creating parameter dashboard", className="alert alert-danger"),
-            html.Pre(str(e), style={"fontSize": "12px"})
-        ])
-
-def create_single_parameter_view(df_filtered, parameter, reference_values, highlight_thresholds):
-    """
-    Create a view for a single chemical parameter with graph, explanation, and diagram.
-    
-    Args:
-        df_filtered: Filtered dataframe with chemical data
-        parameter: Parameter code to display
-        reference_values: Dictionary of reference values for parameters
-        highlight_thresholds: Boolean indicating whether to highlight threshold violations
-        
-    Returns:
-        Tuple of (graph, explanation, diagram) components
-    """
-    from visualizations.chemical_viz import create_time_series_plot
-    
-    try:
-        # Get parameter name and prepare components
-        parameter_name = get_parameter_name(parameter)
-        
-        # Create graph component
-        graph = html.Div([
-            dcc.Graph(
-                figure=create_time_series_plot(
-                    df_filtered, 
-                    parameter, 
-                    reference_values,
-                    title=f"{parameter_name} Over Time",
-                    y_label=get_parameter_label(parameter),
-                    highlight_thresholds=highlight_thresholds
-                ),
-                style={'height': '450px'}
-            )
-        ])
-        
-        # Get description and analysis text from markdown file
-        file_path = f"chemical/{parameter_name.lower().replace(' ', '_')}.md"
-        explanation_component = load_markdown_content(file_path)
-        
-        # Create diagram component if available
-        if parameter in CHEMICAL_DIAGRAMS:
-            diagram_component = html.Div([
-                create_image_with_caption(
-                    src=CHEMICAL_DIAGRAMS[parameter],
-                    caption=CHEMICAL_DIAGRAM_CAPTIONS.get(parameter, "")
-                )
-            ], className="d-flex h-100 align-items-center justify-content-center", 
-            style={'height': '100%'})
-        else:
-            diagram_component = html.Div(
-                "No diagram available for this parameter.", 
-                className="d-flex h-100 align-items-center justify-content-center"
-            )
-        
-        return graph, explanation_component, diagram_component
-        
-    except Exception as e:
-        print(f"Error creating single parameter view for {parameter}: {e}")
-        error_component = html.Div([
-            html.Div(f"Error creating view for {parameter}", className="alert alert-danger"),
-            html.Pre(str(e), style={"fontSize": "12px"})
-        ])
-        return error_component, html.Div(), html.Div()
-
 def create_biological_community_display(selected_community, selected_site):
     """
-    Create a display for biological community data with description, gallery, and metrics.
+    Create a complete display for biological community data with visualizations.
     
     Args:
         selected_community: Community type ('fish' or 'macro')
@@ -374,37 +415,44 @@ def create_biological_community_display(selected_community, selected_site):
             
         else:
             return html.Div("Please select a valid biological community from the dropdown.")
-        
+
         # Import gallery creation function
         from layouts import create_species_gallery
             
         # Create unified layout for the community
         content = html.Div([
-            # First row: Graph 
+            # First row: Description on left, gallery on right
+            dbc.Row([
+                # Left column: Description
+                dbc.Col([
+                    load_markdown_content(f"biological/{selected_community}_description.md")
+                ], width=6),
+                
+                # Right column: Species gallery
+                dbc.Col([
+                    create_species_gallery(selected_community)
+                ], width=6, className="d-flex align-items-center"),
+            ], className="mb-4"),
+            
+            # Second row: Graph (full width)
             dbc.Row([
                 dbc.Col([
                     dcc.Graph(figure=viz_figure)
                 ], width=12)
             ], className="mb-4"),
             
-            # Second row: Accordion section for metrics tables 
+            # Third row: Accordion section for metrics tables
             dbc.Row([
                 dbc.Col([
                     metrics_accordion
                 ], width=12)
             ], className="mb-4"),
             
-            # Third row: Analysis text on left, species gallery on right
+            # Fourth row: Analysis section
             dbc.Row([
-                # Left column: Analysis section 
                 dbc.Col([
                     load_markdown_content(f"biological/{selected_community}_analysis.md")
-                ], width=6),
-                
-                # Right column: Species gallery 
-                dbc.Col([
-                    create_species_gallery(selected_community)
-                ], width=6, className="d-flex align-items-center"),
+                ], width=12)
             ], className="mb-4"),
         ])
         
@@ -422,7 +470,7 @@ def create_biological_community_display(selected_community, selected_site):
                 html.Pre(str(e), style={"fontSize": "12px", "color": "#666"})
             ])
         ])
-    
+
 def create_habitat_display(selected_site):
     """
     Create a display for habitat assessment data with visualization and metrics.
@@ -431,10 +479,10 @@ def create_habitat_display(selected_site):
         selected_site: Selected site name
         
     Returns:
-        Dash HTML component with the complete habitat display
+        Dash HTML component with habitat data display
     """
     try:
-        # Import required functions for habitat visualization
+        # Import required functions for visualization
         from visualizations.habitat_viz import create_habitat_viz, create_habitat_metrics_accordion
         from data_processing.habitat_processing import get_habitat_dataframe
         
@@ -443,32 +491,47 @@ def create_habitat_display(selected_site):
         
         if site_data.empty:
             return html.Div([
-                html.H4(f"Habitat Assessment Data for {selected_site}", className="mb-4"),
                 html.Div(f"No habitat data available for {selected_site}", 
                         className="alert alert-warning mt-3")
             ])
         
         # Create site-specific visualizations
-        viz_figure = create_habitat_viz(selected_site)  # Pass site parameter
-        metrics_accordion = create_habitat_metrics_accordion(selected_site)  # Pass site parameter
+        viz_figure = create_habitat_viz(selected_site)
+        metrics_accordion = create_habitat_metrics_accordion(selected_site)
         
-        # Create unified layout for habitat assessment
-        content = html.Div([            
-            # First row: Graph (full width)
+        # Create unified layout for habitat data
+        content = html.Div([
+            # First row: Description on left, image on right
+            dbc.Row([
+                # Left column: Description
+                dbc.Col([
+                    load_markdown_content("habitat/habitat_description.md")
+                ], width=6),
+                
+                # Right column: Habitat image
+                dbc.Col([
+                    create_image_with_caption(
+                        src='/assets/images/stream_habitat_diagram.jpg',
+                        caption="Physical features evaluated during habitat assessment"
+                    )
+                ], width=6, className="d-flex align-items-center"),
+            ], className="mb-4"),
+            
+            # Second row: Graph (full width)
             dbc.Row([
                 dbc.Col([
                     dcc.Graph(figure=viz_figure)
                 ], width=12)
             ], className="mb-4"),
             
-            # Second row: Accordion section for metrics tables
+            # Third row: Accordion section for metrics tables
             dbc.Row([
                 dbc.Col([
                     metrics_accordion
                 ], width=12)
             ], className="mb-4"),
             
-            # Third row: Analysis section
+            # Fourth row: Analysis section
             dbc.Row([
                 dbc.Col([
                     load_markdown_content("habitat/habitat_analysis.md")
@@ -490,3 +553,104 @@ def create_habitat_display(selected_site):
                 html.Pre(str(e), style={"fontSize": "12px", "color": "#666"})
             ])
         ])
+
+def create_all_parameters_view(df_filtered, key_parameters, reference_values, highlight_thresholds):
+    """
+    Create a dashboard view showing all chemical parameters.
+    
+    Args:
+        df_filtered: Filtered dataframe with chemical data
+        key_parameters: List of parameters to display
+        reference_values: Dictionary of reference values for parameters
+        highlight_thresholds: Dictionary of threshold values for highlighting
+        
+    Returns:
+        Dash HTML component with all parameters view
+    """
+    try:
+        from visualizations.chemical_viz import create_all_parameters_figure
+        
+        # Create the comprehensive figure
+        fig = create_all_parameters_figure(df_filtered, key_parameters, reference_values, highlight_thresholds)
+        
+        # Return the figure wrapped in a graph component
+        return dcc.Graph(
+            figure=fig,
+            style={'height': '800px'},  # Make it taller for better readability
+            config={'displayModeBar': True, 'toImageButtonOptions': {'width': 1200, 'height': 800}}
+        )
+        
+    except Exception as e:
+        logger.error(f"Error creating all parameters view: {e}")
+        return html.Div([
+            html.H4("Error Loading All Parameters View", className="mb-4"),
+            html.Div("Error loading the comprehensive parameters view.", 
+                    className="alert alert-danger mt-3"),
+            html.Details([
+                html.Summary("Error Details"),
+                html.Pre(str(e), style={"fontSize": "12px", "color": "#666"})
+            ])
+        ])
+
+def create_single_parameter_view(df_filtered, parameter, reference_values, highlight_thresholds):
+    """
+    Create a view for a single chemical parameter with graph, explanation, and diagram.
+    
+    Args:
+        df_filtered: Filtered dataframe with chemical data
+        parameter: Parameter code to display
+        reference_values: Dictionary of reference values for parameters
+        highlight_thresholds: Boolean indicating whether to highlight threshold violations
+        
+    Returns:
+        Tuple of (graph, explanation, diagram) components
+    """
+    from visualizations.chemical_viz import create_time_series_plot
+    
+    try:
+        # Get parameter name and prepare components
+        parameter_name = get_parameter_name(parameter)
+        
+        # Create graph component
+        graph = html.Div([
+            dcc.Graph(
+                figure=create_time_series_plot(
+                    df_filtered, 
+                    parameter, 
+                    reference_values,
+                    title=f"{parameter_name} Over Time",
+                    y_label=get_parameter_label('chem', parameter),
+                    highlight_thresholds=highlight_thresholds
+                ),
+                style={'height': '450px'}
+            )
+        ])
+        
+        # Get description and analysis text from markdown file
+        file_path = f"chemical/{parameter_name.lower().replace(' ', '_')}.md"
+        explanation_component = load_markdown_content(file_path)
+        
+        # Create diagram component if available
+        if parameter in CHEMICAL_DIAGRAMS:
+            diagram_component = html.Div([
+                create_image_with_caption(
+                    src=CHEMICAL_DIAGRAMS[parameter],
+                    caption=CHEMICAL_DIAGRAM_CAPTIONS.get(parameter, "")
+                )
+            ], className="d-flex h-100 align-items-center justify-content-center", 
+            style={'height': '100%'})
+        else:
+            diagram_component = html.Div(
+                "No diagram available for this parameter.", 
+                className="d-flex h-100 align-items-center justify-content-center"
+            )
+        
+        return graph, explanation_component, diagram_component
+        
+    except Exception as e:
+        logger.error(f"Error creating single parameter view for {parameter}: {e}")
+        error_component = html.Div([
+            html.Div(f"Error creating view for {parameter}", className="alert alert-danger"),
+            html.Pre(str(e), style={"fontSize": "12px"})
+        ])
+        return error_component, html.Div(), html.Div()
