@@ -2,6 +2,7 @@ import os
 import sys
 import pandas as pd
 import numpy as np
+from utils import setup_logging, round_parameter_value
 
 # Add project root to path 
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -533,17 +534,23 @@ def insert_processed_chemical_data(df):
                 
                 for param_name, param_id in parameter_map.items():
                     if param_name in row and pd.notna(row[param_name]):
-                        value = row[param_name]
+                        # Apply appropriate rounding before insertion
+                        raw_value = row[param_name]
+                        rounded_value = round_parameter_value(param_name, raw_value, 'chemical')
                         
-                        # Determine status using shared utility
-                        status = determine_status(param_name, value, reference_values)
+                        # Skip if rounding failed
+                        if rounded_value is None:
+                            continue
+                            
+                        # Determine status using rounded value
+                        status = determine_status(param_name, rounded_value, reference_values)
                         
-                        # Insert measurement
+                        # Insert measurement with rounded value
                         cursor.execute("""
                         INSERT INTO chemical_measurements
                         (event_id, parameter_id, value, status)
                         VALUES (?, ?, ?, ?)
-                        """, (event_id, param_id, value, status))
+                        """, (event_id, param_id, rounded_value, status))
                         
                         measurements_added += 1
         

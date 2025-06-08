@@ -254,6 +254,11 @@ def calculate_soluble_nitrogen(df):
         # Calculate total soluble nitrogen
         df_calc['soluble_nitrogen'] = nitrate_calc + nitrite_calc + ammonia_calc
         
+        # Apply proper rounding to ensure consistent decimal places (2 decimal places)
+        df_calc['soluble_nitrogen'] = df_calc['soluble_nitrogen'].apply(
+            lambda x: float(f"{x:.2f}") if pd.notna(x) else x
+        )
+        
         logger.info("Successfully calculated soluble_nitrogen from component values")
         return df_calc
         

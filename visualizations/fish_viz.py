@@ -27,8 +27,8 @@ FONT_SIZES = {
 # Integrity class thresholds
 INTEGRITY_THRESHOLDS = {
     'Excellent': 0.97,
-    'Good': 0.8,
-    'Fair': 0.67,
+    'Good': 0.76,
+    'Fair': 0.60,
     'Poor': 0.47
 }
 

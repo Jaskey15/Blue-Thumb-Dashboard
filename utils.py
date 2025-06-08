@@ -5,6 +5,7 @@ This module contains reusable helper functions used across the dashboard.
 
 import dash_bootstrap_components as dbc
 import os
+import pandas as pd
 import traceback
 from dash import html, dcc
 
@@ -92,6 +93,54 @@ def setup_logging(module_name, category="general"):
     logger.addHandler(console_handler)
     
     return logger
+
+def round_parameter_value(param_name, value, data_type='chemical'):
+    """
+    Round parameter values to appropriate decimal places based on parameter type.
+    
+    Args:
+        param_name: Name of the parameter
+        value: Raw parameter value
+        data_type: Type of data ('chemical', 'bio', 'habitat')
+        
+    Returns:
+        Rounded value or None if input is invalid
+    """
+    if pd.isna(value) or value is None:
+        return None
+    
+    try:
+        # Convert to float first
+        float_value = float(value)
+        
+        if data_type == 'chemical':
+            if param_name == 'do_percent':
+                return int(round(float_value))
+            elif param_name == 'pH':
+                return float(f"{float_value:.1f}")
+            elif param_name == 'soluble_nitrogen':
+                return float(f"{float_value:.2f}")
+            elif param_name == 'Phosphorus':
+                return float(f"{float_value:.3f}")
+            elif param_name == 'Chloride':
+                return int(round(float_value))
+            else:
+                # Default for unknown chemical parameters (2 decimal places)
+                return float(f"{float_value:.2f}")
+                
+        elif data_type == 'bio':
+            return float(f"{float_value:.2f}")
+            
+        elif data_type == 'habitat':
+            return int(round(float_value))
+            
+        else:
+            # Default rounding (2 decimal places)
+            return float(f"{float_value:.2f}")
+            
+    except (ValueError, TypeError):
+        logger.warning(f"Could not round value {value} for parameter {param_name}")
+        return None
 
 def load_markdown_content(filename, fallback_message=None):
     """

@@ -2,7 +2,7 @@ import pandas as pd
 import sqlite3
 from database.database import get_connection, close_connection
 from data_processing.data_loader import load_csv_data, clean_column_names, save_processed_data
-from utils import setup_logging
+from utils import setup_logging, round_parameter_value
 
 # Set up component-specific logging
 logger = setup_logging("habitat_processing", category="processing")

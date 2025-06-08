@@ -2,6 +2,7 @@ import os
 import sys
 import pandas as pd
 import numpy as np
+from utils import setup_logging, round_parameter_value
 
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
@@ -153,7 +154,7 @@ def get_reference_values():
                 if row['threshold_type'] in threshold_mapping:
                     reference_key = threshold_mapping[row['threshold_type']]
                     reference_values[param][reference_key] = row['value']
-                
+        
         # If no reference values in database, use hardcoded defaults
         if not reference_values:
             reference_values = {
@@ -161,62 +162,31 @@ def get_reference_values():
                     'normal min': 80, 
                     'normal max': 130, 
                     'caution min': 50,
-                    'caution max': 150,
-                    'description': 'Normal dissolved oxygen saturation range'
+                    'caution max': 150
                 },
                 'pH': {
                     'normal min': 6.5, 
-                    'normal max': 9.0, 
-                    'description': 'Normal range for Oklahoma streams'
+                    'normal max': 9.0
                 },
                 'soluble_nitrogen': {
                     'normal': 0.8, 
-                    'caution': 1.5, 
-                    'description': 'Normal nitrogen levels for this area'
+                    'caution': 1.5
                 },
                 'Phosphorus': {
                     'normal': 0.05, 
-                    'caution': 0.1, 
-                    'description': 'Phosphorus levels for streams in Oklahoma'
+                    'caution': 0.1
                 },
                 'Chloride': {
-                    'poor': 250,
-                    'description': 'Maximum acceptable chloride level'
+                    'normal': 250,
+                    'caution': 500
                 }
             }
             
         return reference_values
+        
     except Exception as e:
         logger.error(f"Error getting reference values: {e}")
-        # Return default reference values
-        return {
-            'do_percent': {
-                'normal min': 80, 
-                'normal max': 130, 
-                'caution min': 50,
-                'caution max': 150,
-                'description': 'Normal dissolved oxygen saturation range'
-            },
-            'pH': {
-                'normal min': 6.5, 
-                'normal max': 9.0, 
-                'description': 'Normal range for Oklahoma streams'
-            },
-            'soluble_nitrogen': {
-                'normal': 0.8, 
-                'caution': 1.5, 
-                'description': 'Normal nitrogen levels for this area'
-            },
-            'Phosphorus': {
-                'normal': 0.05, 
-                'caution': 0.1, 
-                'description': 'Phosphorus levels for streams in Oklahoma'
-            },
-            'Chloride': {
-                'poor': 250,
-                'description': 'Maximum acceptable chloride level'
-            }
-        }
+        return {}
     finally:
         close_connection(conn)
 
@@ -358,19 +328,28 @@ def load_chemical_data_to_db(site_name=None):
                         if parameter in PARAMETER_MAP:
                             parameter_id = PARAMETER_MAP[parameter]
                             
-                            # Check if this measurement already exists (batch lookup)
+                            # Check if this measurement already exists 
                             if (event_id, parameter_id) not in existing_measurements:
                                 # Calculate status using shared utility
                                 status = determine_status(parameter, value, reference_values)
                                 
-                                # Insert new measurement
+                                # Apply appropriate rounding before insertion
+                                rounded_value = round_parameter_value(parameter, value, 'chemical')
+
+                                # Skip if rounding failed
+                                if rounded_value is None:
+                                    continue
+                                    
+                                # Recalculate status with rounded value
+                                status = determine_status(parameter, rounded_value, reference_values)
+
                                 cursor.execute("""
                                 INSERT INTO chemical_measurements
                                 (event_id, parameter_id, value, status)
                                 VALUES (?, ?, ?, ?)
-                                """, (event_id, parameter_id, value, status))
-                                
-                                existing_measurements.add((event_id, parameter_id))  # Update our lookup
+                                """, (event_id, parameter_id, rounded_value, status))
+
+                                existing_measurements.add((event_id, parameter_id))  
                                 measurements_added += 1
         
         conn.commit()

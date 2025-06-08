@@ -17,7 +17,8 @@ COLORS = {
         'excellent': '#1e8449',  # Green
         'good': '#7cb342',       # Light green
         'fair': '#ff9800',       # Orange
-        'poor': '#e74c3c',       # Red
+        'poor': '#e53e3e',       # Red-orange 
+        'very poor': '#e74c3c',  # Red
     },
     'macro': {
         'non-impaired': '#1e8449',        # Green
@@ -44,8 +45,8 @@ PARAMETER_THRESHOLDS = {
         {'min': 150, 'max': float('inf'), 'status': 'Poor', 'color': COLORS['poor']}
     ],
     'pH': [
-        {'min': 6.5, 'max': 9.0, 'status': 'Normal', 'color': COLORS['normal']},
         {'min': -float('inf'), 'max': 6.5, 'status': 'Below Normal', 'color': COLORS['below_normal']},
+        {'min': 6.5, 'max': 9.0, 'status': 'Normal', 'color': COLORS['normal']},
         {'min': 9.0, 'max': float('inf'), 'status': 'Above Normal', 'color': COLORS['above_normal']}
     ],
     'soluble_nitrogen': [
@@ -60,16 +61,18 @@ PARAMETER_THRESHOLDS = {
     ],
     'Chloride': [
         {'min': -float('inf'), 'max': 250, 'status': 'Normal', 'color': COLORS['normal']},
-        {'min': 250, 'max': float('inf'), 'status': 'Poor', 'color': COLORS['poor']}
+        {'min': 250, 'max': 500, 'status': 'Caution', 'color': COLORS['caution']},
+        {'min': 500, 'max': float('inf'), 'status': 'Poor', 'color': COLORS['poor']}
     ]
 }
 
 # Fish IBI thresholds
 FISH_IBI_THRESHOLDS = [
     {'min': 0.97, 'max': float('inf'), 'status': 'Excellent', 'color': COLORS['fish']['excellent']},
-    {'min': 0.8, 'max': 0.97, 'status': 'Good', 'color': COLORS['fish']['good']},
-    {'min': 0.67, 'max': 0.8, 'status': 'Fair', 'color': COLORS['fish']['fair']},
-    {'min': -float('inf'), 'max': 0.67, 'status': 'Poor', 'color': COLORS['fish']['poor']}
+    {'min': 0.76, 'max': 0.97, 'status': 'Good', 'color': COLORS['fish']['good']},
+    {'min': 0.60, 'max': 0.76, 'status': 'Fair', 'color': COLORS['fish']['fair']},
+    {'min': 0.47, 'max': 0.60, 'status': 'Poor', 'color': COLORS['fish']['poor']},
+    {'min': -float('inf'), 'max': 0.47, 'status': 'Very Poor', 'color': COLORS['fish']['very poor']}
 ]
 
 # Macroinvertebrate bioassessment thresholds
@@ -83,10 +86,10 @@ MACRO_THRESHOLDS = [
 # Habitat assessment thresholds (based on total score ranges)
 HABITAT_THRESHOLDS = [
     {'min': 90, 'max': float('inf'), 'status': 'A', 'color': COLORS['habitat']['a']},
-    {'min': 80, 'max': 89, 'status': 'B', 'color': COLORS['habitat']['b']},
-    {'min': 70, 'max': 79, 'status': 'C', 'color': COLORS['habitat']['c']},
-    {'min': 60, 'max': 69, 'status': 'D', 'color': COLORS['habitat']['d']},
-    {'min': -float('inf'), 'max': 59, 'status': 'F', 'color': COLORS['habitat']['f']}
+    {'min': 80, 'max': 90, 'status': 'B', 'color': COLORS['habitat']['b']},
+    {'min': 70, 'max': 80, 'status': 'C', 'color': COLORS['habitat']['c']},
+    {'min': 60, 'max': 70, 'status': 'D', 'color': COLORS['habitat']['d']},
+    {'min': -float('inf'), 'max': 60, 'status': 'F', 'color': COLORS['habitat']['f']}
 ]
 
 # Parameter display names

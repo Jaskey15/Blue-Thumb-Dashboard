@@ -10,8 +10,10 @@ import dash
 from dash import html, dcc
 import dash_bootstrap_components as dbc
 from config.data_definitions import PARAMETER_DISPLAY_NAMES, PARAMETER_AXIS_LABELS, FISH_DATA, MACRO_DATA
+from map_viz import COLORS
 from utils import setup_logging, load_markdown_content, create_image_with_caption
 from .helper_functions import create_empty_state, create_error_state
+from visualizations.map_viz import COLORS
 
 logger = setup_logging("tab_utilities")
 
@@ -35,51 +37,61 @@ def get_parameter_legend(param_type, param_name):
     if param_type == 'chem':
         if param_name == 'do_percent':
             return [
-                {"color": "#1e8449", "label": "Normal (80-130%)"},
-                {"color": "#ff9800", "label": "Caution (50-80% or 130-150%)"},
-                {"color": "#e74c3c", "label": "Poor (<50% or >150%)"}
+                {"color": COLORS['normal'], "label": "Normal (80-130%)"},
+                {"color": COLORS['caution'], "label": "Caution (50-80% or 130-150%)"},
+                {"color": COLORS['poor'], "label": "Poor (<50% or >150%)"}
             ]
         elif param_name == 'pH':
             return [
-                {"color": "#1e8449", "label": "Normal (6.5-9.0)"},
-                {"color": "#f57c00", "label": "Below Normal (<6.5: Acidic)"},
-                {"color": "#5e35b1", "label": "Above Normal (>9.0: Basic/Alkaline)"}
+                {"color": COLORS['normal'], "label": "Normal (6.5-9.0)"},
+                {"color": COLORS['below_normal'], "label": "Below Normal (<6.5: Acidic)"},
+                {"color": COLORS['above_normal'], "label": "Above Normal (>9.0: Basic/Alkaline)"}
             ]
         elif param_name == 'soluble_nitrogen':
             return [
-                {"color": "#1e8449", "label": "Normal (<0.8 mg/L)"},
-                {"color": "#ff9800", "label": "Elevated (0.8-2.0 mg/L)"},
-                {"color": "#e74c3c", "label": "High (>2.0 mg/L)"}
+                {"color": COLORS['normal'], "label": "Normal (<0.8 mg/L)"},
+                {"color": COLORS['caution'], "label": "Elevated (0.8-1.5 mg/L)"},
+                {"color": COLORS['poor'], "label": "High (>1.5 mg/L)"}
             ]
         elif param_name == 'Phosphorus':
             return [
-                {"color": "#1e8449", "label": "Normal (<0.1 mg/L)"},
-                {"color": "#ff9800", "label": "Elevated (0.1-0.3 mg/L)"},
-                {"color": "#e74c3c", "label": "High (>0.3 mg/L)"}
+                {"color": COLORS['normal'], "label": "Normal (<0.05 mg/L)"},
+                {"color": COLORS['caution'], "label": "Elevated (0.05-0.1 mg/L)"},
+                {"color": COLORS['poor'], "label": "High (>0.1 mg/L)"}
             ]
         elif param_name == 'Chloride':
             return [
-                {"color": "#1e8449", "label": "Normal (<250 mg/L)"},
-                {"color": "#ff9800", "label": "Elevated (250-500 mg/L)"},
-                {"color": "#e74c3c", "label": "High (>500 mg/L)"}
+                {"color": COLORS['normal'], "label": "Normal (<250 mg/L)"},
+                {"color": COLORS['caution'], "label": "Caution (250-500 mg/L)"},
+                {"color": COLORS['poor'], "label": "Poor (>500 mg/L)"}
             ]
     
     # Biological parameter legends
     elif param_type == 'bio':
-        return [
-            {"color": "#1e8449", "label": "Non-impaired (>0.79)"},
-            {"color": "#ff9800", "label": "Slightly Impaired (0.60-0.79)"},
-            {"color": "#e74c3c", "label": "Moderately Impaired (0.40-0.59)"},
-            {"color": "#8b0000", "label": "Severely Impaired (<0.40)"}
-        ]
+        if param_name == 'Fish_IBI':
+            return [
+                {"color": COLORS['fish']['excellent'], "label": "Excellent (>0.97)"},
+                {"color": COLORS['fish']['good'], "label": "Good (0.76-0.97)"},
+                {"color": COLORS['fish']['fair'], "label": "Fair (0.60-0.79)"},
+                {"color": COLORS['fish']['poor'], "label": "Poor (0.47-0.60)"},
+                {"color": COLORS['fish']['very poor'], "label": "Very Poor (<0.47)"}
+            ]
+        elif param_name == 'Macro_Combined':
+            return [
+                {"color": COLORS['macro']['non-impaired'], "label": "Non-impaired (>0.83)"},
+                {"color": COLORS['macro']['slightly_impaired'], "label": "Slightly Impaired (0.54-0.83)"},
+                {"color": COLORS['macro']['moderately_impaired'], "label": "Moderately Impaired (0.17-0.54)"},
+                {"color": COLORS['macro']['severely_impaired'], "label": "Severely Impaired (<0.17)"}
+            ]
     
     # Habitat parameter legends
     elif param_type == 'habitat':
         return [
-            {"color": "#1e8449", "label": "Excellent (16-20)"},
-            {"color": "#ff9800", "label": "Good (11-15)"},
-            {"color": "#e74c3c", "label": "Fair (6-10)"},
-            {"color": "#8b0000", "label": "Poor (0-5)"}
+            {"color": COLORS['habitat']['a'], "label": "A (>90)"},
+            {"color": COLORS['habitat']['b'], "label": "B (80-89)"},
+            {"color": COLORS['habitat']['c'], "label": "C (70-79)"},
+            {"color": COLORS['habitat']['d'], "label": "D (60-69)"},
+            {"color": COLORS['habitat']['f'], "label": "F (<60)"}
         ]
     
     # Default legend if parameter not found
