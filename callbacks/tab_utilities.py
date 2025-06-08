@@ -85,47 +85,24 @@ def get_parameter_legend(param_type, param_name):
     # Default legend if parameter not found
     return [{"color": "#666", "label": "No data available"}]
 
-def get_parameter_label(param_type, param_name):
-    """
-    Get the appropriate y-axis label for a parameter.
-    Used by visualization functions across tabs.
-    
-    Args:
-        param_type: Type of parameter ('chem', 'bio', or 'habitat')
-        param_name: Specific parameter name
-        
-    Returns:
-        str: Y-axis label for the parameter
-    """
-    return PARAMETER_AXIS_LABELS.get(param_name, param_name.replace('_', ' ').title())
-
-def get_parameter_name(parameter):
-    """
-    Get the human-readable name for a parameter code.
-    Used across tabs for display purposes.
-    
-    Args:
-        parameter: Parameter code
-        
-    Returns:
-        str: Human-readable name for the parameter
-    """
-    return PARAMETER_DISPLAY_NAMES.get(parameter, parameter)
-
 def get_site_count_message(param_type, param_name, sites_with_data, total_sites):
     """
     Create custom site count message based on parameter type.
     Used by overview tab for map status messages.
     
     Args:
-        param_type: Type of parameter ('chem', 'bio', 'habitat')
-        param_name: Specific parameter name
-        sites_with_data: Number of sites with data
+        param_type: Type of parameter ('chem', 'bio', 'habitat', or None for basic map)
+        param_name: Specific parameter name (or None for basic map)
+        sites_with_data: Number of sites with data (or total for basic map)
         total_sites: Total number of sites
         
     Returns:
         str: Formatted site count message
     """
+    # Handle basic map case (no parameter selected)
+    if not param_type or not param_name:
+        return f"Showing {total_sites} monitoring sites"
+    
     if param_type == 'chem':
         return f"Showing {sites_with_data} of {total_sites} sites with chemical data"
     elif param_type == 'bio':
@@ -137,6 +114,68 @@ def get_site_count_message(param_type, param_name, sites_with_data, total_sites)
         return f"Showing {sites_with_data} of {total_sites} sites with habitat data"
     
     return f"Showing {sites_with_data} of {total_sites} sites"
+
+def create_basic_map_legend_html(total_count):
+    """
+    Create the legend HTML for the basic map showing active vs historic sites.
+    
+    Args:
+        total_count: Total number of sites being displayed
+        
+    Returns:
+        Dash HTML component for the basic map legend
+    """
+    legend_content = [
+        # Site count display
+        html.Div(
+            f"Showing {total_count} monitoring sites",
+            className="text-center mb-2",
+            style={"font-weight": "bold", "color": "#666"}
+        ),
+        # Legend items
+        html.Div([
+            html.Div([
+                html.Span("●", style={"color": "#3366CC", "font-size": "16px"}),
+                html.Span(" Active Sites", className="mr-3")
+            ], style={"display": "inline-block", "margin-right": "15px"}),
+            html.Div([
+                html.Span("●", style={"color": "#9370DB", "font-size": "12px"}),
+                html.Span(" Historic Sites", className="mr-3")
+            ], style={"display": "inline-block", "margin-right": "15px"})
+        ])
+    ]
+    
+    return html.Div(legend_content, className="text-center mt-2 mb-4")
+
+def create_map_legend_html(legend_items, count_message):
+    """
+    Create standardized HTML for map legends in the overview tab.
+    
+    Args:
+        legend_items: List of dictionaries with 'color' and 'label' keys
+        count_message: String message about site counts to display
+        
+    Returns:
+        Dash HTML component for the legend
+    """
+    legend_content = [
+        # Site count display
+        html.Div(
+            count_message,
+            className="text-center mb-2",
+            style={"font-weight": "bold", "color": "#666"}
+        ),
+        # Legend items
+        html.Div([
+            html.Div([
+                html.Span("● ", style={"color": item["color"], "font-size": "20px"}),
+                html.Span(item["label"], className="mr-3")
+            ], style={"display": "inline-block", "margin-right": "15px"})
+            for item in legend_items
+        ])
+    ]
+    
+    return html.Div(legend_content, className="text-center mt-2 mb-4")
 
 # ===========================================================================================
 # BIOLOGICAL TAB UTILITIES
