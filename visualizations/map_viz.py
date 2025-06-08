@@ -512,10 +512,13 @@ def create_error_map(error_message):
     )
     return fig
 
-def create_basic_site_map():
+def create_basic_site_map(active_only=False):
     """
     Create a basic interactive map with all monitoring sites shown with different shapes/colors for active vs historic.
     
+    Args:
+        active_only: Boolean - if True, show only active sites; if False, show all sites
+        
     Returns:
         Tuple of (figure, active_count, historic_count, total_count)
     """
@@ -527,23 +530,23 @@ def create_basic_site_map():
         if not MONITORING_SITES:
             return create_error_map("Error: No monitoring sites available"), 0, 0, 0
         
-        # Track counts
-        active_count = 0
-        historic_count = 0
-        total_count = len(MONITORING_SITES)
+        # Apply filtering if requested
+        if active_only:
+            sites_to_use, active_count, historic_count, total_original = filter_sites_by_active_status(
+                MONITORING_SITES, active_only
+            )
+        else:
+            sites_to_use = MONITORING_SITES
+            active_count = sum(1 for site in sites_to_use if site.get('active', False))
+            historic_count = len(sites_to_use) - active_count
+            total_original = len(sites_to_use)
         
         # Add all sites with appropriate styling handled by add_site_marker
-        for site in MONITORING_SITES:
+        for site in sites_to_use:
             hover_text = (f"Site: {site['name']}<br>"
                          f"County: {site['county']}<br>"
                          f"River Basin: {site['river_basin']}<br>"
                          f"Ecoregion: {site['ecoregion']}")
-            
-            # Count sites by status
-            if site["active"]:
-                active_count += 1
-            else:
-                historic_count += 1
             
             # Add marker (styling handled internally by add_site_marker)
             fig = add_site_marker(
@@ -593,6 +596,9 @@ def create_basic_site_map():
 
         # Add title 
         fig.update_layout(title=dict(text="Monitoring Sites", x=0.5, y=0.98))
+        
+        # Return the correct count based on filtering
+        total_count = len(sites_to_use)
         
         return fig, active_count, historic_count, total_count
     

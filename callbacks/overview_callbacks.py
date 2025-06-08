@@ -43,8 +43,8 @@ def register_overview_callbacks(app):
         try:
             from visualizations.map_viz import create_basic_site_map
             
-            # Create basic map with site counts
-            basic_map, active_count, historic_count, total_count = create_basic_site_map()
+            # Create basic map with site counts (without filtering for initial load)
+            basic_map, active_count, historic_count, total_count = create_basic_site_map(active_only=False)
             
             # Enable the parameter dropdown now that map is loaded
             dropdown_disabled = False
@@ -98,15 +98,10 @@ def register_overview_callbacks(app):
                 filter_sites_by_active_status, MONITORING_SITES
             )
             
-            # Filter sites based on toggle state
-            filtered_sites, active_count, historic_count, total_original = filter_sites_by_active_status(
-                MONITORING_SITES, active_only_toggle
-            )
-            
-            # If no parameter selected, show basic map
+            # If no parameter selected, show basic map with filtering applied
             if not parameter_value:
-                # Use the same approach as the initial map load
-                basic_map, active_count, historic_count, total_count = create_basic_site_map()
+                # Use the updated create_basic_site_map function with filtering
+                basic_map, active_count, historic_count, total_count = create_basic_site_map(active_only=active_only_toggle)
                 
                 # Create legend using utility function
                 legend_html = create_basic_map_legend_html(total_count)
@@ -122,6 +117,11 @@ def register_overview_callbacks(app):
                 )
             
             param_type, param_name = parameter_value.split(':', 1)
+            
+            # Filter sites based on toggle state
+            filtered_sites, active_count, historic_count, total_original = filter_sites_by_active_status(
+                MONITORING_SITES, active_only_toggle
+            )
             
             # Start with current figure or create basic map
             if current_figure and current_figure.get('data'):
