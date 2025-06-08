@@ -110,9 +110,39 @@ def register_chemical_callbacks(app):
             )
         return dash.no_update, dash.no_update, dash.no_update, dash.no_update
     
-    # ===========================
-    # 2. DATA VISUALIZATION
-    # ===========================
+    # ================================
+    # 2. DATA VISUALIZATION & FILTERS
+    # ================================
+    
+    @app.callback(
+        Output('month-checklist', 'value'),
+        [Input('select-all-months', 'n_clicks'),
+         Input('select-spring', 'n_clicks'),
+         Input('select-summer', 'n_clicks'), 
+         Input('select-fall', 'n_clicks'),
+         Input('select-winter', 'n_clicks')],
+        prevent_initial_call=True
+    )
+    def update_month_selection(all_clicks, spring_clicks, summer_clicks, fall_clicks, winter_clicks):
+        """Update month selection based on season button clicks."""
+        ctx = dash.callback_context
+        
+        if not ctx.triggered:
+            return dash.no_update
+        
+        # Get which button was clicked
+        button_id = ctx.triggered[0]['prop_id'].split('.')[0]
+        
+        # Define season mappings
+        season_months = {
+            'select-all-months': list(range(1, 13)),  # All months
+            'select-spring': [3, 4, 5],      # March, April, May
+            'select-summer': [6, 7, 8],      # June, July, August  
+            'select-fall': [9, 10, 11],      # September, October, November
+            'select-winter': [12, 1, 2],     # December, January, February
+        }
+        
+        return season_months.get(button_id, dash.no_update)
     
     @app.callback(
         [Output('chemical-graph-container', 'children'),
@@ -173,33 +203,5 @@ def register_chemical_callbacks(app):
                 str(e)
             )
             return error_state, html.Div(), html.Div()
-
-    # ===========================
-    # 3. MONTH SELECTION HELPER
-    # ===========================
-    
-    @app.callback(
-        Output('month-checklist', 'value'),
-        [Input('season-buttons', 'n_clicks'),
-         Input('all-months-button', 'n_clicks')],
-        prevent_initial_call=True
-    )
-    def update_month_selection(season_clicks, all_months_clicks):
-        """Update month selection based on season or all months button clicks."""
-        ctx = dash.callback_context
-        
-        if not ctx.triggered:
-            return dash.no_update
-        
-        button_id = ctx.triggered[0]['prop_id'].split('.')[0]
-        
-        if button_id == 'all-months-button':
-            return list(range(1, 13))  # All months
-        elif button_id == 'season-buttons':
-            # For season buttons, you'd need to implement season logic
-            # This is placeholder - adjust based on your season button implementation
-            return list(range(6, 9))  # Summer as example
-        
-        return dash.no_update
 
 
