@@ -154,7 +154,7 @@ def register_chemical_callbacks(app):
                     df_filtered = df_filtered[df_filtered['Month'].isin(selected_months)]
             
             # Create visualization based on parameter selection
-            if selected_parameter == 'all':
+            if selected_parameter == 'all_parameters':
                 graph, explanation, diagram = create_all_parameters_visualization(
                     df_filtered, key_parameters, reference_values, highlight_thresholds
                 )

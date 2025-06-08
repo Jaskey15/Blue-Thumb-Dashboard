@@ -538,7 +538,7 @@ def create_chemical_tab():
                     )
                 ], width=5),
 
-                # Month selection (right side) - UPDATED LAYOUT TO MATCH ORIGINAL
+                # Month selection 
                 dbc.Col([
                     html.Label(
                         "Select Months:", 
@@ -561,7 +561,7 @@ def create_chemical_tab():
                 ], width=7)
             ], className="mb-3"),
             
-            # Highlight switch - UPDATED LAYOUT TO MATCH ORIGINAL
+            # Highlight switch 
             dbc.Row([
                 dbc.Col([
                     html.Label(

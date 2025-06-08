@@ -327,45 +327,6 @@ def create_biological_community_display(selected_community, selected_site):
 # ===========================================================================================
 # CHEMICAL TAB UTILITIES
 # ===========================================================================================
-
-def create_all_parameters_visualization(df_filtered, key_parameters, reference_values, highlight_thresholds):
-    """Create visualization for all chemical parameters."""
-    try:
-        if df_filtered.empty:
-            empty_state = create_empty_state("No data available for the selected time period.")
-            return empty_state, html.Div(), html.Div()
-        
-        # Import the visualization function
-        from visualizations.chemical_viz import create_all_parameters_figure
-        
-        # Create the comprehensive figure
-        fig = create_all_parameters_figure(df_filtered, key_parameters, reference_values, highlight_thresholds)
-        
-        # Create the graph component
-        graph = dcc.Graph(
-            figure=fig,
-            style={'height': '800px'},  
-            config={'displayModeBar': True, 'toImageButtonOptions': {'width': 1200, 'height': 800}}
-        )
-        
-        # Create explanation
-        explanation = html.Div([
-            html.H4("All Chemical Parameters"),
-            html.P("This view shows all chemical parameters measured at this site over time. "
-                  "Each parameter is normalized to allow comparison across different measurement scales.")
-        ])
-        
-        return graph, explanation, html.Div()  
-        
-    except Exception as e:
-        logger.error(f"Error creating all parameters view: {e}")
-        error_state = create_error_state(
-            "Visualization Error", 
-            "Could not create all parameters visualization.", 
-            str(e)
-        )
-        return error_state, html.Div(), html.Div()
-
 def create_single_parameter_visualization(df_filtered, parameter, reference_values, highlight_thresholds):
     """Create visualization for a single chemical parameter."""
     try:
@@ -423,6 +384,37 @@ def create_single_parameter_visualization(df_filtered, parameter, reference_valu
         error_state = create_error_state(
             "Visualization Error", 
             f"Could not create {parameter} visualization.", 
+            str(e)
+        )
+        return error_state, html.Div(), html.Div()
+
+def create_all_parameters_visualization(df_filtered, key_parameters, reference_values, highlight_thresholds):
+    """Create visualization for all chemical parameters."""
+    try:
+        if df_filtered.empty:
+            empty_state = create_empty_state("No data available for the selected time period.")
+            return empty_state, html.Div(), html.Div()
+        
+        # Import the visualization function
+        from visualizations.chemical_viz import create_parameter_dashboard
+        
+        # Create the comprehensive figure
+        fig = create_parameter_dashboard(df_filtered, key_parameters, reference_values, highlight_thresholds)
+        
+        # Create the graph component
+        graph = dcc.Graph(
+            figure=fig,
+            style={'height': '800px'},  
+            config={'displayModeBar': True, 'toImageButtonOptions': {'width': 1200, 'height': 800}}
+        )
+        
+        return graph, html.Div(), html.Div()  
+        
+    except Exception as e:
+        logger.error(f"Error creating all parameters view: {e}")
+        error_state = create_error_state(
+            "Visualization Error", 
+            "Could not create all parameters visualization.", 
             str(e)
         )
         return error_state, html.Div(), html.Div()

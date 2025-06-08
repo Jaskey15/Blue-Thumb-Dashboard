@@ -53,8 +53,6 @@ NUTRIENT_COLUMN_MAPPINGS = {
     }
 }
 
-# Key changes needed in updated_chemical_processing.py
-
 def load_updated_chemical_data():
     """
     Load the CLEANED updated chemical data CSV file.
