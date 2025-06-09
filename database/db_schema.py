@@ -1,78 +1,5 @@
 from database.database import get_connection, close_connection
 
-def insert_default_parameters(cursor):
-    """
-    Insert default chemical parameters into the database.
-    
-    Args:
-        cursor: Database cursor
-        
-    Returns:
-        bool: True if successful
-    """
-    # Define the parameters
-    parameters = [
-        (1, 'Dissolved Oxygen', 'do_percent', 'Dissolved Oxygen', 'Percent saturation of dissolved oxygen', '%'),
-        (2, 'pH', 'pH', 'pH', 'Measure of acidity/alkalinity', 'pH units'),
-        (3, 'Soluble Nitrogen', 'soluble_nitrogen', 'Nitrogen', 'Total soluble nitrogen including nitrate, nitrite, and ammonia', 'mg/L'),
-        (4, 'Phosphorus', 'Phosphorus', 'Phosphorus', 'Orthophosphate phosphorus', 'mg/L'),
-        (5, 'Chloride', 'Chloride', 'Chloride', 'Chloride ion concentration', 'mg/L')
-    ]
-    
-    # Insert the parameters
-    cursor.executemany('''
-    INSERT OR IGNORE INTO chemical_parameters 
-    (parameter_id, parameter_name, parameter_code, display_name, description, unit)
-    VALUES (?, ?, ?, ?, ?, ?)
-    ''', parameters)
-    
-    print(f"Inserted {len(parameters)} chemical parameters")
-    return True
-
-def insert_default_reference_values(cursor):
-    """
-    Insert default chemical reference values into the database.
-    
-    Args:
-        cursor: Database cursor
-        
-    Returns:
-        bool: True if successful
-    """
-    # Define the reference values
-    reference_values = [
-        # do_percent reference values
-        (1, 1, 'normal_min', 80, 'Minimum for normal range'),
-        (2, 1, 'normal_max', 130, 'Maximum for normal range'),
-        (3, 1, 'caution_min', 50, 'Minimum for caution range'),
-        (4, 1, 'caution_max', 150, 'Maximum for caution range'),
-        
-        # pH reference values
-        (5, 2, 'normal_min', 6.5, 'Minimum for normal range'),
-        (6, 2, 'normal_max', 9.0, 'Maximum for normal range'),
-        
-        # Soluble Nitrogen reference values
-        (7, 3, 'normal', 0.8, 'Normal threshold'),
-        (8, 3, 'caution', 1.5, 'Caution threshold'),
-        
-        # Phosphorus reference values
-        (9, 4, 'normal', 0.05, 'Normal threshold'),
-        (10, 4, 'caution', 0.1, 'Caution threshold'),
-        
-        # Chloride reference values
-        (11, 5, 'poor', 250, 'Poor threshold')
-    ]
-    
-    # Insert the reference values
-    cursor.executemany('''
-    INSERT OR IGNORE INTO chemical_reference_values
-    (reference_id, parameter_id, threshold_type, value, description)
-    VALUES (?, ?, ?, ?, ?)
-    ''', reference_values)
-    
-    print(f"Inserted {len(reference_values)} chemical reference values")
-    return True
-
 def create_tables():
     """Create all database tables if they don't exist."""
     conn = get_connection()
@@ -282,11 +209,12 @@ def create_tables():
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_fish_site_year ON fish_collection_events(site_id, year)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_habitat_site_year ON habitat_assessments(site_id, year)')
     
-    # Run some initial population of common tables
-    # Insert key chemical parameters
+    # Initialize chemical parameters and reference values if they don't exist
     cursor.execute("SELECT COUNT(*) FROM chemical_parameters")
     if cursor.fetchone()[0] == 0:
-        # Insert default parameters and reference values
+        # Import and insert default parameters and reference values from chemical_utils
+        from data_processing.chemical_utils import insert_default_parameters, insert_default_reference_values
+        
         insert_default_parameters(cursor)
         insert_default_reference_values(cursor)
         

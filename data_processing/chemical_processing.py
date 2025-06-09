@@ -23,29 +23,21 @@ from data_processing.data_queries import (
 # Import shared chemical utilities
 from data_processing.chemical_utils import (
     validate_chemical_data, determine_status, apply_bdl_conversions,
-    calculate_soluble_nitrogen, remove_empty_chemical_rows
+    calculate_soluble_nitrogen, remove_empty_chemical_rows,
+    KEY_PARAMETERS, PARAMETER_MAP, DEFAULT_REFERENCE_VALUES,
+    ensure_default_parameters_exist
 )
 from utils import setup_logging
 
 # Configure Logging
 logger = setup_logging("chemical_processing", category="processing")
 
-# Key parameters for analysis and visualization
-KEY_PARAMETERS = [    
-    'do_percent', 'pH', 'soluble_nitrogen', 
-    'Phosphorus', 'Chloride', 
-]
 
-# Map of parameter codes to parameter_id in the database
-PARAMETER_MAP = {
-    'do_percent': 1,
-    'pH': 2,
-    'soluble_nitrogen': 3,
-    'Phosphorus': 4,
-    'Chloride': 5
-}
 def get_reference_values():
     """Get reference values from the database."""
+    # Ensure parameters exist before trying to query them
+    ensure_default_parameters_exist()
+    
     conn = get_connection()
     try:
         reference_values = {}
@@ -81,30 +73,7 @@ def get_reference_values():
         
         # If no reference values in database, use hardcoded defaults
         if not reference_values:
-            reference_values = {
-                'do_percent': {
-                    'normal min': 80, 
-                    'normal max': 130, 
-                    'caution min': 50,
-                    'caution max': 150
-                },
-                'pH': {
-                    'normal min': 6.5, 
-                    'normal max': 9.0
-                },
-                'soluble_nitrogen': {
-                    'normal': 0.8, 
-                    'caution': 1.5
-                },
-                'Phosphorus': {
-                    'normal': 0.05, 
-                    'caution': 0.1
-                },
-                'Chloride': {
-                    'normal': 250,
-                    'caution': 500
-                }
-            }
+            reference_values = DEFAULT_REFERENCE_VALUES
             
         return reference_values
         
@@ -125,6 +94,9 @@ def load_chemical_data_to_db(site_name=None):
     Returns:
         bool: True if successful, False otherwise
     """
+    # Ensure parameters exist before loading data
+    ensure_default_parameters_exist()
+    
     conn = get_connection()
     cursor = conn.cursor()
     

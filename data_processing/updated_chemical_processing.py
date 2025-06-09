@@ -19,7 +19,8 @@ from database.database import get_connection, close_connection
 # Import shared chemical utilities
 from data_processing.chemical_utils import (
     validate_chemical_data, determine_status, apply_bdl_conversions,
-    calculate_soluble_nitrogen, remove_empty_chemical_rows
+    calculate_soluble_nitrogen, remove_empty_chemical_rows,
+    KEY_PARAMETERS, PARAMETER_MAP
 )
 
 from utils import setup_logging
@@ -524,15 +525,7 @@ def insert_processed_chemical_data(df):
                 samples_added += 1
                 
                 # Insert measurements for each parameter
-                parameter_map = {
-                    'do_percent': 1,
-                    'pH': 2, 
-                    'soluble_nitrogen': 3,
-                    'Phosphorus': 4,
-                    'Chloride': 5
-                }
-                
-                for param_name, param_id in parameter_map.items():
+                for param_name, param_id in PARAMETER_MAP.items():
                     if param_name in row and pd.notna(row[param_name]):
                         # Apply appropriate rounding before insertion
                         raw_value = row[param_name]
