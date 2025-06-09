@@ -6,10 +6,9 @@ Tests the logic in data_processing.habitat_processing module.
 import unittest
 import pandas as pd
 import numpy as np
-import tempfile
 import os
 import sys
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 # Add project root to path
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

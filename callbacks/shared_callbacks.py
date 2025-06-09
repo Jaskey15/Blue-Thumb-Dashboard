@@ -4,7 +4,6 @@ This file contains callbacks that are used across the entire application.
 """
 
 import dash
-from dash import html
 from dash.dependencies import Input, Output, State
 from utils import setup_logging
 

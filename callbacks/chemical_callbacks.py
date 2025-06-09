@@ -4,15 +4,14 @@ This file contains callbacks specific to the chemical data tab.
 """
 
 import dash
-from dash import html, dcc, Input, Output, State, ALL
+from dash import html, Input, Output, State, ALL
 from utils import setup_logging
 from data_processing.data_queries import get_chemical_data_from_db
 from data_processing.chemical_utils import KEY_PARAMETERS, get_reference_values
 from .tab_utilities import create_all_parameters_visualization, create_single_parameter_visualization
 from .helper_functions import (
     should_perform_search, is_item_clicked, extract_selected_item,
-    create_empty_state, create_error_state, create_loading_state,
-    create_search_results
+    create_empty_state, create_error_state, create_search_results
 )
 
 # Configure logging

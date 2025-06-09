@@ -178,7 +178,7 @@ def get_latest_data_by_type(data_type):
     try:
         # Call only database query functions, not processing functions
         if data_type == 'chemical':
-            from data_processing.chemical_processing import get_chemical_data_from_db
+            from data_processing.data_queries import get_chemical_data_from_db
             df = get_chemical_data_from_db()  # Only query, don't process
             
         elif data_type == 'fish':
@@ -414,10 +414,9 @@ def add_data_markers(fig, sites, data_type, parameter_name=None, season=None, fi
     config = data_config[data_type]
     
     # Get reference values if needed (for chemical data)
-    reference_values = None
     if config['needs_reference_values']:
         from data_processing.chemical_processing import get_reference_values
-        reference_values = get_reference_values()
+        get_reference_values()
     
     # Track sites with data for counting
     sites_with_data = 0
@@ -542,7 +541,7 @@ def create_basic_site_map(active_only=False):
             sites_to_use = MONITORING_SITES
             active_count = sum(1 for site in sites_to_use if site.get('active', False))
             historic_count = len(sites_to_use) - active_count
-            total_original = len(sites_to_use)
+            len(sites_to_use)
         
         # Add all sites with appropriate styling handled by add_site_marker
         for site in sites_to_use:

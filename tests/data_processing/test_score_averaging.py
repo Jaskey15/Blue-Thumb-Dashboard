@@ -5,11 +5,10 @@ Tests the logic for handling fish replicates vs duplicates and score averaging.
 
 import unittest
 import pandas as pd
-import tempfile
 import os
 import sys
-from datetime import datetime, timedelta
-from unittest.mock import patch, MagicMock
+from datetime import datetime
+from unittest.mock import patch
 
 # Add project root to path
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

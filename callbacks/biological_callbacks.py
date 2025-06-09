@@ -4,7 +4,7 @@ This file contains callbacks specific to the biological data tab.
 """
 
 import dash
-from dash import html, dcc, Input, Output, State, ALL
+from dash import html, Input, Output, State, ALL
 from utils import setup_logging
 from .tab_utilities import create_biological_community_display, create_gallery_navigation_callback
 from .helper_functions import (

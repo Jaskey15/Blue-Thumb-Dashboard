@@ -5,14 +5,13 @@ This file contains callbacks specific to the overview tab.
 
 import dash
 import plotly.graph_objects as go
-from dash import html, Input, Output, State  
+from dash import Input, Output, State  
 from config.data_definitions import PARAMETER_DISPLAY_NAMES
 from .tab_utilities import (
     get_parameter_legend, get_site_count_message, 
     create_basic_map_legend_html, create_map_legend_html
 )
 from .helper_functions import create_error_state
-from visualizations.map_viz import add_site_marker
 from utils import setup_logging
 
 # Configure logging

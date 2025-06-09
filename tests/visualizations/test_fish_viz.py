@@ -6,8 +6,6 @@ To run specific tests, set the flags below to True/False
 To run all tests: python test_fish_viz.py
 """
 
-import pandas as pd
-import plotly.graph_objects as go
 from data_processing.fish_processing import (
     get_fish_dataframe, 
     get_fish_metrics_data_for_table,
@@ -15,8 +13,7 @@ from data_processing.fish_processing import (
 )
 from data_processing.fish_viz import (
     create_fish_viz, 
-    create_fish_metrics_table_for_accordion,
-    create_fish_metrics_accordion
+    create_fish_metrics_table_for_accordion
 )
 
 # ============================================================================
@@ -122,7 +119,7 @@ def test_known_sites():
                 print(f"💾 Saved chart: {filename}")
             
             # Test metrics table
-            metrics_table = create_fish_metrics_table_for_accordion(site_name)
+            create_fish_metrics_table_for_accordion(site_name)
             print(f"✅ Created metrics table successfully")
             
             successful_sites.append(site_name)

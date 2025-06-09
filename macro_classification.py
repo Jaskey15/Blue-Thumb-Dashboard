@@ -1,5 +1,4 @@
 import pandas as pd
-import numpy as np
 
 # Load your processed fish data
 df = pd.read_csv('data/processed/processed_macro_data.csv')

@@ -9,7 +9,6 @@ from data_processing.data_queries import get_chemical_date_range
 from utils import load_markdown_content, create_image_with_caption, setup_logging
 
 # Import from data_definitions to avoid duplication
-from config.data_definitions import CHEMICAL_DIAGRAMS
 
 # Configure logging
 logger = setup_logging("layouts", category="app")

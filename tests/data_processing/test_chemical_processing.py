@@ -6,19 +6,16 @@ Tests the logic in data_processing.chemical_processing module.
 import unittest
 import pandas as pd
 import numpy as np
-import tempfile
 import os
 import sys
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 # Add project root to path
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, project_root)
 
 from data_processing.chemical_processing import (
-    process_chemical_data_from_csv,
-    get_reference_values,
-    load_chemical_data_to_db
+    process_chemical_data_from_csv
 )
 from data_processing.chemical_utils import (
     validate_chemical_data,

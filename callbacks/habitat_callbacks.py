@@ -4,7 +4,7 @@ This file contains callbacks specific to the habitat data tab.
 """
 
 import dash
-from dash import html, dcc, Input, Output, State, ALL
+from dash import html, Input, Output, State, ALL
 from utils import setup_logging, get_sites_with_data
 from .tab_utilities import create_habitat_display
 from .helper_functions import (

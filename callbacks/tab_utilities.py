@@ -9,10 +9,9 @@ for its corresponding tab.
 import dash
 from dash import html, dcc
 import dash_bootstrap_components as dbc
-from config.data_definitions import PARAMETER_DISPLAY_NAMES, PARAMETER_AXIS_LABELS, FISH_DATA, MACRO_DATA
-from map_viz import COLORS
-from utils import setup_logging, load_markdown_content, create_image_with_caption
-from .helper_functions import create_empty_state, create_error_state
+from config.data_definitions import FISH_DATA, MACRO_DATA
+from utils import setup_logging, load_markdown_content
+from .helper_functions import create_empty_state, create_error_state, get_parameter_name, get_parameter_label
 from visualizations.map_viz import COLORS
 
 logger = setup_logging("tab_utilities")

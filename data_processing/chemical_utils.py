@@ -279,10 +279,6 @@ def remove_empty_chemical_rows(df, chemical_columns=None):
     
     return df_filtered
 
-# =============================================================================
-# DATABASE FUNCTIONS
-# =============================================================================
-
 def get_reference_values():
     """
     Get reference values from the database.
@@ -345,7 +341,7 @@ def get_reference_values():
     finally:
         close_connection(conn)
 
-def get_existing_data_batch(conn):
+def get_existing_data(conn):
     """
     Get all existing data for batch processing and duplicate detection.
     
@@ -468,7 +464,7 @@ def insert_chemical_data(df, check_duplicates=True, data_source="unknown"):
         reference_values = get_reference_values()
         
         # load existing data
-        existing_events, event_lookup, existing_measurements, site_lookup = get_existing_data_batch(conn)
+        existing_events, event_lookup, existing_measurements, site_lookup = get_existing_data(conn)
         logger.info(f"Found {len(existing_events)} existing events, {len(existing_measurements)} existing measurements")
         
         # Track statistics

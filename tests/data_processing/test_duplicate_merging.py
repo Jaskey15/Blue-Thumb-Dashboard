@@ -5,7 +5,6 @@ Tests the coordinate-based site consolidation logic in merge_sites.py.
 
 import unittest
 import pandas as pd
-import tempfile
 import os
 import sys
 from unittest.mock import patch, MagicMock

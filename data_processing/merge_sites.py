@@ -1,5 +1,4 @@
 import pandas as pd
-import sqlite3
 import os
 from utils import setup_logging
 from data_processing.data_loader import clean_site_name

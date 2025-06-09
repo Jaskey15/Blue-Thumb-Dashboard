@@ -1,6 +1,5 @@
 import os
 import pandas as pd
-import sqlite3
 
 # Import from data_loader
 from data_processing.data_loader import load_csv_data, clean_column_names, save_processed_data, clean_site_name

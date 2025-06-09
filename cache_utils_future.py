@@ -3,8 +3,6 @@ Cache utility functions for the Tenmile Creek Water Quality Dashboard.
 Provides caching functionality to improve dashboard performance.
 """
 
-import pandas as pd
-from datetime import datetime, timedelta
 from utils import setup_logging
 
 # Initialize logger for cache operations
