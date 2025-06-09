@@ -21,7 +21,7 @@ from data_processing.chemical_utils import (
     validate_chemical_data, determine_status, apply_bdl_conversions,
     calculate_soluble_nitrogen, remove_empty_chemical_rows,
     KEY_PARAMETERS, PARAMETER_MAP,
-    batch_insert_chemical_data, check_for_duplicates_against_db
+    insert_chemical_data, check_for_duplicates_against_db
 )
 
 from utils import setup_logging
@@ -55,10 +55,6 @@ NUTRIENT_COLUMN_MAPPINGS = {
         'high_col2': 'Chloride_High2_Final'
     }
 }
-
-# ==============================
-# DATA LOADING AND PARSING
-# ==============================
 
 def load_updated_chemical_data():
     """
@@ -125,10 +121,6 @@ def parse_sampling_dates(df):
         logger.error(f"Error parsing sampling dates: {e}")
         return df
 
-# ==============================
-# NUTRIENT VALUE PROCESSING
-# ==============================
-
 def get_greater_value(row, col1, col2, tiebreaker='col1'):
     """
     Get the greater value between two columns, with tiebreaker logic.
@@ -157,12 +149,12 @@ def get_greater_value(row, col1, col2, tiebreaker='col1'):
         if val2 is None:
             return val1
             
-        # If both have values, return the greater (with tiebreaker)
+        # If both have values, return the greater 
         if val1 > val2:
             return val1
         elif val2 > val1:
             return val2
-        else:  # They're equal
+        else:  
             return val1 if tiebreaker == 'col1' else val2
             
     except Exception as e:
@@ -227,7 +219,7 @@ def process_conditional_nutrient(df, nutrient_name):
             range_selection_col=mapping['range_selection'],
             low_col1=mapping['low_col1'],
             low_col2=mapping['low_col2'],
-            mid_col1=mapping.get('mid_col1'),  # .get() handles missing keys
+            mid_col1=mapping.get('mid_col1'),  
             mid_col2=mapping.get('mid_col2'),
             high_col1=mapping.get('high_col1'),
             high_col2=mapping.get('high_col2')
@@ -264,10 +256,6 @@ def process_simple_nutrients(df):
         logger.error(f"Error processing simple nutrients: {e}")
         return df
 
-# ==============================
-# DATA FORMATTING AND PROCESSING
-# ==============================
-
 def format_to_database_schema(df):
     """
     Format the processed data to match the existing database schema.
@@ -279,28 +267,29 @@ def format_to_database_schema(df):
         DataFrame: DataFrame formatted for database insertion
     """
     try:
-        # Create a new dataframe with the required columns
-        formatted_df = pd.DataFrame()
+        # Start with a copy of the existing dataframe
+        formatted_df = df.copy()
         
-        # Map columns to match existing schema
-        formatted_df['Site_Name'] = df['Site Name']  # Note: Site Name -> Site_Name
-        formatted_df['Date'] = df['Date']
-        formatted_df['Year'] = df['Year'] 
-        formatted_df['Month'] = df['Month']
+        # Remap columns that actually need to change
+        column_mappings = {
+            'Site Name': 'Site_Name',
+            '% Oxygen Saturation': 'do_percent', 
+            'pH #1': 'pH',
+            'Orthophosphate': 'Phosphorus'
+        }
         
-        # Map chemical parameters
-        formatted_df['do_percent'] = df['% Oxygen Saturation']
-        formatted_df['pH'] = df['pH #1']  # Using pH #1 as primary pH reading
-        
-        # Use our processed nutrient values
-        formatted_df['Nitrate'] = df['Nitrate']
-        formatted_df['Nitrite'] = df['Nitrite'] 
-        formatted_df['Ammonia'] = df['Ammonia']
-        formatted_df['Phosphorus'] = df['Orthophosphate']  # Map Orthophosphate -> Phosphorus
-        formatted_df['Chloride'] = df['Chloride']
+        # Apply the mappings
+        formatted_df = formatted_df.rename(columns=column_mappings)
         
         # Add calculated soluble nitrogen using shared utility
         formatted_df = calculate_soluble_nitrogen(formatted_df)
+        
+        # Select only the columns we need for the database
+        required_columns = ['Site_Name', 'Date', 'Year', 'Month', 'do_percent', 'pH', 
+                           'Nitrate', 'Nitrite', 'Ammonia', 'Phosphorus', 'Chloride', 
+                           'soluble_nitrogen']
+        
+        formatted_df = formatted_df[required_columns]
         
         # Convert numeric columns to proper types
         numeric_columns = ['do_percent', 'pH', 'Nitrate', 'Nitrite', 'Ammonia', 
@@ -318,7 +307,7 @@ def format_to_database_schema(df):
         logger.error(f"Error formatting data to database schema: {e}")
         return pd.DataFrame()
 
-def process_updated_chemical_data_complete():
+def process_updated_chemical_data():
     """
     Complete processing pipeline for updated chemical data.
     
@@ -328,23 +317,23 @@ def process_updated_chemical_data_complete():
     try:
         logger.info("Starting complete processing of updated chemical data...")
         
-        # Step 1: Load and parse dates
+        # Load and parse dates
         df = load_updated_chemical_data()
         if df.empty:
             return pd.DataFrame()
         
         df = parse_sampling_dates(df)
         
-        # Step 2: Process all nutrients
+        # Process all nutrients
         df = process_simple_nutrients(df)  # Nitrate, Nitrite
         df['Ammonia'] = process_conditional_nutrient(df, 'ammonia')
         df['Orthophosphate'] = process_conditional_nutrient(df, 'orthophosphate') 
         df['Chloride'] = process_conditional_nutrient(df, 'chloride')
         
-        # Step 3: Format to database schema
+        # Format to database schema
         formatted_df = format_to_database_schema(df)
         
-        # Step 4: Clean and validate using shared utilities
+        # Clean and validate 
         formatted_df = remove_empty_chemical_rows(formatted_df)
         formatted_df = validate_chemical_data(formatted_df, remove_invalid=True)
         
@@ -354,10 +343,6 @@ def process_updated_chemical_data_complete():
     except Exception as e:
         logger.error(f"Error in complete processing pipeline: {e}")
         return pd.DataFrame()
-
-# ==============================
-# DATABASE LOADING
-# ==============================
 
 def load_updated_chemical_data_to_db():
     """
@@ -372,7 +357,7 @@ def load_updated_chemical_data_to_db():
         
         # Step 1: Process the updated chemical data
         logger.info("Step 1: Processing updated chemical data...")
-        processed_df = process_updated_chemical_data_complete()
+        processed_df = process_updated_chemical_data()
         
         if processed_df.empty:
             logger.error("Failed to process updated chemical data")
@@ -393,9 +378,9 @@ def load_updated_chemical_data_to_db():
         # Step 3: Use batch insertion function
         logger.info(f"Step 3: Inserting {len(df_no_duplicates)} new records into database...")
         
-        stats = batch_insert_chemical_data(
+        stats = insert_chemical_data(
             df_no_duplicates,
-            check_duplicates=False,  # Already checked above
+            check_duplicates=False, 
             data_source="cleaned_updated_chemical_data.csv"
         )
         
@@ -410,11 +395,7 @@ def load_updated_chemical_data_to_db():
     except Exception as e:
         logger.error(f"Error in updated chemical data pipeline: {e}")
         return False
-
-# ==============================
-# TESTING
-# ==============================
-
+    
 # Test section if run directly
 if __name__ == "__main__":
     logger.info("Testing complete updated chemical data pipeline with database insertion...")

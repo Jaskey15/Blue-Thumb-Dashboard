@@ -20,7 +20,7 @@ from data_processing.chemical_utils import (
     validate_chemical_data, determine_status, apply_bdl_conversions,
     calculate_soluble_nitrogen, remove_empty_chemical_rows,
     KEY_PARAMETERS, PARAMETER_MAP,
-    batch_insert_chemical_data, get_reference_values
+    insert_chemical_data, get_reference_values
 )
 from utils import setup_logging, round_parameter_value
 
@@ -183,7 +183,7 @@ def load_chemical_data_to_db(site_name=None):
             return False
         
         # Use shared batch insertion function
-        stats = batch_insert_chemical_data(
+        stats = insert_chemical_data(
             df_clean, 
             check_duplicates=True, 
             data_source="cleaned_chemical_data.csv"

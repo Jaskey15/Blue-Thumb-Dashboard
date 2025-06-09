@@ -514,9 +514,9 @@ def insert_chemical_measurement(cursor, event_id, parameter_id, value, status, e
         return True
     return False
 
-def batch_insert_chemical_data(df, check_duplicates=True, data_source="unknown"):
+def insert_chemical_data(df, check_duplicates=True, data_source="unknown"):
     """
-    Unified batch insertion function for chemical data.
+    Shared function to insert chemical data
  
     Args:
         df: DataFrame with processed chemical data 
