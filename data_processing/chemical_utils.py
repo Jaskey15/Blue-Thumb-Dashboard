@@ -19,18 +19,6 @@ BDL_VALUES = {
     'Phosphorus': 0.005,
 }
 
-# Chemical parameter validation limits
-VALIDATION_LIMITS = {
-    'pH': {'min': 0, 'max': 14},
-    'do_percent': {'min': 0, 'max': 200},
-    'Nitrate': {'min': 0, 'max': None},
-    'Nitrite': {'min': 0, 'max': None},
-    'Ammonia': {'min': 0, 'max': None},
-    'Phosphorus': {'min': 0, 'max': None},
-    'Chloride': {'min': 0, 'max': None},
-    'soluble_nitrogen': {'min': 0, 'max': None}
-}
-
 # Key parameters for analysis and visualization
 KEY_PARAMETERS = [    
     'do_percent', 'pH', 'soluble_nitrogen', 
@@ -186,6 +174,7 @@ def convert_bdl_value(value, bdl_replacement):
 def validate_chemical_data(df, remove_invalid=True):
     """
     Validate chemical data and optionally remove invalid values.
+    pH must be between 0-14, all other parameters must be > 0.
     
     Args:
         df: DataFrame with chemical data
@@ -195,63 +184,43 @@ def validate_chemical_data(df, remove_invalid=True):
         DataFrame with validated data
     """
     df_clean = df.copy()
+    total_issues = 0
     
-    # Get chemical columns that exist in the dataframe
-    chemical_columns = [col for col in VALIDATION_LIMITS.keys() if col in df_clean.columns]
+    # Define chemical parameters (excluding pH which has special handling)
+    chemical_params = ['do_percent', 'Nitrate', 'Nitrite', 'Ammonia', 
+                      'Phosphorus', 'Chloride', 'soluble_nitrogen']
     
-    validation_summary = {
-        'total_issues': 0,
-        'issues_by_parameter': {}
-    }
-    
-    for column in chemical_columns:
-        if column not in df_clean.columns:
-            continue
-            
-        limits = VALIDATION_LIMITS[column]
-        original_values = df_clean[column].copy()
-        issues_found = 0
+    # Validate pH (must be between 0-14)
+    if 'pH' in df_clean.columns:
+        ph_invalid_mask = ((df_clean['pH'] < 0) | (df_clean['pH'] > 14)) & df_clean['pH'].notna()
+        ph_invalid_count = ph_invalid_mask.sum()
         
-        # Check minimum values
-        if limits['min'] is not None:
-            below_min_mask = (df_clean[column] < limits['min']) & df_clean[column].notna()
-            below_min_count = below_min_mask.sum()
+        if ph_invalid_count > 0:
+            total_issues += ph_invalid_count
+            if remove_invalid:
+                df_clean.loc[ph_invalid_mask, 'pH'] = np.nan
+                logger.info(f"Removed {ph_invalid_count} pH values outside 0-14 range")
+            else:
+                logger.warning(f"Found {ph_invalid_count} pH values outside 0-14 range")
+    
+    # Validate other chemical parameters (must be > 0)
+    for param in chemical_params:
+        if param in df_clean.columns:
+            invalid_mask = (df_clean[param] <= 0) & df_clean[param].notna()
+            invalid_count = invalid_mask.sum()
             
-            if below_min_count > 0:
-                issues_found += below_min_count
+            if invalid_count > 0:
+                total_issues += invalid_count
                 if remove_invalid:
-                    df_clean.loc[below_min_mask, column] = np.nan
-                    logger.info(f"Removed {below_min_count} {column} values below {limits['min']}")
+                    df_clean.loc[invalid_mask, param] = np.nan
+                    logger.info(f"Removed {invalid_count} {param} values <= 0")
                 else:
-                    logger.warning(f"Found {below_min_count} {column} values below {limits['min']}")
-        
-        # Check maximum values
-        if limits['max'] is not None:
-            above_max_mask = (df_clean[column] > limits['max']) & df_clean[column].notna()
-            above_max_count = above_max_mask.sum()
-            
-            if above_max_count > 0:
-                issues_found += above_max_count
-                if column in ['pH']:  # Remove pH values outside range
-                    if remove_invalid:
-                        df_clean.loc[above_max_mask, column] = np.nan
-                        logger.info(f"Removed {above_max_count} {column} values above {limits['max']}")
-                    else:
-                        logger.warning(f"Found {above_max_count} {column} values above {limits['max']}")
-                else:  # Just warn for DO and other parameters
-                    logger.warning(f"Found {above_max_count} {column} values above {limits['max']} (keeping values)")
-        
-        # Track issues for this parameter
-        if issues_found > 0:
-            validation_summary['issues_by_parameter'][column] = issues_found
-            validation_summary['total_issues'] += issues_found
+                    logger.warning(f"Found {invalid_count} {param} values <= 0")
     
     # Log overall summary
-    if validation_summary['total_issues'] > 0:
-        logger.info(f"Data validation complete: {validation_summary['total_issues']} total issues found")
-        for param, count in validation_summary['issues_by_parameter'].items():
-            action = "removed" if remove_invalid else "flagged"
-            logger.info(f"  - {param}: {count} issues {action}")
+    if total_issues > 0:
+        action = "removed" if remove_invalid else "flagged"
+        logger.info(f"Data validation complete: {total_issues} total issues {action}")
     else:
         logger.info("Data validation complete: No quality issues found")
     
