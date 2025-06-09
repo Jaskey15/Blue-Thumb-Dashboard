@@ -20,7 +20,8 @@ from database.database import get_connection, close_connection
 from data_processing.chemical_utils import (
     validate_chemical_data, determine_status, apply_bdl_conversions,
     calculate_soluble_nitrogen, remove_empty_chemical_rows,
-    KEY_PARAMETERS, PARAMETER_MAP
+    KEY_PARAMETERS, PARAMETER_MAP,
+    insert_default_parameters, insert_default_reference_values
 )
 
 from utils import setup_logging
@@ -480,6 +481,12 @@ def insert_processed_chemical_data(df):
     try:
         conn = get_connection()
         cursor = conn.cursor()
+        
+        # Insert default parameters once at the start - fail hard if this doesn't work
+        insert_default_parameters(cursor)
+        insert_default_reference_values(cursor)
+        conn.commit()
+        logger.info("Default chemical parameters and reference values ensured in database")
         
         # Import required functions from existing chemical processing
         from data_processing.chemical_processing import get_reference_values

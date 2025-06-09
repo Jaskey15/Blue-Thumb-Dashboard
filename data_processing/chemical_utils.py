@@ -10,15 +10,6 @@ from utils import setup_logging
 # Set up logging
 logger = setup_logging("chemical_utils", category="processing")
 
-# Define constants for BDL values (Below Detection Limit)
-# Values provided by Blue Thumb Cordinator
-BDL_VALUES = {
-    'Nitrate': 0.3,    
-    'Nitrite': 0.03,    
-    'Ammonia': 0.03,
-    'Phosphorus': 0.005,
-}
-
 # Key parameters for analysis and visualization
 KEY_PARAMETERS = [    
     'do_percent', 'pH', 'soluble_nitrogen', 
@@ -35,35 +26,45 @@ PARAMETER_MAP = {
 }
 
 CHEMICAL_PARAMETERS = [
-    (1, 'Dissolved Oxygen', 'do_percent', 'Dissolved Oxygen', 'Percent saturation of dissolved oxygen', '%'),
-    (2, 'pH', 'pH', 'pH', 'Measure of acidity/alkalinity', 'pH units'),
-    (3, 'Soluble Nitrogen', 'soluble_nitrogen', 'Nitrogen', 'Total soluble nitrogen including nitrate, nitrite, and ammonia', 'mg/L'),
-    (4, 'Phosphorus', 'Phosphorus', 'Phosphorus', 'Orthophosphate phosphorus', 'mg/L'),
-    (5, 'Chloride', 'Chloride', 'Chloride', 'Chloride ion concentration', 'mg/L')
+    (1, 'Dissolved Oxygen', 'do_percent', 'Dissolved Oxygen', '%'),
+    (2, 'pH', 'pH', 'pH', 'pH units'),
+    (3, 'Soluble Nitrogen', 'soluble_nitrogen', 'Nitrogen', 'mg/L'),
+    (4, 'Phosphorus', 'Phosphorus', 'Phosphorus', 'mg/L'),
+    (5, 'Chloride', 'Chloride', 'Chloride', 'mg/L')
 ]
 
 CHEMICAL_REFERENCE_VALUES = [
     # do_percent reference values
-    (1, 1, 'normal_min', 80, 'Minimum for normal range'),
-    (2, 1, 'normal_max', 130, 'Maximum for normal range'),
-    (3, 1, 'caution_min', 50, 'Minimum for caution range'),
-    (4, 1, 'caution_max', 150, 'Maximum for caution range'),
+    (1, 1, 'normal_min', 80),
+    (2, 1, 'normal_max', 130),
+    (3, 1, 'caution_min', 50),
+    (4, 1, 'caution_max', 150),
     
     # pH reference values
-    (5, 2, 'normal_min', 6.5, 'Minimum for normal range'),
-    (6, 2, 'normal_max', 9.0, 'Maximum for normal range'),
+    (5, 2, 'normal_min', 6.5),
+    (6, 2, 'normal_max', 9.0),
     
     # Soluble Nitrogen reference values
-    (7, 3, 'normal', 0.8, 'Normal threshold'),
-    (8, 3, 'caution', 1.5, 'Caution threshold'),
+    (7, 3, 'normal', 0.8),
+    (8, 3, 'caution', 1.5),
     
     # Phosphorus reference values
-    (9, 4, 'normal', 0.05, 'Normal threshold'),
-    (10, 4, 'caution', 0.1, 'Caution threshold'),
+    (9, 4, 'normal', 0.05),
+    (10, 4, 'caution', 0.1),
     
     # Chloride reference values
-    (11, 5, 'poor', 250, 'Poor threshold')
+    (11, 5, 'normal', 250),
+    (12, 5, 'caution', 500)
 ]
+
+# Define constants for BDL values (Below Detection Limit)
+# Values provided by Blue Thumb Cordinator
+BDL_VALUES = {
+    'Nitrate': 0.3,    
+    'Nitrite': 0.03,    
+    'Ammonia': 0.03,
+    'Phosphorus': 0.005,
+}
 
 def insert_default_parameters(cursor):
     """
@@ -79,8 +80,8 @@ def insert_default_parameters(cursor):
         # Insert the parameters
         cursor.executemany('''
         INSERT OR IGNORE INTO chemical_parameters 
-        (parameter_id, parameter_name, parameter_code, display_name, description, unit)
-        VALUES (?, ?, ?, ?, ?, ?)
+        (parameter_id, parameter_name, parameter_code, display_name, unit)
+        VALUES (?, ?, ?, ?, ?)
         ''', CHEMICAL_PARAMETERS)
         
         logger.info(f"Inserted {len(CHEMICAL_PARAMETERS)} chemical parameters")
@@ -102,8 +103,8 @@ def insert_default_reference_values(cursor):
         # Insert the reference values
         cursor.executemany('''
         INSERT OR IGNORE INTO chemical_reference_values
-        (reference_id, parameter_id, threshold_type, value, description)
-        VALUES (?, ?, ?, ?, ?)
+        (reference_id, parameter_id, threshold_type, value)
+        VALUES (?, ?, ?, ?)
         ''', CHEMICAL_REFERENCE_VALUES)
         
         logger.info(f"Inserted {len(CHEMICAL_REFERENCE_VALUES)} chemical reference values")
@@ -111,38 +112,7 @@ def insert_default_reference_values(cursor):
         logger.error(f"Error inserting default reference values: {e}")
         raise Exception(f"Failed to insert default chemical reference values: {e}")
 
-def ensure_default_parameters_exist():
-    """
-    Ensure that default chemical parameters and reference values exist in the database.
-    This function should be called during chemical processing initialization.
-    
-    Raises:
-        Exception: If parameters cannot be created or verified
-    """
-    try:
-        from database.database import get_connection, close_connection
-        
-        conn = get_connection()
-        cursor = conn.cursor()
-        
-        # Check if parameters table has data
-        cursor.execute("SELECT COUNT(*) FROM chemical_parameters")
-        param_count = cursor.fetchone()[0]
-        
-        if param_count == 0:
-            logger.info("No chemical parameters found in database, inserting defaults...")
-            insert_default_parameters(cursor)
-            insert_default_reference_values(cursor)
-            conn.commit()
-            logger.info("Default chemical parameters and reference values added")
-        else:
-            logger.debug(f"Found {param_count} existing chemical parameters in database")
-        
-        close_connection(conn)
-        
-    except Exception as e:
-        logger.error(f"Error ensuring default parameters exist: {e}")
-        raise Exception(f"Critical error: Cannot ensure chemical parameters exist in database: {e}")
+
 
 def convert_bdl_value(value, bdl_replacement):
     """
@@ -265,19 +235,12 @@ def determine_status(parameter, value, reference_values):
             else:
                 return "Normal"
                 
-    elif parameter in ['soluble_nitrogen', 'Phosphorus']:
+    elif parameter in ['soluble_nitrogen', 'Phosphorus', 'Chloride']:
         if 'caution' in ref and 'normal' in ref:
             if value > ref['caution']:
                 return "Poor"
             elif value > ref['normal']:
                 return "Caution"
-            else:
-                return "Normal"
-                
-    elif parameter == 'Chloride':
-        if 'poor' in ref:
-            if value > ref['poor']:
-                return "Poor"
             else:
                 return "Normal"
                 

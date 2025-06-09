@@ -25,7 +25,7 @@ from data_processing.chemical_utils import (
     validate_chemical_data, determine_status, apply_bdl_conversions,
     calculate_soluble_nitrogen, remove_empty_chemical_rows,
     KEY_PARAMETERS, PARAMETER_MAP,
-    ensure_default_parameters_exist
+    insert_default_parameters, insert_default_reference_values
 )
 from utils import setup_logging
 
@@ -43,9 +43,6 @@ def get_reference_values():
     Raises:
         Exception: If reference values cannot be retrieved from database
     """
-    # Ensure parameters exist before trying to query them
-    ensure_default_parameters_exist()
-    
     conn = get_connection()
     try:
         reference_values = {}
@@ -106,13 +103,15 @@ def load_chemical_data_to_db(site_name=None):
     Returns:
         bool: True if successful, False otherwise
     """
-    # Ensure parameters exist before loading data
-    ensure_default_parameters_exist()
-    
     conn = get_connection()
     cursor = conn.cursor()
     
     try:
+        # Insert default parameters once at the start - fail hard if this doesn't work
+        insert_default_parameters(cursor)
+        insert_default_reference_values(cursor)
+        conn.commit()
+        logger.info("Default chemical parameters and reference values ensured in database")
         # Process the data from CSV
         df_clean, _, _ = process_chemical_data_from_csv(site_name)
         

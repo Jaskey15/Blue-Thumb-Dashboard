@@ -40,7 +40,7 @@ def create_tables():
         parameter_name TEXT NOT NULL,
         parameter_code TEXT NOT NULL,
         display_name TEXT NOT NULL,
-        description TEXT,
+
         unit TEXT,
         UNIQUE(parameter_code)
     )
@@ -52,7 +52,6 @@ def create_tables():
         parameter_id INTEGER NOT NULL,
         threshold_type TEXT NOT NULL,
         value REAL NOT NULL,
-        description TEXT,
         FOREIGN KEY (parameter_id) REFERENCES chemical_parameters (parameter_id)
     )
     ''')
