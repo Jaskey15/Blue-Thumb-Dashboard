@@ -6,7 +6,8 @@ This file contains callbacks specific to the chemical data tab.
 import dash
 from dash import html, dcc, Input, Output, State, ALL
 from utils import setup_logging
-from data_processing.chemical_processing import process_chemical_data
+from data_processing.data_queries import get_chemical_data_from_db
+from data_processing.chemical_utils import KEY_PARAMETERS, get_reference_values
 from .tab_utilities import create_all_parameters_visualization, create_single_parameter_visualization
 from .helper_functions import (
     should_perform_search, is_item_clicked, extract_selected_item,
@@ -169,9 +170,9 @@ def register_chemical_callbacks(app):
             logger.info(f"Creating chemical visualization for {selected_site}, parameter: {selected_parameter}")
             
             # Get processed data
-            df_filtered, key_parameters, reference_values = process_chemical_data(
-                site_name=selected_site, use_db=True
-            )
+            df_filtered = get_chemical_data_from_db(selected_site)
+            key_parameters = KEY_PARAMETERS
+            reference_values = get_reference_values()
             
             # Filter by year range and months
             if not df_filtered.empty:

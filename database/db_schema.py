@@ -23,24 +23,11 @@ def create_tables():
 
     # ---------- CHEMICAL DATA TABLES ----------
     cursor.execute('''
-    CREATE TABLE IF NOT EXISTS chemical_collection_events (
-        event_id INTEGER PRIMARY KEY,
-        site_id INTEGER NOT NULL,
-        sample_id INTEGER,
-        collection_date TEXT NOT NULL,
-        year INTEGER NOT NULL,
-        month INTEGER NOT NULL,
-        FOREIGN KEY (site_id) REFERENCES sites (site_id)
-    )
-    ''')
-
-    cursor.execute('''
     CREATE TABLE IF NOT EXISTS chemical_parameters (
         parameter_id INTEGER PRIMARY KEY,
         parameter_name TEXT NOT NULL,
         parameter_code TEXT NOT NULL,
         display_name TEXT NOT NULL,
-
         unit TEXT,
         UNIQUE(parameter_code)
     )
@@ -56,6 +43,18 @@ def create_tables():
     )
     ''')
 
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS chemical_collection_events (
+        event_id INTEGER PRIMARY KEY,
+        site_id INTEGER NOT NULL,
+        sample_id INTEGER,
+        collection_date TEXT NOT NULL,
+        year INTEGER NOT NULL,
+        month INTEGER NOT NULL,
+        FOREIGN KEY (site_id) REFERENCES sites (site_id)
+    )
+    ''')
+    
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS chemical_measurements (
         event_id INTEGER NOT NULL,

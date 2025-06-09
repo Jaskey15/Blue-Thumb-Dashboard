@@ -21,7 +21,7 @@ from data_processing.chemical_utils import (
     validate_chemical_data, determine_status, apply_bdl_conversions,
     calculate_soluble_nitrogen, remove_empty_chemical_rows,
     KEY_PARAMETERS, PARAMETER_MAP,
-    insert_default_parameters, insert_default_reference_values
+    batch_insert_chemical_data, check_for_duplicates_against_db
 )
 
 from utils import setup_logging
@@ -56,6 +56,10 @@ NUTRIENT_COLUMN_MAPPINGS = {
     }
 }
 
+# ==============================
+# DATA LOADING AND PARSING
+# ==============================
+
 def load_updated_chemical_data():
     """
     Load the CLEANED updated chemical data CSV file.
@@ -83,7 +87,7 @@ def load_updated_chemical_data():
     except Exception as e:
         logger.error(f"Error loading cleaned updated chemical data: {e}")
         return pd.DataFrame()
-    
+
 def parse_sampling_dates(df):
     """
     Parse the sampling date column that contains both date and time.
@@ -120,6 +124,10 @@ def parse_sampling_dates(df):
     except Exception as e:
         logger.error(f"Error parsing sampling dates: {e}")
         return df
+
+# ==============================
+# NUTRIENT VALUE PROCESSING
+# ==============================
 
 def get_greater_value(row, col1, col2, tiebreaker='col1'):
     """
@@ -256,6 +264,10 @@ def process_simple_nutrients(df):
         logger.error(f"Error processing simple nutrients: {e}")
         return df
 
+# ==============================
+# DATA FORMATTING AND PROCESSING
+# ==============================
+
 def format_to_database_schema(df):
     """
     Format the processed data to match the existing database schema.
@@ -343,79 +355,9 @@ def process_updated_chemical_data_complete():
         logger.error(f"Error in complete processing pipeline: {e}")
         return pd.DataFrame()
 
-def check_for_duplicates(df):
-    """
-    Check for duplicates against existing data in the database.
-    Remove duplicates (prioritizing original data over updated data).
-    
-    Args:
-        df: DataFrame with processed updated chemical data
-        
-    Returns:
-        DataFrame: DataFrame with duplicates removed
-    """
-    try:
-        conn = get_connection()
-        cursor = conn.cursor()
-        
-        # Get all existing (site_name, date) combinations from database
-        existing_query = """
-        SELECT DISTINCT s.site_name, c.collection_date
-        FROM chemical_collection_events c
-        JOIN sites s ON c.site_id = s.site_id
-        """
-        
-        existing_df = pd.read_sql_query(existing_query, conn)
-        close_connection(conn)
-        
-        if existing_df.empty:
-            logger.info("No existing chemical data found in database - no duplicates to check")
-            return df
-        
-        # Convert dates to same format for comparison
-        existing_df['collection_date'] = pd.to_datetime(existing_df['collection_date']).dt.date
-        df['date_for_comparison'] = df['Date'].dt.date
-        
-        # Create sets of (site_name, date) tuples for efficient comparison
-        existing_combinations = set(zip(existing_df['site_name'].apply(clean_site_name), existing_df['collection_date']))
-        
-        # Check each row in our updated data for duplicates
-        duplicate_mask = df.apply(
-            lambda row: (row['Site_Name'], row['date_for_comparison']) in existing_combinations, 
-            axis=1
-        )
-        
-        # Count and log duplicates found
-        duplicates_found = duplicate_mask.sum()
-        total_records = len(df)
-        
-        if duplicates_found > 0:
-            logger.info(f"Found {duplicates_found} duplicate records out of {total_records} total records")
-            
-            # Log some example duplicates for reference
-            duplicate_examples = df[duplicate_mask][['Site_Name', 'Date']].head(5)
-            logger.info("Example duplicate records (keeping original data):")
-            for _, row in duplicate_examples.iterrows():
-                logger.info(f"  - {row['Site_Name']} on {row['Date'].strftime('%Y-%m-%d')}")
-            
-            # Remove duplicates (keep original data, remove updated data)
-            df_no_duplicates = df[~duplicate_mask].copy()
-            
-            logger.info(f"Removed {duplicates_found} duplicates. {len(df_no_duplicates)} records remaining for insertion.")
-        else:
-            logger.info("No duplicates found - all records are new")
-            df_no_duplicates = df.copy()
-        
-        # Clean up the temporary comparison column
-        df_no_duplicates = df_no_duplicates.drop(columns=['date_for_comparison'])
-        
-        return df_no_duplicates
-        
-    except Exception as e:
-        logger.error(f"Error checking for duplicates: {e}")
-        # If duplicate checking fails, return original data and let user decide
-        logger.warning("Duplicate checking failed - returning all data. Manual review recommended.")
-        return df
+# ==============================
+# DATABASE LOADING
+# ==============================
 
 def load_updated_chemical_data_to_db():
     """
@@ -438,138 +380,40 @@ def load_updated_chemical_data_to_db():
         
         logger.info(f"Successfully processed {len(processed_df)} records")
         
-        # Step 2: Check for and remove duplicates
+        # Step 2: Check for and remove duplicates 
         logger.info("Step 2: Checking for duplicates against existing database...")
-        df_no_duplicates = check_for_duplicates(processed_df)
+        df_no_duplicates, duplicate_count, duplicate_info = check_for_duplicates_against_db(
+            processed_df, prioritize_existing=True
+        )
         
         if df_no_duplicates.empty:
             logger.info("No new records to insert after duplicate removal")
             return True
         
-        # Step 3: Use existing database insertion function
+        # Step 3: Use batch insertion function
         logger.info(f"Step 3: Inserting {len(df_no_duplicates)} new records into database...")
         
-        # Insert the processed data using our dedicated function
-        success = insert_processed_chemical_data(df_no_duplicates)
+        stats = batch_insert_chemical_data(
+            df_no_duplicates,
+            check_duplicates=False,  # Already checked above
+            data_source="cleaned_updated_chemical_data.csv"
+        )
         
-        if success:
-            logger.info("Successfully completed updated chemical data pipeline!")
-            logger.info(f"Final summary:")
-            logger.info(f"  - Processed: {len(processed_df)} total records")
-            logger.info(f"  - Duplicates removed: {len(processed_df) - len(df_no_duplicates)}")
-            logger.info(f"  - New records inserted: {len(df_no_duplicates)}")
-            return True
-        else:
-            logger.error("Database insertion failed")
-            return False
+        logger.info("Successfully completed updated chemical data pipeline!")
+        logger.info(f"Final summary:")
+        logger.info(f"  - Processed: {len(processed_df)} total records")
+        logger.info(f"  - Duplicates removed: {duplicate_count}")
+        logger.info(f"  - New records inserted: {stats['measurements_added']}")
+        
+        return True
             
     except Exception as e:
         logger.error(f"Error in updated chemical data pipeline: {e}")
         return False
 
-def insert_processed_chemical_data(df):
-    """
-    Insert processed chemical data directly into database.
-    Uses the same logic as existing chemical_processing.py but works with already-processed data.
-    
-    Args:
-        df: DataFrame with processed chemical data (formatted to schema)
-        
-    Returns:
-        bool: True if successful, False otherwise
-    """
-    try:
-        conn = get_connection()
-        cursor = conn.cursor()
-        
-        # Insert default parameters once at the start - fail hard if this doesn't work
-        insert_default_parameters(cursor)
-        insert_default_reference_values(cursor)
-        conn.commit()
-        logger.info("Default chemical parameters and reference values ensured in database")
-        
-        # Import required functions from existing chemical processing
-        from data_processing.chemical_processing import get_reference_values
-        
-        # Get reference values for status determination
-        reference_values = get_reference_values()
-        
-        # Track insertion counts
-        sites_processed = set()
-        samples_added = 0
-        measurements_added = 0
-        
-        # Group by site and date for insertion
-        for (site_name, date), group in df.groupby(['Site_Name', 'Date']):
-            sites_processed.add(site_name)
-            
-            # Get site_id (create site if it doesn't exist)
-            cursor.execute("SELECT site_id FROM sites WHERE site_name = ?", (site_name,))
-            site_result = cursor.fetchone()
-            
-            if site_result:
-                site_id = site_result[0]
-            else:
-                # Create new site (minimal info for now)
-                cursor.execute("INSERT INTO sites (site_name) VALUES (?)", (site_name,))
-                site_id = cursor.lastrowid
-                logger.info(f"Created new site: {site_name}")
-            
-            # Process this date group (should only be one row per site per date)
-            for _, row in group.iterrows():
-                date_str = row['Date'].strftime('%Y-%m-%d')
-                year = row['Year']
-                month = row['Month']
-                
-                # Insert collection event
-                cursor.execute("""
-                INSERT INTO chemical_collection_events 
-                (site_id, collection_date, year, month)
-                VALUES (?, ?, ?, ?)
-                """, (site_id, date_str, year, month))
-                
-                event_id = cursor.lastrowid
-                samples_added += 1
-                
-                # Insert measurements for each parameter
-                for param_name, param_id in PARAMETER_MAP.items():
-                    if param_name in row and pd.notna(row[param_name]):
-                        # Apply appropriate rounding before insertion
-                        raw_value = row[param_name]
-                        rounded_value = round_parameter_value(param_name, raw_value, 'chemical')
-                        
-                        # Skip if rounding failed
-                        if rounded_value is None:
-                            continue
-                            
-                        # Determine status using rounded value
-                        status = determine_status(param_name, rounded_value, reference_values)
-                        
-                        # Insert measurement with rounded value
-                        cursor.execute("""
-                        INSERT INTO chemical_measurements
-                        (event_id, parameter_id, value, status)
-                        VALUES (?, ?, ?, ?)
-                        """, (event_id, param_id, rounded_value, status))
-                        
-                        measurements_added += 1
-        
-        conn.commit()
-        close_connection(conn)
-        
-        logger.info(f"Successfully inserted data:")
-        logger.info(f"  - Sites processed: {len(sites_processed)}")
-        logger.info(f"  - Collection events added: {samples_added}")
-        logger.info(f"  - Measurements added: {measurements_added}")
-        
-        return True
-        
-    except Exception as e:
-        if conn:
-            conn.rollback()
-            close_connection(conn)
-        logger.error(f"Error inserting processed chemical data: {e}")
-        return False
+# ==============================
+# TESTING
+# ==============================
 
 # Test section if run directly
 if __name__ == "__main__":

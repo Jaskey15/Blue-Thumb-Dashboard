@@ -3,7 +3,8 @@ import plotly.graph_objects as go
 import pandas as pd
 
 from plotly.subplots import make_subplots
-from data_processing.chemical_processing import process_chemical_data
+from data_processing.data_queries import get_chemical_data_from_db
+from data_processing.chemical_utils import KEY_PARAMETERS, get_reference_values
 from utils import setup_logging
 
 logger = setup_logging("chemical_viz", category="visualization")
@@ -430,10 +431,12 @@ def create_time_series_plot(df, parameter, reference_values, title=None, y_label
 
 def create_parameter_dashboard(df=None, parameters=None, reference_values=None, highlight_thresholds=True, get_param_name=None):
     """Create a subplot figure for all parameters with optional threshold highlighting"""
-    # If no data is provided, process it
+    # If no data is provided, get it from database
     if df is None or parameters is None or reference_values is None:
         try:
-            df, parameters, reference_values = process_chemical_data()
+            df = get_chemical_data_from_db()
+            parameters = KEY_PARAMETERS
+            reference_values = get_reference_values()
         except Exception as e:
             print(f"Error loading chemical data: {e}")
             # Return empty figure with error message
@@ -605,7 +608,9 @@ def create_parameter_dashboard(df=None, parameters=None, reference_values=None, 
 def create_chemical_viz(highlight_thresholds=True):
     """Create chemical dashboard for the app"""
     try:
-        df_clean, key_parameters, reference_values = process_chemical_data()
+        df_clean = get_chemical_data_from_db()
+        key_parameters = KEY_PARAMETERS
+        reference_values = get_reference_values()
         return create_parameter_dashboard(df_clean, key_parameters, reference_values, highlight_thresholds)
     except Exception as e:
         print(f"Error creating chemical visualization: {e}")

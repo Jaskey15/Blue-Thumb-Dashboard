@@ -112,8 +112,6 @@ def insert_default_reference_values(cursor):
         logger.error(f"Error inserting default reference values: {e}")
         raise Exception(f"Failed to insert default chemical reference values: {e}")
 
-
-
 def convert_bdl_value(value, bdl_replacement):
     """
     Convert zeros to BDL replacement values.
@@ -358,3 +356,347 @@ def remove_empty_chemical_rows(df, chemical_columns=None):
         logger.info(f"Removed {removed_count} rows with no chemical data")
     
     return df_filtered
+
+# =============================================================================
+# DATABASE FUNCTIONS
+# =============================================================================
+
+def get_reference_values():
+    """
+    Get reference values from the database.
+    Moved from chemical_processing.py for shared use.
+    
+    Returns:
+        dict: Reference values organized by parameter
+        
+    Raises:
+        Exception: If reference values cannot be retrieved from database
+    """
+    from database.database import get_connection, close_connection
+    
+    conn = get_connection()
+    try:
+        reference_values = {}
+        
+        query = """
+        SELECT p.parameter_code, r.threshold_type, r.value
+        FROM chemical_reference_values r
+        JOIN chemical_parameters p ON r.parameter_id = p.parameter_id
+        """
+        
+        df = pd.read_sql_query(query, conn)
+        
+        if df.empty:
+            raise Exception("No chemical reference values found in database. Database initialization may have failed.")
+        
+        for param in df['parameter_code'].unique():
+            reference_values[param] = {}
+            param_data = df[df['parameter_code'] == param]
+            
+            # Mapping of database threshold_type to dashboard reference key
+            threshold_mapping = {
+                'normal_min': 'normal min',
+                'normal_max': 'normal max',
+                'caution_min': 'caution min',
+                'caution_max': 'caution max',
+                'normal': 'normal',
+                'caution': 'caution',
+                'poor': 'poor'
+            }
+
+            # Process all thresholds with a single loop
+            for _, row in param_data.iterrows():
+                if row['threshold_type'] in threshold_mapping:
+                    reference_key = threshold_mapping[row['threshold_type']]
+                    reference_values[param][reference_key] = row['value']
+        
+        # Validate that we have reference values for key parameters
+        if not reference_values:
+            raise Exception("Failed to parse chemical reference values from database")
+            
+        logger.debug(f"Successfully retrieved reference values for {len(reference_values)} parameters")
+        return reference_values
+        
+    except Exception as e:
+        logger.error(f"Error getting reference values: {e}")
+        raise Exception(f"Critical error: Cannot retrieve chemical reference values from database: {e}")
+    finally:
+        close_connection(conn)
+
+def get_existing_data_batch(conn):
+    """
+    Get all existing data for batch processing and duplicate detection.
+    
+    Returns:
+        tuple: (existing_events, event_lookup, existing_measurements, site_lookup)
+    """
+    # Get all existing collection events
+    existing_events_query = """
+    SELECT s.site_name, c.collection_date, c.event_id
+    FROM chemical_collection_events c
+    JOIN sites s ON c.site_id = s.site_id
+    """
+    existing_events_df = pd.read_sql_query(existing_events_query, conn)
+    existing_events = set(zip(existing_events_df['site_name'], existing_events_df['collection_date']))
+    event_lookup = dict(zip(
+        zip(existing_events_df['site_name'], existing_events_df['collection_date']), 
+        existing_events_df['event_id']
+    ))
+    
+    # Get all existing measurements
+    existing_measurements_query = """
+    SELECT event_id, parameter_id
+    FROM chemical_measurements
+    """
+    existing_measurements_df = pd.read_sql_query(existing_measurements_query, conn)
+    existing_measurements = set(zip(existing_measurements_df['event_id'], existing_measurements_df['parameter_id']))
+    
+    # Get all existing sites (NO CREATION - only lookup)
+    existing_sites_df = pd.read_sql_query("SELECT site_name, site_id FROM sites", conn)
+    site_lookup = dict(zip(existing_sites_df['site_name'], existing_sites_df['site_id']))
+    
+    return existing_events, event_lookup, existing_measurements, site_lookup
+
+def insert_collection_event(cursor, site_id, date_str, year, month, existing_events, event_lookup, site_name):
+    """
+    Insert collection event if it doesn't exist.
+    
+    Args:
+        cursor: Database cursor
+        site_id: Site ID (must already exist)
+        date_str: Date string (YYYY-MM-DD)
+        year: Year
+        month: Month
+        existing_events: Set of existing (site_name, date) tuples
+        event_lookup: Dictionary for event lookup
+        site_name: Site name for lookup
+        
+    Returns:
+        tuple: (event_id, was_created)
+    """
+    if (site_name, date_str) in existing_events:
+        return event_lookup[(site_name, date_str)], False
+    else:
+        cursor.execute("""
+        INSERT INTO chemical_collection_events 
+        (site_id, collection_date, year, month)
+        VALUES (?, ?, ?, ?)
+        """, (site_id, date_str, year, month))
+        
+        event_id = cursor.lastrowid
+        existing_events.add((site_name, date_str))
+        event_lookup[(site_name, date_str)] = event_id
+        return event_id, True
+
+def insert_chemical_measurement(cursor, event_id, parameter_id, value, status, existing_measurements):
+    """
+    Insert chemical measurement if it doesn't exist.
+    
+    Args:
+        cursor: Database cursor
+        event_id: Collection event ID
+        parameter_id: Parameter ID
+        value: Measurement value
+        status: Measurement status
+        existing_measurements: Set of existing (event_id, parameter_id) tuples
+        
+    Returns:
+        bool: True if measurement was inserted, False if it already existed
+    """
+    if (event_id, parameter_id) not in existing_measurements:
+        cursor.execute("""
+        INSERT INTO chemical_measurements
+        (event_id, parameter_id, value, status)
+        VALUES (?, ?, ?, ?)
+        """, (event_id, parameter_id, value, status))
+        
+        existing_measurements.add((event_id, parameter_id))
+        return True
+    return False
+
+def batch_insert_chemical_data(df, check_duplicates=True, data_source="unknown"):
+    """
+    Unified batch insertion function for chemical data.
+ 
+    Args:
+        df: DataFrame with processed chemical data 
+        check_duplicates: Whether to check for existing data
+        data_source: Description of data source for logging
+        
+    Returns:
+        dict: Statistics about the insertion process
+    """
+    from database.database import get_connection, close_connection
+    from utils import round_parameter_value
+    
+    if df.empty:
+        logger.warning(f"No data to process for {data_source}")
+        return {
+            'sites_processed': 0,
+            'events_added': 0,
+            'measurements_added': 0,
+            'data_source': data_source
+        }
+    
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Ensure default parameters and reference values exist
+        insert_default_parameters(cursor)
+        insert_default_reference_values(cursor)
+        conn.commit()
+        logger.info(f"Default chemical parameters and reference values ensured in database")
+        
+        # Get reference values for status determination
+        reference_values = get_reference_values()
+        
+        # load existing data
+        existing_events, event_lookup, existing_measurements, site_lookup = get_existing_data_batch(conn)
+        logger.info(f"Found {len(existing_events)} existing events, {len(existing_measurements)} existing measurements")
+        
+        # Track statistics
+        stats = {
+            'sites_processed': 0,
+            'sites_created': 0,  # Always 0 - we don't create sites
+            'events_added': 0,
+            'measurements_added': 0,
+            'data_source': data_source
+        }
+        
+        # Process data by site and date
+        for (site_name, date), group in df.groupby(['Site_Name', 'Date']):
+            stats['sites_processed'] += 1
+            
+            # Get site_id (sites guaranteed to exist from prior processing)
+            site_id = site_lookup[site_name]
+            
+            # Process this date group (should only be one row per site per date)
+            for _, row in group.iterrows():
+                date_str = row['Date'].strftime('%Y-%m-%d')
+                year = row['Year']
+                month = row['Month']
+                
+                # Insert collection event
+                event_id, event_was_created = insert_collection_event(
+                    cursor, site_id, date_str, year, month, 
+                    existing_events, event_lookup, site_name
+                )
+                if event_was_created:
+                    stats['events_added'] += 1
+                
+                # Insert measurements for each parameter
+                for param_name, param_id in PARAMETER_MAP.items():
+                    if param_name in row and pd.notna(row[param_name]):
+                        raw_value = row[param_name]
+                        
+                        # Apply appropriate rounding before insertion
+                        rounded_value = round_parameter_value(param_name, raw_value, 'chemical')
+                        
+                        if rounded_value is None:
+                            continue
+                            
+                        # Determine status using rounded value
+                        status = determine_status(param_name, rounded_value, reference_values)
+                        
+                        # Insert measurement
+                        measurement_was_inserted = insert_chemical_measurement(
+                            cursor, event_id, param_id, rounded_value, status, existing_measurements
+                        )
+                        if measurement_was_inserted:
+                            stats['measurements_added'] += 1
+        
+        conn.commit()
+        
+        # Log results
+        logger.info(f"Successfully inserted {data_source} data:")
+        logger.info(f"  - Sites processed: {stats['sites_processed']}")
+        logger.info(f"  - Collection events added: {stats['events_added']}")
+        logger.info(f"  - Measurements added: {stats['measurements_added']}")
+        
+        return stats
+        
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Error in batch insertion for {data_source}: {e}")
+        raise Exception(f"Failed to insert {data_source} data: {e}")
+    finally:
+        close_connection(conn)
+
+def check_for_duplicates_against_db(df, prioritize_existing=True):
+    """
+    Check for duplicates against existing data in the database.
+    
+    Args:
+        df: DataFrame with processed chemical data
+        prioritize_existing: If True, remove duplicates from df; if False, return info only
+        
+    Returns:
+        tuple: (df_no_duplicates, duplicate_count, duplicate_info)
+    """
+    from database.database import get_connection, close_connection
+    from data_processing.data_loader import clean_site_name
+    
+    try:
+        conn = get_connection()
+        
+        # Get all existing (site_name, date) combinations from database
+        existing_query = """
+        SELECT DISTINCT s.site_name, c.collection_date
+        FROM chemical_collection_events c
+        JOIN sites s ON c.site_id = s.site_id
+        """
+        
+        existing_df = pd.read_sql_query(existing_query, conn)
+        close_connection(conn)
+        
+        if existing_df.empty:
+            logger.info("No existing chemical data found in database - no duplicates to check")
+            return df, 0, []
+        
+        # Convert dates to same format for comparison
+        existing_df['collection_date'] = pd.to_datetime(existing_df['collection_date']).dt.date
+        df['date_for_comparison'] = df['Date'].dt.date
+        
+        # Create sets for efficient comparison
+        existing_combinations = set(zip(
+            existing_df['site_name'].apply(clean_site_name), 
+            existing_df['collection_date']
+        ))
+        
+        # Check each row for duplicates
+        duplicate_mask = df.apply(
+            lambda row: (row['Site_Name'], row['date_for_comparison']) in existing_combinations, 
+            axis=1
+        )
+        
+        duplicate_count = duplicate_mask.sum()
+        duplicate_info = []
+        
+        if duplicate_count > 0:
+            duplicate_examples = df[duplicate_mask][['Site_Name', 'Date']].head(10)
+            duplicate_info = [(row['Site_Name'], row['Date'].strftime('%Y-%m-%d')) 
+                            for _, row in duplicate_examples.iterrows()]
+            
+            logger.info(f"Found {duplicate_count} duplicate records out of {len(df)} total records")
+            
+            if prioritize_existing:
+                df_no_duplicates = df[~duplicate_mask].copy()
+                logger.info(f"Removed {duplicate_count} duplicates. {len(df_no_duplicates)} records remaining.")
+            else:
+                df_no_duplicates = df.copy()
+                logger.info("Duplicates found but not removed (prioritize_existing=False)")
+        else:
+            logger.info("No duplicates found - all records are new")
+            df_no_duplicates = df.copy()
+        
+        # Clean up temporary column
+        if 'date_for_comparison' in df_no_duplicates.columns:
+            df_no_duplicates = df_no_duplicates.drop(columns=['date_for_comparison'])
+        
+        return df_no_duplicates, duplicate_count, duplicate_info
+        
+    except Exception as e:
+        logger.error(f"Error checking for duplicates: {e}")
+        logger.warning("Duplicate checking failed - returning all data")
+        return df, 0, []
