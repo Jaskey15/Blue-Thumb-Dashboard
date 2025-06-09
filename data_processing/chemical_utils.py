@@ -25,38 +25,6 @@ PARAMETER_MAP = {
     'Chloride': 5
 }
 
-CHEMICAL_PARAMETERS = [
-    (1, 'Dissolved Oxygen', 'do_percent', 'Dissolved Oxygen', '%'),
-    (2, 'pH', 'pH', 'pH', 'pH units'),
-    (3, 'Soluble Nitrogen', 'soluble_nitrogen', 'Nitrogen', 'mg/L'),
-    (4, 'Phosphorus', 'Phosphorus', 'Phosphorus', 'mg/L'),
-    (5, 'Chloride', 'Chloride', 'Chloride', 'mg/L')
-]
-
-CHEMICAL_REFERENCE_VALUES = [
-    # do_percent reference values
-    (1, 1, 'normal_min', 80),
-    (2, 1, 'normal_max', 130),
-    (3, 1, 'caution_min', 50),
-    (4, 1, 'caution_max', 150),
-    
-    # pH reference values
-    (5, 2, 'normal_min', 6.5),
-    (6, 2, 'normal_max', 9.0),
-    
-    # Soluble Nitrogen reference values
-    (7, 3, 'normal', 0.8),
-    (8, 3, 'caution', 1.5),
-    
-    # Phosphorus reference values
-    (9, 4, 'normal', 0.05),
-    (10, 4, 'caution', 0.1),
-    
-    # Chloride reference values
-    (11, 5, 'normal', 250),
-    (12, 5, 'caution', 500)
-]
-
 # Define constants for BDL values (Below Detection Limit)
 # Values provided by Blue Thumb Cordinator
 BDL_VALUES = {
@@ -65,52 +33,6 @@ BDL_VALUES = {
     'Ammonia': 0.03,
     'Phosphorus': 0.005,
 }
-
-def insert_default_parameters(cursor):
-    """
-    Insert default chemical parameters into the database.
-    
-    Args:
-        cursor: Database cursor
-        
-    Raises:
-        Exception: If insertion fails
-    """
-    try:
-        # Insert the parameters
-        cursor.executemany('''
-        INSERT OR IGNORE INTO chemical_parameters 
-        (parameter_id, parameter_name, parameter_code, display_name, unit)
-        VALUES (?, ?, ?, ?, ?)
-        ''', CHEMICAL_PARAMETERS)
-        
-        logger.info(f"Inserted {len(CHEMICAL_PARAMETERS)} chemical parameters")
-    except Exception as e:
-        logger.error(f"Error inserting default parameters: {e}")
-        raise Exception(f"Failed to insert default chemical parameters: {e}")
-
-def insert_default_reference_values(cursor):
-    """
-    Insert default chemical reference values into the database.
-    
-    Args:
-        cursor: Database cursor
-        
-    Raises:
-        Exception: If insertion fails
-    """
-    try:
-        # Insert the reference values
-        cursor.executemany('''
-        INSERT OR IGNORE INTO chemical_reference_values
-        (reference_id, parameter_id, threshold_type, value)
-        VALUES (?, ?, ?, ?)
-        ''', CHEMICAL_REFERENCE_VALUES)
-        
-        logger.info(f"Inserted {len(CHEMICAL_REFERENCE_VALUES)} chemical reference values")
-    except Exception as e:
-        logger.error(f"Error inserting default reference values: {e}")
-        raise Exception(f"Failed to insert default chemical reference values: {e}")
 
 def convert_bdl_value(value, bdl_replacement):
     """
@@ -174,16 +96,16 @@ def validate_chemical_data(df, remove_invalid=True):
     # Validate other chemical parameters (must be > 0)
     for param in chemical_params:
         if param in df_clean.columns:
-            invalid_mask = (df_clean[param] <= 0) & df_clean[param].notna()
+            invalid_mask = (df_clean[param] < 0) & df_clean[param].notna()
             invalid_count = invalid_mask.sum()
             
             if invalid_count > 0:
                 total_issues += invalid_count
                 if remove_invalid:
                     df_clean.loc[invalid_mask, param] = np.nan
-                    logger.info(f"Removed {invalid_count} {param} values <= 0")
+                    logger.info(f"Removed {invalid_count} {param} values < 0")
                 else:
-                    logger.warning(f"Found {invalid_count} {param} values <= 0")
+                    logger.warning(f"Found {invalid_count} {param} values < 0")
     
     # Log overall summary
     if total_issues > 0:
@@ -542,12 +464,6 @@ def insert_chemical_data(df, check_duplicates=True, data_source="unknown"):
     cursor = conn.cursor()
     
     try:
-        # Ensure default parameters and reference values exist
-        insert_default_parameters(cursor)
-        insert_default_reference_values(cursor)
-        conn.commit()
-        logger.info(f"Default chemical parameters and reference values ensured in database")
-        
         # Get reference values for status determination
         reference_values = get_reference_values()
         
