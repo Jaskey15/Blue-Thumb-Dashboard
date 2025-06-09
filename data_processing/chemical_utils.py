@@ -46,32 +46,6 @@ PARAMETER_MAP = {
     'Chloride': 5
 }
 
-# Default reference values for when database is empty
-DEFAULT_REFERENCE_VALUES = {
-    'do_percent': {
-        'normal min': 80, 
-        'normal max': 130, 
-        'caution min': 50,
-        'caution max': 150
-    },
-    'pH': {
-        'normal min': 6.5, 
-        'normal max': 9.0
-    },
-    'soluble_nitrogen': {
-        'normal': 0.8, 
-        'caution': 1.5
-    },
-    'Phosphorus': {
-        'normal': 0.05, 
-        'caution': 0.1
-    },
-    'Chloride': {
-        'normal': 250,
-        'caution': 500
-    }
-}
-
 CHEMICAL_PARAMETERS = [
     (1, 'Dissolved Oxygen', 'do_percent', 'Dissolved Oxygen', 'Percent saturation of dissolved oxygen', '%'),
     (2, 'pH', 'pH', 'pH', 'Measure of acidity/alkalinity', 'pH units'),
@@ -110,8 +84,8 @@ def insert_default_parameters(cursor):
     Args:
         cursor: Database cursor
         
-    Returns:
-        bool: True if successful
+    Raises:
+        Exception: If insertion fails
     """
     try:
         # Insert the parameters
@@ -122,10 +96,9 @@ def insert_default_parameters(cursor):
         ''', CHEMICAL_PARAMETERS)
         
         logger.info(f"Inserted {len(CHEMICAL_PARAMETERS)} chemical parameters")
-        return True
     except Exception as e:
         logger.error(f"Error inserting default parameters: {e}")
-        return False
+        raise Exception(f"Failed to insert default chemical parameters: {e}")
 
 def insert_default_reference_values(cursor):
     """
@@ -134,8 +107,8 @@ def insert_default_reference_values(cursor):
     Args:
         cursor: Database cursor
         
-    Returns:
-        bool: True if successful
+    Raises:
+        Exception: If insertion fails
     """
     try:
         # Insert the reference values
@@ -146,18 +119,17 @@ def insert_default_reference_values(cursor):
         ''', CHEMICAL_REFERENCE_VALUES)
         
         logger.info(f"Inserted {len(CHEMICAL_REFERENCE_VALUES)} chemical reference values")
-        return True
     except Exception as e:
         logger.error(f"Error inserting default reference values: {e}")
-        return False
+        raise Exception(f"Failed to insert default chemical reference values: {e}")
 
 def ensure_default_parameters_exist():
     """
     Ensure that default chemical parameters and reference values exist in the database.
     This function should be called during chemical processing initialization.
     
-    Returns:
-        bool: True if parameters exist or were successfully created
+    Raises:
+        Exception: If parameters cannot be created or verified
     """
     try:
         from database.database import get_connection, close_connection
@@ -179,11 +151,10 @@ def ensure_default_parameters_exist():
             logger.debug(f"Found {param_count} existing chemical parameters in database")
         
         close_connection(conn)
-        return True
         
     except Exception as e:
         logger.error(f"Error ensuring default parameters exist: {e}")
-        return False
+        raise Exception(f"Critical error: Cannot ensure chemical parameters exist in database: {e}")
 
 def convert_bdl_value(value, bdl_replacement):
     """

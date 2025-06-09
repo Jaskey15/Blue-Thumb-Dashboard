@@ -209,18 +209,6 @@ def create_tables():
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_fish_site_year ON fish_collection_events(site_id, year)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_habitat_site_year ON habitat_assessments(site_id, year)')
     
-    # Initialize chemical parameters and reference values if they don't exist
-    cursor.execute("SELECT COUNT(*) FROM chemical_parameters")
-    if cursor.fetchone()[0] == 0:
-        # Import and insert default parameters and reference values from chemical_utils
-        from data_processing.chemical_utils import insert_default_parameters, insert_default_reference_values
-        
-        insert_default_parameters(cursor)
-        insert_default_reference_values(cursor)
-        
-        conn.commit()
-        print("Initial chemical parameters and reference values added")
-    
     close_connection(conn)
     print("Database schema created successfully")
 

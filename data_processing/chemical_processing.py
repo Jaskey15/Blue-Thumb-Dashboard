@@ -24,7 +24,7 @@ from data_processing.data_queries import (
 from data_processing.chemical_utils import (
     validate_chemical_data, determine_status, apply_bdl_conversions,
     calculate_soluble_nitrogen, remove_empty_chemical_rows,
-    KEY_PARAMETERS, PARAMETER_MAP, DEFAULT_REFERENCE_VALUES,
+    KEY_PARAMETERS, PARAMETER_MAP,
     ensure_default_parameters_exist
 )
 from utils import setup_logging
@@ -34,7 +34,15 @@ logger = setup_logging("chemical_processing", category="processing")
 
 
 def get_reference_values():
-    """Get reference values from the database."""
+    """
+    Get reference values from the database.
+    
+    Returns:
+        dict: Reference values organized by parameter
+        
+    Raises:
+        Exception: If reference values cannot be retrieved from database
+    """
     # Ensure parameters exist before trying to query them
     ensure_default_parameters_exist()
     
@@ -49,6 +57,9 @@ def get_reference_values():
         """
         
         df = pd.read_sql_query(query, conn)
+        
+        if df.empty:
+            raise Exception("No chemical reference values found in database. Database initialization may have failed.")
         
         for param in df['parameter_code'].unique():
             reference_values[param] = {}
@@ -71,15 +82,16 @@ def get_reference_values():
                     reference_key = threshold_mapping[row['threshold_type']]
                     reference_values[param][reference_key] = row['value']
         
-        # If no reference values in database, use hardcoded defaults
+        # Validate that we have reference values for key parameters
         if not reference_values:
-            reference_values = DEFAULT_REFERENCE_VALUES
+            raise Exception("Failed to parse chemical reference values from database")
             
+        logger.debug(f"Successfully retrieved reference values for {len(reference_values)} parameters")
         return reference_values
         
     except Exception as e:
         logger.error(f"Error getting reference values: {e}")
-        return {}
+        raise Exception(f"Critical error: Cannot retrieve chemical reference values from database: {e}")
     finally:
         close_connection(conn)
 
