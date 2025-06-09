@@ -39,7 +39,7 @@ def register_chemical_callbacks(app):
         
         try:
             # Get all sites with chemical data
-            from data_processing.chemical_processing import get_sites_with_chemical_data
+            from data_processing.data_queries import get_sites_with_chemical_data
             all_sites = get_sites_with_chemical_data()
             
             if not all_sites:

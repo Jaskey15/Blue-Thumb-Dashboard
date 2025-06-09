@@ -14,6 +14,12 @@ from data_processing.data_loader import (
 )
 from database.database import get_connection, close_connection
 
+# Import data query utilities
+from data_processing.data_queries import (
+    get_sites_with_chemical_data, get_date_range_for_site, 
+    get_chemical_date_range, get_site_id
+)
+
 # Import shared chemical utilities
 from data_processing.chemical_utils import (
     validate_chemical_data, determine_status, apply_bdl_conversions,
@@ -38,88 +44,6 @@ PARAMETER_MAP = {
     'Phosphorus': 4,
     'Chloride': 5
 }
-
-def get_sites_with_chemical_data():
-    """Return a list of sites that have chemical data."""
-    conn = get_connection()
-    try:
-        # Database query stays the same
-        query = """
-        SELECT DISTINCT s.site_name 
-        FROM sites s
-        JOIN chemical_collection_events c ON s.site_id = c.site_id
-        ORDER BY s.site_name
-        """
-        cursor = conn.cursor()
-        cursor.execute(query)
-        sites = [row[0] for row in cursor.fetchall()]
-        
-        # If no sites found in database, fall back to CLEANED CSV data
-        if not sites:
-            cleaned_path = os.path.join(
-                os.path.dirname(os.path.dirname(__file__)), 
-                'data', 'processed', 'cleaned_chemical_data.csv'
-            )
-            df = pd.read_csv(cleaned_path)
-            sites = df['SiteName'].dropna().unique().tolist()
-            
-        return sites
-    except Exception as e:
-        logger.error(f"Error getting sites with chemical data: {e}")
-        # Fallback to cleaned data
-        cleaned_path = os.path.join(
-            os.path.dirname(os.path.dirname(__file__)), 
-            'data', 'processed', 'cleaned_chemical_data.csv'
-        )
-        df = pd.read_csv(cleaned_path)
-        return df['SiteName'].dropna().unique().tolist()
-    finally:
-        close_connection(conn)
-
-def get_date_range_for_site(site_name):
-    """Get the min and max dates for chemical data at a specific site."""
-    conn = get_connection()
-    try:
-        query = """
-        SELECT MIN(collection_date), MAX(collection_date)
-        FROM chemical_collection_events c
-        JOIN sites s ON c.site_id = s.site_id
-        WHERE s.site_name = ?
-        """
-        cursor = conn.cursor()
-        cursor.execute(query, (site_name,))
-        min_date, max_date = cursor.fetchone()
-        
-        if min_date and max_date:
-            min_date = pd.to_datetime(min_date)
-            max_date = pd.to_datetime(max_date)
-            return min_date, max_date
-        else:
-            # Fall back to processing data from CSV
-            df = process_chemical_data(site_name)
-            if not df.empty:
-                return df['Date'].min(), df['Date'].max()
-            return None, None
-    except Exception as e:
-        logger.error(f"Error getting date range for site {site_name}: {e}")
-        # Fall back to processing from CSV
-        df = process_chemical_data(site_name)
-        if not df.empty:
-            return df['Date'].min(), df['Date'].max()
-        return None, None
-    finally:
-        close_connection(conn)
-
-def get_site_id(cursor, site_name):
-    """Get site ID for a given site name (assumes site already exists)."""
-    cursor.execute("SELECT site_id FROM sites WHERE site_name = ?", (site_name,))
-    result = cursor.fetchone()
-    
-    if result:
-        return result[0]
-    else:
-        raise ValueError(f"Site '{site_name}' not found in database. Run site processing first.")
-
 def get_reference_values():
     """Get reference values from the database."""
     conn = get_connection()
@@ -189,39 +113,6 @@ def get_reference_values():
         return {}
     finally:
         close_connection(conn)
-
-def get_chemical_date_range():
-    """
-    Get the date range (min and max years) for all chemical data in the database.
-    
-    Returns:
-        Tuple of (min_year, max_year) or (2005, 2025) if no data found
-    """
-    conn = None
-    try:
-        conn = get_connection()
-        cursor = conn.cursor()
-        
-        # Query for min and max years from chemical collection events
-        cursor.execute("SELECT MIN(year), MAX(year) FROM chemical_collection_events")
-        result = cursor.fetchone()
-        
-        if result and result[0] is not None and result[1] is not None:
-            min_year, max_year = result
-            logger.info(f"Chemical data date range: {min_year} to {max_year}")
-            return min_year, max_year
-        else:
-            logger.warning("No chemical data found in database, using default range")
-            return 2005, 2025
-            
-    except Exception as e:
-        logger.error(f"Error getting chemical date range: {e}")
-        logger.info("Falling back to default date range")
-        return 2005, 2025
-        
-    finally:
-        if conn:
-            close_connection(conn)
 
 def load_chemical_data_to_db(site_name=None):
     """

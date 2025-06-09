@@ -5,7 +5,7 @@ This file contains functions that create and return the layouts for different da
 
 import dash_bootstrap_components as dbc
 from dash import dcc, html
-from data_processing.chemical_processing import get_chemical_date_range
+from data_processing.data_queries import get_chemical_date_range
 from utils import load_markdown_content, create_image_with_caption, setup_logging
 
 # Import from data_definitions to avoid duplication
