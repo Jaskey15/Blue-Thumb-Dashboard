@@ -223,13 +223,12 @@ def save_processed_data(df, data_type):
     while '__' in sanitized_type:
         sanitized_type = sanitized_type.replace('__', '_')
     
-    # Get the path for processed data
-    file_path = os.path.join(PROCESSED_DATA_DIR, f"processed_{sanitized_type}.csv")
+    file_path = os.path.join(INTERIM_DATA_DIR, f"{sanitized_type}.csv")
     
     try:
-        logger.info(f"Saving processed {data_type} data to {file_path}")
+        logger.info(f"Saving {data_type} data to {file_path}")
         df.to_csv(file_path, index=False)
-        logger.info(f"Successfully saved {len(df)} rows of processed {data_type} data")
+        logger.info(f"Successfully saved {len(df)} rows of {data_type} data")
         return True
     
     except Exception as e:

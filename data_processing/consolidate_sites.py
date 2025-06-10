@@ -369,14 +369,19 @@ def save_consolidated_data(consolidated_sites, conflicts_df):
         consolidated_sites: DataFrame with consolidated site data
         conflicts_df: DataFrame with conflicts that need manual review
     """
-    # Save consolidated sites
-    consolidated_path = os.path.join(PROCESSED_DATA_DIR, 'master_sites.csv')
+    # Save master sites file to processed directory (for site processing)
+    master_path = os.path.join(PROCESSED_DATA_DIR, 'master_sites.csv')
+    consolidated_sites.to_csv(master_path, index=False, encoding='utf-8')
+    logger.info(f"Saved master sites to: master_sites.csv")
+    
+    # Save full consolidated sites file to interim directory (with source tracking)
+    consolidated_path = os.path.join(INTERIM_DATA_DIR, 'consolidated_sites.csv')
     consolidated_sites.to_csv(consolidated_path, index=False, encoding='utf-8')
-    logger.info(f"Saved consolidated sites to: master_sites.csv")
+    logger.info(f"Saved consolidated sites to: consolidated_sites.csv")
     
     # Save conflicts if any exist
     if not conflicts_df.empty:
-        conflicts_path = os.path.join(PROCESSED_DATA_DIR, 'site_conflicts_for_review.csv')
+        conflicts_path = os.path.join(INTERIM_DATA_DIR, 'site_conflicts_for_review.csv')
         conflicts_df.to_csv(conflicts_path, index=False, encoding='utf-8')
         logger.warning(f"Saved {len(conflicts_df)} conflicts to: site_conflicts_for_review.csv")
         logger.warning("⚠️  Manual review required for conflicting sites!")

@@ -19,7 +19,7 @@ Usage:
 
 import os
 import pandas as pd
-from data_processing.data_loader import load_csv_data, clean_column_names, save_processed_data, clean_site_name
+from data_processing.data_loader import load_csv_data, clean_column_names, save_processed_data, clean_site_name, PROCESSED_DATA_DIR
 from database.database import get_connection, close_connection
 from data_processing import setup_logging
 
@@ -96,8 +96,10 @@ def load_site_data():
         logger.info(f"Processed {len(sites_df)} unique sites with database schema columns")
         logger.info(f"Using columns: {list(sites_df.columns)}")
         
-        # Save the processed data
-        save_processed_data(sites_df, 'consolidated_sites_for_db')
+        # Save the database-ready sites data to processed directory
+        sites_for_db_path = os.path.join(PROCESSED_DATA_DIR, 'sites_for_db.csv')
+        sites_df.to_csv(sites_for_db_path, index=False)
+        logger.info(f"Saved database-ready sites to: sites_for_db.csv")
         
         return sites_df
     

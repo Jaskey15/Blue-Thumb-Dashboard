@@ -10,8 +10,6 @@ from data_processing import setup_logging
 # Set up logging
 logger = setup_logging("data_queries", category="processing")
 
-
-
 def get_chemical_date_range():
     """
     Get the date range (min and max years) for all chemical data in the database.
