@@ -223,7 +223,7 @@ def save_processed_data(df, data_type):
     while '__' in sanitized_type:
         sanitized_type = sanitized_type.replace('__', '_')
     
-    file_path = os.path.join(INTERIM_DATA_DIR, f"{sanitized_type}.csv")
+    file_path = os.path.join(PROCESSED_DATA_DIR, f"processed_{sanitized_type}.csv")
     
     try:
         logger.info(f"Saving {data_type} data to {file_path}")

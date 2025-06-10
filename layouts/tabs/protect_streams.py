@@ -1,0 +1,85 @@
+"""
+Protect Our Streams tab layout for the Tenmile Creek Water Quality Dashboard.
+"""
+
+import dash_bootstrap_components as dbc
+from dash import html
+from utils import load_markdown_content
+from ..constants import TAB_STYLES
+from ..helpers import create_action_card, create_watershed_image_section
+
+def create_protect_our_streams_tab():
+    """
+    Create the layout for the Protect Our Streams tab.
+    
+    Returns:
+        HTML layout for the Protect Our Streams tab
+    """
+    try:
+        # Import the card data
+        from config.action_cards import HOME_YARD_CARDS, RURAL_CARDS, RECREATION_CARDS, COMMUNITY_CARDS
+        
+        # Create cards using the imported data
+        home_yard_cards = [create_action_card(**card) for card in HOME_YARD_CARDS]
+        rural_cards = [create_action_card(**card) for card in RURAL_CARDS]
+        recreation_cards = [create_action_card(**card) for card in RECREATION_CARDS]
+        community_cards = [create_action_card(**card) for card in COMMUNITY_CARDS]
+        
+        # Create main tabs with all cards displayed for each category
+        main_tabs = dbc.Tabs([
+            dbc.Tab(
+                dbc.Row([
+                    *[dbc.Col(card, width=12, md=6, lg=4, className="mb-4") for card in home_yard_cards]
+                ], className="mt-3"),
+                label="Home & Yard"
+            ),
+            dbc.Tab(
+                dbc.Row([
+                    *[dbc.Col(card, width=12, md=6, lg=4, className="mb-4") for card in rural_cards]
+                ], className="mt-3"),
+                label="Rural & Agricultural"
+            ),
+            dbc.Tab(
+                dbc.Row([
+                    *[dbc.Col(card, width=12, md=6, lg=4, className="mb-4") for card in recreation_cards]
+                ], className="mt-3"),
+                label="Recreation"
+            ),
+            dbc.Tab(
+                dbc.Row([
+                    *[dbc.Col(card, width=12, md=6, lg=4, className="mb-4") for card in community_cards]
+                ], className="mt-3"),
+                label="Community Action"
+            )
+        ], className="mt-4")
+            
+        # Put everything together in the tab layout
+        tab_content = html.Div([
+            # First row with text and image side by side
+            dbc.Row([
+                # Left column for text 
+                dbc.Col([
+                    load_markdown_content('protect_our_streams_intro.md')
+                ], width=6),
+                
+                # Right column for image 
+                create_watershed_image_section()
+            ]),
+            
+            # Second row for "Actions You Can Take" section
+            dbc.Row([
+                dbc.Col([
+                    html.H3("Actions You Can Take", className="mt-4"),
+                    main_tabs
+                ], width=12)
+            ])
+        ], className=TAB_STYLES["standard_margin"])
+        
+        return tab_content
+        
+    except Exception as e:
+        print(f"Error creating protect our streams tab: {e}")
+        return html.Div([
+            html.Div("Error loading protect our streams tab content", className="alert alert-danger"),
+            html.Pre(str(e), style={"fontSize": "12px"})
+        ]) 

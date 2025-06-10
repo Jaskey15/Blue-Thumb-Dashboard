@@ -3,11 +3,13 @@ import dash_bootstrap_components as dbc
 
 from callbacks import register_callbacks
 from dash import html, dcc
-from layouts import (
-    create_overview_tab, create_chemical_tab, create_biological_tab,
-    create_habitat_tab, create_protect_our_streams_tab, create_source_data_tab,
-    create_icon_attribution_modal, create_image_credits_modal
-)
+from layouts.tabs.overview import create_overview_tab
+from layouts.tabs.chemical import create_chemical_tab
+from layouts.tabs.biological import create_biological_tab
+from layouts.tabs.habitat import create_habitat_tab
+from layouts.tabs.protect_streams import create_protect_our_streams_tab
+from layouts.tabs.source_data import create_source_data_tab
+from layouts.modals import create_icon_attribution_modal, create_image_credits_modal
 
 # Initialize the Dash app
 app = dash.Dash(__name__, 

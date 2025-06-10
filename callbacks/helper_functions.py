@@ -272,20 +272,20 @@ def get_parameter_legend(param_type, param_name):
         elif param_name == 'soluble_nitrogen':
             return [
                 {"color": "#1e8449", "label": "Normal (<0.8 mg/L)"},
-                {"color": "#ff9800", "label": "Elevated (0.8-2.0 mg/L)"},
-                {"color": "#e74c3c", "label": "High (>2.0 mg/L)"}
+                {"color": "#ff9800", "label": "Caution (0.8-1.5 mg/L)"},
+                {"color": "#e74c3c", "label": "High (>1.5 mg/L)"}
             ]
         elif param_name == 'Phosphorus':
             return [
-                {"color": "#1e8449", "label": "Normal (<0.1 mg/L)"},
-                {"color": "#ff9800", "label": "Elevated (0.1-0.3 mg/L)"},
-                {"color": "#e74c3c", "label": "High (>0.3 mg/L)"}
+                {"color": "#1e8449", "label": "Normal (<0.05 mg/L)"},
+                {"color": "#ff9800", "label": "Caution (0.05-0.1 mg/L)"},
+                {"color": "#e74c3c", "label": "Poor (>0.1 mg/L)"}
             ]
         elif param_name == 'Chloride':
             return [
-                {"color": "#1e8449", "label": "Normal (<250 mg/L)"},
-                {"color": "#ff9800", "label": "Elevated (250-500 mg/L)"},
-                {"color": "#e74c3c", "label": "High (>500 mg/L)"}
+                {"color": "#1e8449", "label": "Normal (<200 mg/L)"},
+                {"color": "#ff9800", "label": "Caution (200-400 mg/L)"},
+                {"color": "#e74c3c", "label": "Poor (>400 mg/L)"}
             ]
     
     # Biological parameter legends

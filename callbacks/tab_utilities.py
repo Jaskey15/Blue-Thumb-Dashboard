@@ -325,7 +325,7 @@ def create_biological_community_display(selected_community, selected_site):
             )
 
         # Import gallery creation function
-        from layouts import create_species_gallery
+        from layouts.helpers import create_species_gallery
             
         # Create unified layout for the community
         content = html.Div([
