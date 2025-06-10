@@ -65,8 +65,9 @@ PARAMETER_THRESHOLDS = {
     },
     'Chloride': {
         'ranges': [
-            {'min': -float('inf'), 'max': 250, 'status': 'Normal'},
-            {'min': 250, 'max': float('inf'), 'status': 'Poor'}
+            {'min': -float('inf'), 'max': 200, 'status': 'Normal'},
+            {'min': 200, 'max': 400, 'status': 'Caution'},
+            {'min': 400, 'max': float('inf'), 'status': 'Poor'}
         ]
     }
 }
@@ -92,7 +93,8 @@ REFERENCE_LINES = {
         {'value': 0.1, 'color': 'red', 'label': 'Poor', 'style': LINE_STYLES['caution']}
     ],
     'Chloride': [
-        {'value': 250, 'color': 'red', 'label': 'Poor', 'style': LINE_STYLES['poor']}
+        {'value': 200, 'color': 'orange', 'label': 'Caution', 'style': LINE_STYLES['normal']},
+        {'value': 400, 'color': 'red', 'label': 'Poor', 'style': LINE_STYLES['caution']}
     ]
 }
 

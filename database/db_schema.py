@@ -37,8 +37,8 @@ CHEMICAL_REFERENCE_VALUES = [
     (10, 4, 'caution', 0.1),
     
     # Chloride reference values
-    (11, 5, 'normal', 250),
-    (12, 5, 'caution', 500)
+    (11, 5, 'normal', 200),
+    (12, 5, 'caution', 400)
 ]
 
 def populate_chemical_reference_data(cursor):

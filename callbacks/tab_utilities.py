@@ -49,20 +49,20 @@ def get_parameter_legend(param_type, param_name):
         elif param_name == 'soluble_nitrogen':
             return [
                 {"color": COLORS['normal'], "label": "Normal (<0.8 mg/L)"},
-                {"color": COLORS['caution'], "label": "Elevated (0.8-1.5 mg/L)"},
-                {"color": COLORS['poor'], "label": "High (>1.5 mg/L)"}
+                {"color": COLORS['caution'], "label": "Caution (0.8-1.5 mg/L)"},
+                {"color": COLORS['poor'], "label": "Poor (>1.5 mg/L)"}
             ]
         elif param_name == 'Phosphorus':
             return [
                 {"color": COLORS['normal'], "label": "Normal (<0.05 mg/L)"},
-                {"color": COLORS['caution'], "label": "Elevated (0.05-0.1 mg/L)"},
-                {"color": COLORS['poor'], "label": "High (>0.1 mg/L)"}
+                {"color": COLORS['caution'], "label": "Caution (0.05-0.1 mg/L)"},
+                {"color": COLORS['poor'], "label": "Poor (>0.1 mg/L)"}
             ]
         elif param_name == 'Chloride':
             return [
-                {"color": COLORS['normal'], "label": "Normal (<250 mg/L)"},
-                {"color": COLORS['caution'], "label": "Caution (250-500 mg/L)"},
-                {"color": COLORS['poor'], "label": "Poor (>500 mg/L)"}
+                {"color": COLORS['normal'], "label": "Normal (<200 mg/L)"},
+                {"color": COLORS['caution'], "label": "Caution (200-400 mg/L)"},
+                {"color": COLORS['poor'], "label": "Poor (>400 mg/L)"}
             ]
     
     # Biological parameter legends

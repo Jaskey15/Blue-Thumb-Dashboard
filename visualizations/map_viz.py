@@ -60,9 +60,9 @@ PARAMETER_THRESHOLDS = {
         {'min': 0.1, 'max': float('inf'), 'status': 'Poor', 'color': COLORS['poor']}
     ],
     'Chloride': [
-        {'min': -float('inf'), 'max': 250, 'status': 'Normal', 'color': COLORS['normal']},
-        {'min': 250, 'max': 500, 'status': 'Caution', 'color': COLORS['caution']},
-        {'min': 500, 'max': float('inf'), 'status': 'Poor', 'color': COLORS['poor']}
+        {'min': -float('inf'), 'max': 200, 'status': 'Normal', 'color': COLORS['normal']},
+        {'min': 200, 'max': 400, 'status': 'Caution', 'color': COLORS['caution']},
+        {'min': 400, 'max': float('inf'), 'status': 'Poor', 'color': COLORS['poor']}
     ]
 }
 
