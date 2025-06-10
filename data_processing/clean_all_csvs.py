@@ -11,35 +11,33 @@ import os
 import sys
 import pandas as pd
 
-# Add parent directory to Python path and define base directory
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, BASE_DIR)
-
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from utils import setup_logging
 
 # Set up logging
 logger = setup_logging("clean_all_csvs", category="preprocessing")
 
 # Define data directories 
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 RAW_DATA_DIR = os.path.join(BASE_DIR, 'data', 'raw')
-PROCESSED_DATA_DIR = os.path.join(BASE_DIR, 'data', 'processed')
+INTERIM_DATA_DIR = os.path.join(BASE_DIR, 'data', 'interim')
 
-# Ensure processed directory exists
-os.makedirs(PROCESSED_DATA_DIR, exist_ok=True)
+# Ensure interim directory exists
+os.makedirs(INTERIM_DATA_DIR, exist_ok=True)
 
 def clean_all_csvs():
     """
     Clean all CSV files by standardizing site names.
     
     This function processes all raw CSV files, cleans site names by stripping
-    whitespace and normalizing spaces, then saves cleaned versions.
+    whitespace and normalizing spaces, then saves cleaned versions to the interim folder.
     
     Returns:
         bool: True if all files processed successfully
     """
     logger.info("Starting CSV cleaning pipeline...")
     logger.info(f"Input: {RAW_DATA_DIR}")
-    logger.info(f"Output: {PROCESSED_DATA_DIR}")
+    logger.info(f"Output: {INTERIM_DATA_DIR}")
     
     # List of CSV files to process
     csv_files = [
@@ -48,7 +46,8 @@ def clean_all_csvs():
         'updated_chemical_data.csv',
         'fish_data.csv',
         'macro_data.csv',
-        'habitat_data.csv'
+        'habitat_data.csv',
+        'BT_fish_collection_dates.csv'
     ]
     
     # Initialize summary counters
@@ -59,10 +58,13 @@ def clean_all_csvs():
     # Process each CSV file
     for input_file in csv_files:
         try:
-            # Handle the one special case
+            # Handle special cases
             if input_file == 'updated_chemical_data.csv':
                 site_column = 'Site Name'
                 encoding = 'cp1252'
+            elif input_file == 'BT_fish_collection_dates.csv':
+                site_column = 'Name'
+                encoding = None
             else:
                 site_column = 'SiteName'
                 encoding = None
@@ -72,7 +74,7 @@ def clean_all_csvs():
             description = input_file.replace('_', ' ').replace('.csv', ' data')
             
             input_path = os.path.join(RAW_DATA_DIR, input_file)
-            output_path = os.path.join(PROCESSED_DATA_DIR, output_file)
+            output_path = os.path.join(INTERIM_DATA_DIR, output_file)
             
             logger.info(f"Processing {description}: {input_file}")
             
