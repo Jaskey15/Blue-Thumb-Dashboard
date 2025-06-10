@@ -9,7 +9,7 @@ for its corresponding tab.
 import dash
 from dash import html, dcc
 import dash_bootstrap_components as dbc
-from config.data_definitions import FISH_DATA, MACRO_DATA
+from layouts.ui_data import FISH_DATA, MACRO_DATA
 from utils import setup_logging, load_markdown_content
 from .helper_functions import create_empty_state, create_error_state, get_parameter_name, get_parameter_label
 from visualizations.map_viz import COLORS
@@ -386,7 +386,7 @@ def create_single_parameter_visualization(df_filtered, parameter, reference_valu
         
         # Import required functions
         from visualizations.chemical_viz import create_time_series_plot
-        from config.data_definitions import CHEMICAL_DIAGRAMS, CHEMICAL_DIAGRAM_CAPTIONS
+        from layouts.ui_data import CHEMICAL_DIAGRAMS, CHEMICAL_DIAGRAM_CAPTIONS
         from utils import load_markdown_content, create_image_with_caption
         
         # Get parameter name for display

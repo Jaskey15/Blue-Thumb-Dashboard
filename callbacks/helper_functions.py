@@ -8,7 +8,7 @@ import dash
 import json
 from dash import html
 from utils import setup_logging
-from config.data_definitions import PARAMETER_DISPLAY_NAMES, PARAMETER_AXIS_LABELS
+from config.shared_constants import PARAMETER_DISPLAY_NAMES, PARAMETER_AXIS_LABELS
 
 # Configure logging
 logger = setup_logging("helper_callbacks", category="callbacks")

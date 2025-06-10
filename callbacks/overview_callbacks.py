@@ -6,7 +6,7 @@ This file contains callbacks specific to the overview tab.
 import dash
 import plotly.graph_objects as go
 from dash import Input, Output, State  
-from config.data_definitions import PARAMETER_DISPLAY_NAMES
+from config.shared_constants import PARAMETER_DISPLAY_NAMES
 from .tab_utilities import (
     get_parameter_legend, get_site_count_message, 
     create_basic_map_legend_html, create_map_legend_html

@@ -17,7 +17,7 @@ def create_protect_our_streams_tab():
     """
     try:
         # Import the card data
-        from config.action_cards import HOME_YARD_CARDS, RURAL_CARDS, RECREATION_CARDS, COMMUNITY_CARDS
+        from ..ui_data import HOME_YARD_CARDS, RURAL_CARDS, RECREATION_CARDS, COMMUNITY_CARDS
         
         # Create cards using the imported data
         home_yard_cards = [create_action_card(**card) for card in HOME_YARD_CARDS]
