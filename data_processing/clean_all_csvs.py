@@ -47,7 +47,6 @@ def clean_all_csvs():
         'fish_data.csv',
         'macro_data.csv',
         'habitat_data.csv',
-        'BT_fish_collection_dates.csv'
     ]
     
     # Initialize summary counters
@@ -62,9 +61,6 @@ def clean_all_csvs():
             if input_file == 'updated_chemical_data.csv':
                 site_column = 'Site Name'
                 encoding = 'cp1252'
-            elif input_file == 'BT_fish_collection_dates.csv':
-                site_column = 'Name'
-                encoding = None
             else:
                 site_column = 'SiteName'
                 encoding = None

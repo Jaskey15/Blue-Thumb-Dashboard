@@ -9,19 +9,22 @@ logger = setup_logging("data_loader", category="processing")
 # Constants
 RAW_DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'raw')
 PROCESSED_DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'processed')
+INTERIM_DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'interim')
 
 # Make sure directories exist
 os.makedirs(RAW_DATA_DIR, exist_ok=True)
 os.makedirs(PROCESSED_DATA_DIR, exist_ok=True)
+os.makedirs(INTERIM_DATA_DIR, exist_ok=True)
 
-# File paths for each data source
+# File paths for each data source (cleaned files are now in interim directory)
 DATA_FILES = {
-    'site': os.path.join(PROCESSED_DATA_DIR, 'cleaned_site_data.csv'),  
-    'chemical': os.path.join(PROCESSED_DATA_DIR, 'cleaned_chemical_data.csv'),  
-    'updated_chemical': os.path.join(PROCESSED_DATA_DIR, 'cleaned_updated_chemical_data.csv'), 
-    'fish': os.path.join(PROCESSED_DATA_DIR, 'cleaned_fish_data.csv'),  
-    'macro': os.path.join(PROCESSED_DATA_DIR, 'cleaned_macro_data.csv'),  
-    'habitat': os.path.join(PROCESSED_DATA_DIR, 'cleaned_habitat_data.csv')  
+    'site': os.path.join(INTERIM_DATA_DIR, 'cleaned_site_data.csv'),  
+    'chemical': os.path.join(INTERIM_DATA_DIR, 'cleaned_chemical_data.csv'),  
+    'updated_chemical': os.path.join(INTERIM_DATA_DIR, 'cleaned_updated_chemical_data.csv'), 
+    'fish': os.path.join(INTERIM_DATA_DIR, 'cleaned_fish_data.csv'),  
+    'macro': os.path.join(INTERIM_DATA_DIR, 'cleaned_macro_data.csv'),  
+    'habitat': os.path.join(INTERIM_DATA_DIR, 'cleaned_habitat_data.csv'),
+    'fish_collection_dates': os.path.join(INTERIM_DATA_DIR, 'cleaned_BT_fish_collection_dates.csv')
 }
 
 def get_file_path(data_type, processed=False):
@@ -29,7 +32,7 @@ def get_file_path(data_type, processed=False):
     Get the path to a data file.
     
     Args:
-        data_type: Type of data ('site', 'chemical', 'fish', 'macro', 'habitat')
+        data_type: Type of data ('site', 'chemical', 'updated_chemical', 'fish', 'macro', 'habitat', 'fish_collection_dates')
         processed: Whether to return path for processed data (default: False)
     
     Returns:
@@ -125,7 +128,7 @@ def load_csv_data(data_type, usecols=None, dtype=None, parse_dates=None,
     Load data from a CSV file with optional site name cleaning.
     
     Args:
-        data_type: Type of data ('site', 'chemical', 'fish', 'macro', 'habitat')
+        data_type: Type of data ('site', 'chemical', 'updated_chemical', 'fish', 'macro', 'habitat', 'fish_collection_dates')
         usecols: List of columns to load (default: None, load all)
         dtype: Dictionary of column data types (default: None)
         parse_dates: List of columns to parse as dates (default: None)
@@ -279,7 +282,7 @@ def get_unique_sites(data_type, site_column='sitename'):
     Get a list of unique site names from a data file.
     
     Args:
-        data_type: Type of data ('site', 'chemical', 'fish', 'macro', 'habitat')
+        data_type: Type of data ('site', 'chemical', 'updated_chemical', 'fish', 'macro', 'habitat', 'fish_collection_dates')
         site_column: Name of the column containing site names (default: 'sitename')
     
     Returns:
@@ -348,7 +351,7 @@ def get_date_range(data_type, date_column='Date'):
     Get the date range (min and max dates) for a data type.
     
     Args:
-        data_type: Type of data ('chemical', 'fish', 'macro', 'habitat')
+        data_type: Type of data ('chemical', 'updated_chemical', 'fish', 'macro', 'habitat', 'fish_collection_dates')
         date_column: Name of the column containing dates (default: 'Date')
     
     Returns:
