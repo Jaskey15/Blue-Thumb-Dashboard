@@ -84,39 +84,6 @@ def load_site_data():
         logger.error(f"Error loading site data: {e}")
         return pd.DataFrame()
 
-def find_missing_sites(sites_df):
-    """
-    Find sites that exist in the DataFrame but not in the database.
-    
-    Args:
-        sites_df: DataFrame with site information
-    
-    Returns:
-        DataFrame with sites that don't exist in the database
-    """
-    if sites_df.empty:
-        return pd.DataFrame()
-    
-    conn = get_connection()
-    try:
-        cursor = conn.cursor()
-        
-        # Get existing site names from database
-        cursor.execute("SELECT site_name FROM sites")
-        existing_sites = {clean_site_name(row[0]).lower() for row in cursor.fetchall()}
-        
-        # Find sites that don't exist in database
-        mask = ~sites_df['site_name'].apply(clean_site_name).str.lower().isin(existing_sites)
-        missing_sites = sites_df[mask].copy()
-        
-        return missing_sites
-        
-    except Exception as e:
-        logger.error(f"Error finding missing sites: {e}")
-        return pd.DataFrame()
-    finally:
-        close_connection(conn)
-
 def insert_sites_into_db(sites_df):
     """
     Insert site data into the SQLite database.
