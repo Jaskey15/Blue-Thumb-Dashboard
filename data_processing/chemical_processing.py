@@ -18,7 +18,7 @@ Usage:
 import os
 import pandas as pd
 from data_processing.data_loader import clean_column_names, save_processed_data
-from data_processing.data_queries import get_sites_with_chemical_data, get_date_range_for_site
+from utils import get_sites_with_data
 from data_processing.chemical_utils import (
     validate_chemical_data, apply_bdl_conversions, calculate_soluble_nitrogen,
     remove_empty_chemical_rows, KEY_PARAMETERS,
@@ -201,7 +201,7 @@ if __name__ == "__main__":
     logger.info("Testing chemical data processing")
     
     # Get list of sites with chemical data
-    sites = get_sites_with_chemical_data()
+    sites = get_sites_with_data('chemical')
     if sites:
         logger.info(f"Found {len(sites)} sites with chemical data")
         
@@ -215,11 +215,6 @@ if __name__ == "__main__":
         
         if not df_clean.empty:
             logger.info(f"Successfully retrieved {len(df_clean)} records for {test_site}")
-            
-            # Test date range function
-            min_date, max_date = get_date_range_for_site(test_site)
-            if min_date and max_date:
-                logger.info(f"Date range for {test_site}: {min_date} to {max_date}")
         else:
             logger.warning(f"No data found for test site: {test_site}")
     else:

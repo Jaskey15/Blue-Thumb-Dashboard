@@ -1,11 +1,10 @@
 """
 Chemical callbacks for the Tenmile Creek Water Quality Dashboard.
-This file contains callbacks specific to the chemical data tab.
 """
 
 import dash
 from dash import html, Input, Output, State, ALL
-from utils import setup_logging
+from utils import setup_logging, get_sites_with_data
 from data_processing.data_queries import get_chemical_data_from_db
 from data_processing.chemical_utils import KEY_PARAMETERS, get_reference_values
 from .tab_utilities import create_all_parameters_visualization, create_single_parameter_visualization
@@ -39,8 +38,7 @@ def register_chemical_callbacks(app):
         
         try:
             # Get all sites with chemical data
-            from data_processing.data_queries import get_sites_with_chemical_data
-            all_sites = get_sites_with_chemical_data()
+            all_sites = get_sites_with_data('chemical')
             
             if not all_sites:
                 return [html.Div("No chemical data available.", 

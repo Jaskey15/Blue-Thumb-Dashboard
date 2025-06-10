@@ -10,65 +10,7 @@ from data_processing import setup_logging
 # Set up logging
 logger = setup_logging("data_queries", category="processing")
 
-def get_all_sites():
-    """
-    Retrieve all sites from the database.
-    
-    Returns:
-        DataFrame containing all site data
-    """
-    from database.database import get_connection, close_connection
-    
-    conn = get_connection()
-    try:
-        query = "SELECT * FROM sites ORDER BY site_name"
-        sites_df = pd.read_sql_query(query, conn)
-        logger.debug(f"Retrieved {len(sites_df)} sites from database")
-        return sites_df
-    except Exception as e:
-        logger.error(f"Error retrieving sites from database: {e}")
-        return pd.DataFrame()
-    finally:
-        close_connection(conn)
 
-def get_sites_with_chemical_data():
-    """Return a list of sites that have chemical data."""
-    from database.database import get_connection, close_connection
-    
-    conn = get_connection()
-    try:
-        # Database query stays the same
-        query = """
-        SELECT DISTINCT s.site_name 
-        FROM sites s
-        JOIN chemical_collection_events c ON s.site_id = c.site_id
-        ORDER BY s.site_name
-        """
-        cursor = conn.cursor()
-        cursor.execute(query)
-        sites = [row[0] for row in cursor.fetchall()]
-        
-        # If no sites found in database, fall back to CLEANED CSV data
-        if not sites:
-            cleaned_path = os.path.join(
-                os.path.dirname(os.path.dirname(__file__)), 
-                'data', 'interim', 'cleaned_chemical_data.csv'
-            )
-            df = pd.read_csv(cleaned_path)
-            sites = df['SiteName'].dropna().unique().tolist()
-            
-        return sites
-    except Exception as e:
-        logger.error(f"Error getting sites with chemical data: {e}")
-        # Fallback to cleaned data
-        cleaned_path = os.path.join(
-            os.path.dirname(os.path.dirname(__file__)), 
-            'data', 'interim', 'cleaned_chemical_data.csv'
-        )
-        df = pd.read_csv(cleaned_path)
-        return df['SiteName'].dropna().unique().tolist()
-    finally:
-        close_connection(conn)
 
 def get_chemical_date_range():
     """
@@ -104,66 +46,6 @@ def get_chemical_date_range():
     finally:
         if conn:
             close_connection(conn)
-
-def get_date_range_for_site(site_name):
-    """Get the min and max dates for chemical data at a specific site."""
-    from database.database import get_connection, close_connection
-    
-    conn = get_connection()
-    try:
-        query = """
-        SELECT MIN(collection_date), MAX(collection_date)
-        FROM chemical_collection_events c
-        JOIN sites s ON c.site_id = s.site_id
-        WHERE s.site_name = ?
-        """
-        cursor = conn.cursor()
-        cursor.execute(query, (site_name,))
-        min_date, max_date = cursor.fetchone()
-        
-        if min_date and max_date:
-            min_date = pd.to_datetime(min_date)
-            max_date = pd.to_datetime(max_date)
-            return min_date, max_date
-        else:
-            # Fall back to CSV data if no database data
-            logger.warning(f"No database data found for site {site_name}, checking CSV files")
-            try:
-                # Try cleaned_chemical_data.csv first
-                cleaned_path = os.path.join(
-                    os.path.dirname(os.path.dirname(__file__)), 
-                    'data', 'interim', 'cleaned_chemical_data.csv'
-                )
-                if os.path.exists(cleaned_path):
-                    df = pd.read_csv(cleaned_path, parse_dates=['Date'])
-                    site_data = df[df['SiteName'] == site_name]
-                    if not site_data.empty:
-                        return site_data['Date'].min(), site_data['Date'].max()
-                
-                # Try cleaned_updated_chemical_data.csv
-                updated_path = os.path.join(
-                    os.path.dirname(os.path.dirname(__file__)), 
-                    'data', 'interim', 'cleaned_updated_chemical_data.csv'
-                )
-                if os.path.exists(updated_path):
-                    df = pd.read_csv(updated_path)
-                    # Parse the "Sampling Date" column
-                    if 'Sampling Date' in df.columns:
-                        df['Date'] = pd.to_datetime(df['Sampling Date'], format='%m/%d/%Y, %I:%M %p').dt.date
-                        df['Date'] = pd.to_datetime(df['Date'])
-                        site_data = df[df['Site Name'] == site_name]
-                        if not site_data.empty:
-                            return site_data['Date'].min(), site_data['Date'].max()
-                            
-                return None, None
-            except Exception as csv_e:
-                logger.error(f"Error reading CSV files for site {site_name}: {csv_e}")
-                return None, None
-    except Exception as e:
-        logger.error(f"Error getting date range for site {site_name}: {e}")
-        return None, None
-    finally:
-        close_connection(conn)
 
 def get_chemical_data_from_db(site_name=None):
     """

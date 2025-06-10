@@ -499,12 +499,17 @@ if __name__ == "__main__":
     success = process_site_data()
     if success:
         print("Site processing completed successfully!")
-        # Display some sample site data
-        from data_processing.data_queries import get_all_sites
-        all_sites = get_all_sites()
-        if not all_sites.empty:
-            print(f"Total sites: {len(all_sites)}")
-            print("\nSample sites:")
-            print(all_sites[['site_name', 'county', 'river_basin']].head())
+        # Display total site count
+        from database.database import get_connection, close_connection
+        conn = get_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM sites")
+            site_count = cursor.fetchone()[0]
+            print(f"Total sites: {site_count}")
+        except Exception as e:
+            print(f"Could not retrieve site count: {e}")
+        finally:
+            close_connection(conn)
     else:
         print("Site processing failed. Check the log for details.")
