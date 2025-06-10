@@ -7,7 +7,7 @@ from data_processing.biological_utils import (
     remove_invalid_biological_values,
     convert_columns_to_numeric
 )
-from utils import setup_logging
+from data_processing import setup_logging
 
 # Set up logging
 logger = setup_logging("macro_processing", category="processing")

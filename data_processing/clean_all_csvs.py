@@ -8,11 +8,8 @@ Usage: python clean_all_csvs.py
 """
 
 import os
-import sys
 import pandas as pd
-
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-from utils import setup_logging
+from data_processing import setup_logging
 
 # Set up logging
 logger = setup_logging("clean_all_csvs", category="preprocessing")

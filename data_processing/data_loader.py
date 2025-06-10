@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 import re
-from utils import setup_logging
+from data_processing import setup_logging
 
 # Initialize logger
 logger = setup_logging("data_loader", category="processing")

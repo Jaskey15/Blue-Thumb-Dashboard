@@ -1,6 +1,6 @@
 import pandas as pd
 import os
-from utils import setup_logging
+from data_processing import setup_logging
 from data_processing.data_loader import clean_site_name
 from database.database import get_connection, close_connection
 

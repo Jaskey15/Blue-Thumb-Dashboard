@@ -5,7 +5,7 @@ Shared functions for processing and validating chemical data.
 
 import pandas as pd
 import numpy as np
-from utils import setup_logging
+from data_processing import setup_logging
 
 # Set up logging
 logger = setup_logging("chemical_utils", category="processing")

@@ -5,7 +5,7 @@ Functions for retrieving data from the database and CSV files for visualization 
 
 import pandas as pd
 import os
-from utils import setup_logging
+from data_processing import setup_logging
 
 # Set up logging
 logger = setup_logging("data_queries", category="processing")

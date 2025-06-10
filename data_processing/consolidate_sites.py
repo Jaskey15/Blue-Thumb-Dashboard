@@ -6,15 +6,10 @@ Creates a master sites table with best available metadata from priority sources.
 """
 
 import os
-import sys
 import pandas as pd
 
-# Add the parent directory to Python path so we can import utils
-parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, parent_dir)
-
 from data_processing.data_loader import clean_site_name
-from utils import setup_logging
+from data_processing import setup_logging
 
 # Set up logging
 logger = setup_logging("consolidate_sites", category="preprocessing")

@@ -4,7 +4,7 @@ Shared functions for processing fish and macroinvertebrate data.
 """
 
 import pandas as pd
-from utils import setup_logging
+from data_processing import setup_logging
 
 # Set up logging
 logger = setup_logging("biological_utils", category="processing")

@@ -1,19 +1,10 @@
 import os
-import sys
 import pandas as pd
-
-# Add project root to path 
-project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, project_root)
-
-# Import utilities from data_loader and database 
-
-# Import shared chemical utilities
 from data_processing.chemical_utils import (
     validate_chemical_data, calculate_soluble_nitrogen, remove_empty_chemical_rows,
     insert_chemical_data, check_for_duplicates_against_db
 )
-from utils import setup_logging
+from data_processing import setup_logging
 
 # Set up logging
 logger = setup_logging("updated_chemical_processing", category="processing")

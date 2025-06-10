@@ -1,10 +1,8 @@
 import os
 import pandas as pd
-
-# Import from data_loader
 from data_processing.data_loader import load_csv_data, clean_column_names, save_processed_data, clean_site_name
 from database.database import get_connection, close_connection
-from utils import setup_logging
+from data_processing import setup_logging
 
 # Initialize logger
 logger = setup_logging("site_processing", category="processing")
