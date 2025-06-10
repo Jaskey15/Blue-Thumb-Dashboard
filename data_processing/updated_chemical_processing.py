@@ -55,7 +55,7 @@ def load_updated_chemical_data():
     try:
         cleaned_file_path = os.path.join(
             os.path.dirname(os.path.dirname(__file__)), 
-            'data', 'processed', 'cleaned_updated_chemical_data.csv'
+            'data', 'interim', 'cleaned_updated_chemical_data.csv'
         )
         
         if not os.path.exists(cleaned_file_path):

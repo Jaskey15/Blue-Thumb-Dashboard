@@ -12,10 +12,10 @@ def load_csv_files():
     """Load the relevant cleaned CSV files for site name checking."""
     base_dir = os.path.dirname(os.path.dirname(__file__))
     
-    # Load CLEANED CSV files from processed directory
-    site_data = pd.read_csv(os.path.join(base_dir, 'data', 'processed', 'cleaned_site_data.csv'))
-    updated_chemical = pd.read_csv(os.path.join(base_dir, 'data', 'processed', 'cleaned_updated_chemical_data.csv'))
-    chemical_data = pd.read_csv(os.path.join(base_dir, 'data', 'processed', 'cleaned_chemical_data.csv'))
+    # Load CLEANED CSV files from interim directory
+    site_data = pd.read_csv(os.path.join(base_dir, 'data', 'interim', 'cleaned_site_data.csv'))
+    updated_chemical = pd.read_csv(os.path.join(base_dir, 'data', 'interim', 'cleaned_updated_chemical_data.csv'))
+    chemical_data = pd.read_csv(os.path.join(base_dir, 'data', 'interim', 'cleaned_chemical_data.csv'))
     
     return site_data, updated_chemical, chemical_data
 

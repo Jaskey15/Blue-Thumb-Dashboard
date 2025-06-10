@@ -41,7 +41,7 @@ def get_sites_with_chemical_data():
         if not sites:
             cleaned_path = os.path.join(
                 os.path.dirname(os.path.dirname(__file__)), 
-                'data', 'processed', 'cleaned_chemical_data.csv'
+                'data', 'interim', 'cleaned_chemical_data.csv'
             )
             df = pd.read_csv(cleaned_path)
             sites = df['SiteName'].dropna().unique().tolist()
@@ -52,7 +52,7 @@ def get_sites_with_chemical_data():
         # Fallback to cleaned data
         cleaned_path = os.path.join(
             os.path.dirname(os.path.dirname(__file__)), 
-            'data', 'processed', 'cleaned_chemical_data.csv'
+            'data', 'interim', 'cleaned_chemical_data.csv'
         )
         df = pd.read_csv(cleaned_path)
         return df['SiteName'].dropna().unique().tolist()
@@ -121,7 +121,7 @@ def get_date_range_for_site(site_name):
                 # Try cleaned_chemical_data.csv first
                 cleaned_path = os.path.join(
                     os.path.dirname(os.path.dirname(__file__)), 
-                    'data', 'processed', 'cleaned_chemical_data.csv'
+                    'data', 'interim', 'cleaned_chemical_data.csv'
                 )
                 if os.path.exists(cleaned_path):
                     df = pd.read_csv(cleaned_path, parse_dates=['Date'])
@@ -132,7 +132,7 @@ def get_date_range_for_site(site_name):
                 # Try cleaned_updated_chemical_data.csv
                 updated_path = os.path.join(
                     os.path.dirname(os.path.dirname(__file__)), 
-                    'data', 'processed', 'cleaned_updated_chemical_data.csv'
+                    'data', 'interim', 'cleaned_updated_chemical_data.csv'
                 )
                 if os.path.exists(updated_path):
                     df = pd.read_csv(updated_path)

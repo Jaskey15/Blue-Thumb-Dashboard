@@ -21,6 +21,7 @@ logger = setup_logging("consolidate_sites", category="preprocessing")
 
 # Define directories
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+INTERIM_DATA_DIR = os.path.join(BASE_DIR, 'data', 'interim')
 PROCESSED_DATA_DIR = os.path.join(BASE_DIR, 'data', 'processed')
 
 # CSV file configurations in priority order (highest to lowest priority)
@@ -97,7 +98,7 @@ def extract_sites_from_csv(config):
     Returns:
         DataFrame with unique sites and their metadata
     """
-    file_path = os.path.join(PROCESSED_DATA_DIR, config['file'])
+    file_path = os.path.join(INTERIM_DATA_DIR, config['file'])
     
     if not os.path.exists(file_path):
         logger.warning(f"File not found: {config['file']}")

@@ -31,7 +31,7 @@ def process_chemical_data_from_csv(site_name=None):
         # NEW: Load from cleaned CSV instead of using data_loader
         cleaned_chemical_path = os.path.join(
             os.path.dirname(os.path.dirname(__file__)), 
-            'data', 'processed', 'cleaned_chemical_data.csv'
+            'data', 'interim', 'cleaned_chemical_data.csv'
         )
         
         if not os.path.exists(cleaned_chemical_path):
