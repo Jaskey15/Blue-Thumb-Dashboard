@@ -10,15 +10,26 @@ from data_processing import setup_logging
 # Set up logging
 logger = setup_logging("data_queries", category="processing")
 
-def get_site_id(cursor, site_name):
-    """Get site ID for a given site name (assumes site already exists)."""
-    cursor.execute("SELECT site_id FROM sites WHERE site_name = ?", (site_name,))
-    result = cursor.fetchone()
+def get_all_sites():
+    """
+    Retrieve all sites from the database.
     
-    if result:
-        return result[0]
-    else:
-        raise ValueError(f"Site '{site_name}' not found in database. Run site processing first.")
+    Returns:
+        DataFrame containing all site data
+    """
+    from database.database import get_connection, close_connection
+    
+    conn = get_connection()
+    try:
+        query = "SELECT * FROM sites ORDER BY site_name"
+        sites_df = pd.read_sql_query(query, conn)
+        logger.debug(f"Retrieved {len(sites_df)} sites from database")
+        return sites_df
+    except Exception as e:
+        logger.error(f"Error retrieving sites from database: {e}")
+        return pd.DataFrame()
+    finally:
+        close_connection(conn)
 
 def get_sites_with_chemical_data():
     """Return a list of sites that have chemical data."""

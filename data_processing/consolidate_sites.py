@@ -1,11 +1,13 @@
 """
 consolidate_sites.py - Site Consolidation Pipeline
 
-This script consolidates sites from all cleaned CSV files using name-based consolidation.
+This script first cleans all raw CSV files with standardized site names, then consolidates 
+sites from all cleaned CSV files using name-based consolidation.
 Creates a master sites table with best available metadata from priority sources.
 """
 
 import os
+import sys
 import pandas as pd
 
 from data_processing.data_loader import clean_site_name
@@ -16,8 +18,13 @@ logger = setup_logging("consolidate_sites", category="preprocessing")
 
 # Define directories
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+RAW_DATA_DIR = os.path.join(BASE_DIR, 'data', 'raw')
 INTERIM_DATA_DIR = os.path.join(BASE_DIR, 'data', 'interim')
 PROCESSED_DATA_DIR = os.path.join(BASE_DIR, 'data', 'processed')
+
+# Ensure directories exist
+os.makedirs(INTERIM_DATA_DIR, exist_ok=True)
+os.makedirs(PROCESSED_DATA_DIR, exist_ok=True)
 
 # CSV file configurations in priority order (highest to lowest priority)
 CSV_CONFIGS = [
@@ -82,6 +89,97 @@ CSV_CONFIGS = [
         'description': 'Habitat assessment data'
     }
 ]
+
+def clean_all_csvs():
+    """
+    Clean all CSV files by standardizing site names.
+    
+    This function processes all raw CSV files, cleans site names by stripping
+    whitespace and normalizing spaces, then saves cleaned versions to the interim folder.
+    
+    Returns:
+        bool: True if all files processed successfully
+    """
+    logger.info("=" * 60)
+    logger.info("PHASE 1: CSV CLEANING")
+    logger.info("=" * 60)
+    logger.info(f"Input: {RAW_DATA_DIR}")
+    logger.info(f"Output: {INTERIM_DATA_DIR}")
+    
+    # List of CSV files to process
+    csv_files = [
+        'site_data.csv',
+        'chemical_data.csv', 
+        'updated_chemical_data.csv',
+        'fish_data.csv',
+        'macro_data.csv',
+        'habitat_data.csv',
+    ]
+    
+    # Initialize summary counters
+    total_changes = 0
+    total_sites = 0
+    processed_files = []
+    
+    # Process each CSV file
+    for input_file in csv_files:
+        try:
+            # Handle special cases
+            if input_file == 'updated_chemical_data.csv':
+                site_column = 'Site Name'
+                encoding = 'cp1252'
+            else:
+                site_column = 'SiteName'
+                encoding = None
+            
+            # Auto-generate output filename and description
+            output_file = f'cleaned_{input_file}'
+            description = input_file.replace('_', ' ').replace('.csv', ' data')
+            
+            input_path = os.path.join(RAW_DATA_DIR, input_file)
+            output_path = os.path.join(INTERIM_DATA_DIR, output_file)
+            
+            logger.info(f"Processing {description}: {input_file}")
+            
+            # Load the CSV with appropriate encoding
+            if encoding:
+                df = pd.read_csv(input_path, encoding=encoding, low_memory=False)
+            else:
+                df = pd.read_csv(input_path, low_memory=False)
+            
+            # Clean site names and count changes
+            original_sites = df[site_column].copy()
+            df[site_column] = df[site_column].str.strip().str.replace(r'\s+', ' ', regex=True)
+            
+            # Count changes made
+            changes_mask = (original_sites != df[site_column]) & original_sites.notna()
+            site_changes = changes_mask.sum()
+            
+            # Save cleaned CSV
+            df.to_csv(output_path, index=False, encoding='utf-8')
+            
+            # Log results and update counters
+            unique_sites = df[site_column].nunique()
+            logger.info(f"  ✓ {len(df)} rows, {site_changes} names cleaned, {unique_sites} unique sites")
+            
+            total_changes += site_changes
+            total_sites += unique_sites
+            processed_files.append(output_file)
+            
+        except Exception as e:
+            logger.error(f"Failed to process {input_file}: {e}")
+            return False
+    
+    # Generate summary
+    logger.info(f"\n🎉 Successfully cleaned all {len(processed_files)} CSV files!")
+    logger.info(f"Total: {total_changes} site name changes, {total_sites} unique sites across all files")
+    
+    # List output files
+    logger.info("\nCleaned files created:")
+    for filename in processed_files:
+        logger.info(f"  - {filename}")
+    
+    return True
 
 def extract_sites_from_csv(config):
     """
@@ -175,6 +273,9 @@ def consolidate_sites():
     Returns:
         Tuple of (consolidated_sites_df, conflicts_df)
     """
+    logger.info("\n" + "=" * 60)
+    logger.info("PHASE 2: SITE CONSOLIDATION")
+    logger.info("=" * 60)
     logger.info("Starting site consolidation process...")
     
     consolidated_sites = pd.DataFrame()
@@ -287,10 +388,15 @@ def main():
     Main execution function.
     """
     logger.info("=" * 60)
-    logger.info("SITE CONSOLIDATION - PHASE 2A")
+    logger.info("SITE CONSOLIDATION PIPELINE")
     logger.info("=" * 60)
     
-    # Run consolidation
+    # Phase 1: Clean all CSV files
+    if not clean_all_csvs():
+        logger.error("CSV cleaning failed. Check input files.")
+        return False
+    
+    # Phase 2: Run consolidation
     consolidated_sites, conflicts_df = consolidate_sites()
     
     if consolidated_sites.empty:
@@ -302,19 +408,24 @@ def main():
     
     # Summary
     logger.info("\n" + "=" * 60)
-    logger.info("CONSOLIDATION SUMMARY")
+    logger.info("PIPELINE SUMMARY")
     logger.info("=" * 60)
-    logger.info(f"✓ Consolidated {len(consolidated_sites)} unique sites")
-    logger.info(f"✓ Created master_sites.csv")
+    logger.info("✓ Phase 1: Cleaned all raw CSV files")
+    logger.info("✓ Phase 2: Consolidated sites from cleaned CSVs")
+    logger.info(f"✓ Final result: {len(consolidated_sites)} unique sites in master_sites.csv")
     
     if not conflicts_df.empty:
         logger.warning(f"⚠️  {len(conflicts_df)} conflicts need manual review")
         logger.warning("⚠️  See site_conflicts_for_review.csv")
     
+    logger.info("\nOutput files:")
+    logger.info("• Cleaned CSVs in data/interim/ (for other processors)")
+    logger.info("• master_sites.csv in data/processed/ (for site processing)")
+    
     logger.info("\nNext steps:")
     logger.info("1. Review any conflicts flagged above")
-    logger.info("2. Load master_sites.csv into database")
-    logger.info("3. Update processors to use cleaned CSVs")
+    logger.info("2. Other processors can use cleaned CSVs from interim/")
+    logger.info("3. Site processor can use master_sites.csv")
     
     return True
 

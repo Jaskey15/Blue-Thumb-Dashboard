@@ -9,7 +9,6 @@ Key Functions:
 - process_site_data(): Main pipeline to load sites from master_sites.csv into database
 - create_sites_table(): Create the sites table schema
 - insert_sites_into_db(): Insert site records into database
-- get_site_by_name(), get_site_id(): Query functions for site data
 - cleanup_unused_sites(): Remove sites with no monitoring data
 - classify_active_sites(): Mark sites as active/historic based on recent data
 
@@ -109,7 +108,6 @@ def load_site_data():
 def extract_site_metadata_from_csv(file_path, data_type):
     """
     Extract site metadata from a CSV file for sites not in the main sites table.
-    Now uses enhanced data loading with automatic site name cleaning.
     
     Args:
         file_path: Path to the CSV file (not used when using load_csv_data)
@@ -337,79 +335,6 @@ def insert_sites_into_db(sites_df):
     finally:
         close_connection(conn)
 
-def get_all_sites():
-    """
-    Retrieve all sites from the database.
-    
-    Returns:
-        DataFrame containing all site data
-    """
-    conn = get_connection()
-    try:
-        query = "SELECT * FROM sites ORDER BY site_name"
-        sites_df = pd.read_sql_query(query, conn)
-        logger.debug(f"Retrieved {len(sites_df)} sites from database")
-        return sites_df
-    except Exception as e:
-        logger.error(f"Error retrieving sites from database: {e}")
-        return pd.DataFrame()
-    finally:
-        close_connection(conn)
-
-def get_site_by_name(site_name):
-    """
-    Retrieve a specific site from the database by name.
-    
-    Args:
-        site_name: Name of the site to retrieve
-    
-    Returns:
-        DataFrame row containing site data or None if not found
-    """
-    conn = get_connection()
-    try:
-        query = "SELECT * FROM sites WHERE site_name = ?"
-        site_df = pd.read_sql_query(query, conn, params=(site_name,))
-        
-        if len(site_df) == 0:
-            logger.warning(f"Site not found: {site_name}")
-            return None
-        
-        logger.debug(f"Retrieved site data for: {site_name}")
-        return site_df.iloc[0]
-    except Exception as e:
-        logger.error(f"Error retrieving site data for {site_name}: {e}")
-        return None
-    finally:
-        close_connection(conn)
-
-def get_site_id(site_name):
-    """
-    Get the database ID for a given site name.
-    
-    Args:
-        site_name: Name of the site
-    
-    Returns:
-        int: Site ID or None if not found
-    """
-    conn = get_connection()
-    try:
-        cursor = conn.cursor()
-        cursor.execute("SELECT site_id FROM sites WHERE site_name = ?", (site_name,))
-        result = cursor.fetchone()
-        
-        if result:
-            return result[0]
-        else:
-            logger.warning(f"No site_id found for site: {site_name}")
-            return None
-    except Exception as e:
-        logger.error(f"Error getting site_id for {site_name}: {e}")
-        return None
-    finally:
-        close_connection(conn)
-
 def process_site_data():
     try:
         # Create sites table
@@ -490,7 +415,7 @@ def cleanup_unused_sites():
 def classify_active_sites():
     """
     Classify sites as active or historic based on recent chemical data.
-    Active sites have chemical readings within 2 years of the most recent reading date.
+    Active sites have chemical readings within 1 years of the most recent reading date.
     
     Returns:
         bool: True if classification was successful, False otherwise
@@ -575,6 +500,7 @@ if __name__ == "__main__":
     if success:
         print("Site processing completed successfully!")
         # Display some sample site data
+        from data_processing.data_queries import get_all_sites
         all_sites = get_all_sites()
         if not all_sites.empty:
             print(f"Total sites: {len(all_sites)}")
