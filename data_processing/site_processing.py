@@ -7,7 +7,6 @@ Handles site metadata extraction, database operations, and site classification.
 
 Key Functions:
 - process_site_data(): Main pipeline to load sites from master_sites.csv into database
-- create_sites_table(): Create the sites table schema
 - insert_sites_into_db(): Insert site records into database
 - cleanup_unused_sites(): Remove sites with no monitoring data
 - classify_active_sites(): Mark sites as active/historic based on recent data
@@ -25,28 +24,6 @@ from data_processing import setup_logging
 
 # Initialize logger
 logger = setup_logging("site_processing", category="processing")
-
-def create_sites_table():
-    """Create the sites table in the database."""
-    conn = get_connection()
-    cursor = conn.cursor()
-    
-    cursor.execute('''
-    CREATE TABLE IF NOT EXISTS sites (
-        site_id INTEGER PRIMARY KEY,
-        site_name TEXT NOT NULL,
-        latitude REAL,
-        longitude REAL,
-        county TEXT,
-        river_basin TEXT,
-        ecoregion TEXT,
-        UNIQUE(site_name)
-    )
-    ''')
-    
-    conn.commit()
-    logger.info("Sites table created successfully")
-    close_connection(conn)
 
 def load_site_data():
     """
@@ -105,141 +82,6 @@ def load_site_data():
     
     except Exception as e:
         logger.error(f"Error loading site data: {e}")
-        return pd.DataFrame()
-
-def extract_site_metadata_from_csv(file_path, data_type):
-    """
-    Extract site metadata from a CSV file for sites not in the main sites table.
-    
-    Args:
-        file_path: Path to the CSV file (not used when using load_csv_data)
-        data_type: Type of data ('chemical', 'fish', 'macro', 'habitat', 'updated_chemical')
-    
-    Returns:
-        DataFrame with unique sites and their metadata
-    """
-    try:
-        # Use enhanced data_loader for consistent loading and site name cleaning
-        if data_type == 'updated_chemical':
-            df = load_csv_data('updated_chemical', encoding='cp1252', clean_site_names=True)
-        elif data_type in ['chemical', 'fish', 'macro', 'habitat']:
-            df = load_csv_data(data_type, clean_site_names=True)
-        else:
-            logger.error(f"Unknown data type: {data_type}")
-            return pd.DataFrame()
-        
-        if df.empty:
-            logger.warning(f"No data loaded for {data_type}")
-            return pd.DataFrame()
-        
-        # Clean column names
-        df = clean_column_names(df)
-        
-        # DEBUG: Print columns after cleaning (before mapping)
-        print(f"DEBUG - {data_type}: Cleaned columns: {list(df.columns)}")
-        
-        # Define column mappings for each data type
-        column_mappings = {
-            'chemical': {
-                'site_col': 'sitename',
-                'lat_col': 'latitude',
-                'lon_col': 'longitude',
-                'county_col': 'county',
-                'basin_col': 'riverbasin',
-                'ecoregion_col': None  # Not available in chemical data
-            },
-            'updated_chemical': { 
-                'site_col': 'site_name',  
-                'lat_col': 'lat',         
-                'lon_col': 'lon',         
-                'county_col': 'countyname', 
-                'basin_col': None,        # Not available in this file
-                'ecoregion_col': None     # Not available in this file
-            },
-            'fish': {
-                'site_col': 'sitename',
-                'lat_col': 'latitude', 
-                'lon_col': 'longitude',
-                'county_col': None,  # Not readily available
-                'basin_col': 'riverbasin',
-                'ecoregion_col': 'mod_ecoregion'
-            },
-            'habitat': {
-                'site_col': 'sitename',
-                'lat_col': None,  # Not available in habitat data
-                'lon_col': None,  # Not available in habitat data
-                'county_col': None,
-                'basin_col': 'riverbasin',
-                'ecoregion_col': None
-            },
-            'macro': {
-                'site_col': 'sitename',
-                'lat_col': 'latitude',
-                'lon_col': 'longitude', 
-                'county_col': None,
-                'basin_col': None,  # Not available in macro data
-                'ecoregion_col': 'mod_ecoregion'
-            }
-        }
-        
-        if data_type not in column_mappings:
-            logger.error(f"Unknown data type: {data_type}")
-            return pd.DataFrame()
-            
-        mapping = column_mappings[data_type]
-        
-        # DEBUG: Print mapping and column check (after mapping is defined)
-        print(f"DEBUG - {data_type}: Looking for site column: '{mapping['site_col']}'")
-        print(f"DEBUG - {data_type}: Site column found: {mapping['site_col'] in df.columns}")
-        if mapping['site_col'] not in df.columns:
-            print(f"DEBUG - {data_type}: Available columns: {list(df.columns)}")
-        
-        # Check if site name column exists
-        if mapping['site_col'] not in df.columns:
-            logger.error(f"Site name column '{mapping['site_col']}' not found in {data_type} data")
-            return pd.DataFrame()
-        
-        # Get unique sites (site names are already cleaned by load_csv_data)
-        unique_sites = df.drop_duplicates(subset=[mapping['site_col']])
-        
-        # DEBUG: Print site extraction results
-        print(f"DEBUG - {data_type}: Found {len(unique_sites)} unique sites")
-        
-        # Build the result DataFrame
-        result_data = {
-            'site_name': unique_sites[mapping['site_col']]  # No need to strip - already cleaned
-        }
-        
-        # Add available metadata columns
-        for meta_type, col_name in [
-            ('latitude', mapping['lat_col']),
-            ('longitude', mapping['lon_col']),
-            ('county', mapping['county_col']),
-            ('river_basin', mapping['basin_col']),
-            ('ecoregion', mapping['ecoregion_col'])
-        ]:
-            if col_name and col_name in df.columns:
-                result_data[meta_type] = unique_sites[col_name]
-                print(f"DEBUG - {data_type}: Found metadata column '{col_name}' for {meta_type}")
-            else:
-                result_data[meta_type] = None
-                if col_name:  # Only log if we were expecting the column
-                    print(f"DEBUG - {data_type}: Missing expected column '{col_name}' for {meta_type}")
-        
-        result_df = pd.DataFrame(result_data)
-        
-        # Convert lat/lon to numeric if they exist
-        for coord_col in ['latitude', 'longitude']:
-            if coord_col in result_df.columns and result_df[coord_col].notna().any():
-                result_df[coord_col] = pd.to_numeric(result_df[coord_col], errors='coerce')
-        
-        logger.info(f"Extracted metadata for {len(result_df)} sites from {data_type} data")
-        return result_df
-        
-    except Exception as e:
-        logger.error(f"Error extracting site metadata from {data_type}: {e}")
-        import traceback
-        print(f"DEBUG - {data_type}: Full traceback: {traceback.format_exc()}")
         return pd.DataFrame()
 
 def find_missing_sites(sites_df):
@@ -339,9 +181,6 @@ def insert_sites_into_db(sites_df):
 
 def process_site_data():
     try:
-        # Create sites table
-        create_sites_table()
-        
         # Load consolidated site data
         logger.info("Loading consolidated site data from master_sites.csv")
         sites_df = load_site_data()
