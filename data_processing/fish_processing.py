@@ -1,3 +1,32 @@
+"""
+fish_processing.py - Fish Community Data Processing
+
+This module processes fish community assessment data with advanced replicate handling for 
+Blue Thumb monitoring. Distinguishes between true replicates (separate collection events) 
+and duplicate data entries, using BT field work records to assign correct collection dates.
+
+Key Functions:
+- load_fish_data(): Main pipeline to process and load fish data
+- process_fish_csv_data(): Process fish data with NEW replicate handling
+- categorize_and_process_duplicates(): Distinguish replicates from duplicates using BT data
+- validate_ibi_scores(): Validate Index of Biotic Integrity calculations
+- get_fish_dataframe(): Query fish data from database
+
+Replicate Logic:
+- Uses BT_fish_collection_dates.csv to identify true REP collections
+- Assigns correct dates to replicate samples (original vs REP date)
+- Averages duplicate entries that are not true replicates
+- Supports ±1 year buffer for matching BT field work data
+
+Fish Metrics:
+- 7 IBI metrics: species counts, tolerances, feeding guilds, spawning types
+- Integrity classes: Excellent, Good, Fair, Poor, Very Poor
+
+Usage:
+- Run directly to test fish data processing  
+- Import functions for use in the main data pipeline
+"""
+
 import pandas as pd
 import sqlite3
 import difflib

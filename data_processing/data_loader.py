@@ -1,3 +1,26 @@
+"""
+data_loader.py - CSV Data Loading and Utilities
+
+This module provides core data loading functionality for the Blue Thumb Water Quality Dashboard.
+Handles loading cleaned CSV files from the interim directory, site name standardization, 
+column cleaning, and data validation utilities used across all data processing modules.
+
+Key Functions:
+- load_csv_data(): Load any CSV data type with automatic site name cleaning
+- clean_site_name(), clean_site_names_column(): Standardize site name formatting
+- clean_column_names(): Standardize column name formatting
+- save_processed_data(): Save processed data to the processed directory
+- get_unique_sites(): Extract unique site lists from data files
+- filter_data_by_site(): Filter data for specific sites
+
+Data Types Supported:
+- site, chemical, updated_chemical, fish, macro, habitat, fish_collection_dates
+
+Usage:
+- Import functions for consistent data loading across all processing modules
+- Run directly to test data loading functionality
+"""
+
 import os
 import pandas as pd
 import re

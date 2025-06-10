@@ -1,3 +1,21 @@
+"""
+updated_chemical_processing.py - Updated Chemical Data Processing
+
+This module processes the updated chemical data CSV file that contains more recent water quality 
+measurements with complex multi-range readings. Handles conditional logic for selecting values 
+based on range selections and processes nutrients with low/mid/high range measurements.
+
+Key Functions:
+- process_updated_chemical_data(): Main processing pipeline for updated chemical data
+- load_updated_chemical_data_to_db(): Load processed data into database
+- get_conditional_nutrient_value(): Handle range-based nutrient value selection
+- parse_sampling_dates(): Extract dates from datetime strings
+
+Usage:
+- Run directly to process updated chemical data
+- Import functions for use in the main data pipeline
+"""
+
 import os
 import pandas as pd
 from data_processing.chemical_utils import (

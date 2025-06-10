@@ -1,3 +1,23 @@
+"""
+site_processing.py - Site Information Processing and Database Management
+
+This module manages site information processing for the Blue Thumb Water Quality Dashboard.
+Loads consolidated site data from master_sites.csv and manages the sites table in the database.
+Handles site metadata extraction, database operations, and site classification.
+
+Key Functions:
+- process_site_data(): Main pipeline to load sites from master_sites.csv into database
+- create_sites_table(): Create the sites table schema
+- insert_sites_into_db(): Insert site records into database
+- get_site_by_name(), get_site_id(): Query functions for site data
+- cleanup_unused_sites(): Remove sites with no monitoring data
+- classify_active_sites(): Mark sites as active/historic based on recent data
+
+Usage:
+- Run directly to process site data from master_sites.csv
+- Import functions for site database operations in other modules
+"""
+
 import os
 import pandas as pd
 from data_processing.data_loader import load_csv_data, clean_column_names, save_processed_data, clean_site_name

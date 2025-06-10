@@ -1,3 +1,26 @@
+"""
+habitat_processing.py - Habitat Assessment Data Processing
+
+This module processes habitat assessment data from cleaned CSV files and loads it into the database.
+Handles habitat metric validation, duplicate resolution through averaging, and calculates 
+habitat grades based on total scores for Blue Thumb stream assessments.
+
+Key Functions:
+- load_habitat_data(): Main pipeline to process and load habitat data
+- process_habitat_csv_data(): Process habitat data from cleaned CSV
+- resolve_habitat_duplicates(): Average duplicate assessments for same site/date
+- calculate_habitat_grade(): Convert total scores to letter grades (A-F)
+- get_habitat_dataframe(): Query habitat data from database
+
+Habitat Metrics:
+- 11 habitat parameters scored 1-20 each (total 0-200 scale, converted to 0-100)
+- Grades: A (90+), B (80-89), C (70-79), D (60-69), F (<60)
+
+Usage:
+- Run directly to test habitat data processing
+- Import functions for use in the main data pipeline
+"""
+
 import pandas as pd
 import sqlite3
 from database.database import get_connection, close_connection

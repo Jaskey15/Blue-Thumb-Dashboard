@@ -1,3 +1,27 @@
+"""
+merge_sites.py - Site Duplicate Detection and Merging
+
+This module identifies and merges duplicate sites based on coordinate proximity in the database.
+Analyzes sites with identical coordinates (rounded to 3 decimal places) and provides functionality
+to merge duplicate records while preserving all associated monitoring data.
+
+Key Functions:
+- analyze_coordinate_duplicates(): Analyze duplicate sites without making changes
+- merge_duplicate_sites(): Execute the merge process for coordinate duplicates  
+- determine_preferred_site(): Logic to select which site to keep in a duplicate group
+- transfer_site_data(): Move all monitoring data from duplicate to preferred site
+
+Priority Logic:
+1. Sites in updated_chemical_data (highest priority)
+2. Sites in chemical_data 
+3. Longest site name (fallback)
+
+Usage:
+- Run directly to analyze duplicates without changes
+- Call merge_duplicate_sites() to execute the merge process
+- Import functions for coordinate-based site consolidation
+"""
+
 import pandas as pd
 import os
 from data_processing import setup_logging

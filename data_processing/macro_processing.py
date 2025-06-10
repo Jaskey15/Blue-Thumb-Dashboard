@@ -1,3 +1,31 @@
+"""
+macro_processing.py - Macroinvertebrate Community Data Processing
+
+This module processes macroinvertebrate community assessment data from cleaned CSV files 
+and loads it into the database. Handles multiple habitat types per collection event and 
+calculates biological condition assessments for Blue Thumb stream monitoring.
+
+Key Functions:
+- load_macroinvertebrate_data(): Main pipeline to process and load macro data
+- process_macro_csv_data(): Process macroinvertebrate data from cleaned CSV
+- insert_macro_collection_events(): Handle complex collection events with multiple habitats
+- get_macroinvertebrate_dataframe(): Query macro data from database
+
+Macro Metrics:
+- 6 metrics: Taxa Richness, EPT Taxa, EPT Abundance, HBI Score, 
+  % Contribution Dominants, Shannon-Weaver Diversity
+- Biological Conditions: Non-impaired, Slightly Impaired, Moderately Impaired, Severely Impaired
+- Habitat types: Riffle, Pool, etc. (multiple per site/date)
+
+Data Structure:
+- Collection events grouped by site_name + sample_id + habitat
+- Supports seasonal collections (Spring/Fall) with habitat-specific assessments
+
+Usage:
+- Run directly to test macroinvertebrate data processing
+- Import functions for use in the main data pipeline
+"""
+
 import pandas as pd
 import sqlite3
 from database.database import get_connection, close_connection

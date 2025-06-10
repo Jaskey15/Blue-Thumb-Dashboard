@@ -1,3 +1,20 @@
+"""
+chemical_processing.py - Chemical Water Quality Data Processing
+
+This module processes chemical water quality data from cleaned CSV files and loads it into 
+the database. Handles data validation, BDL (Below Detection Limit) conversions, parameter 
+calculations, and database insertion for Blue Thumb water monitoring data.
+
+Key Functions:
+- process_chemical_data_from_csv(): Process and validate chemical data from CSV
+- load_chemical_data_to_db(): Load processed chemical data into database
+- Data validation, BDL handling, and soluble nitrogen calculations
+
+Usage: 
+- Run directly to test chemical data processing
+- Import functions for use in the main data pipeline
+"""
+
 import os
 import pandas as pd
 from data_processing.data_loader import clean_column_names, save_processed_data
