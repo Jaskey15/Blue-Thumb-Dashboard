@@ -466,7 +466,7 @@ def add_data_markers(fig, sites, data_type, parameter_name=None, season=None, fi
             elif data_type == 'habitat':
                 status, color = determine_status_by_type('habitat', value)
                 year = site_data[config['date_column']].iloc[0]  
-                hover_text = f"Site: {site_name}<br>Habitat Score: {value:.0f}<br>Grade: {status}<br>Last assessment: {year}"
+                hover_text = f"Site: {site_name}<br>Habitat Score: {value:.0f}<br>Grade: {status}<br>Last assessment: {year}<br><br><b>🔍 Click to view detailed data</b>"
             
             # Add marker with determined color
             fig = add_site_marker(

@@ -66,30 +66,70 @@ def register_shared_callbacks(app):
     # --------------------------------------------------------------------------------------
     
     @app.callback(
-        Output("main-tabs", "active_tab"),
-        [Input("chemical-overview-link", "n_clicks"),
+        [Output("main-tabs", "active_tab"),
+         Output("navigation-store", "data")],
+        [Input("site-map-graph", "clickData"),
+         Input("parameter-dropdown", "value"),
+         Input("chemical-overview-link", "n_clicks"),
          Input("biological-overview-link", "n_clicks"),
-         Input("habitat-overview-link", "n_clicks")], 
+         Input("habitat-overview-link", "n_clicks")],
         prevent_initial_call=True
     )
-    def navigate_to_overview_tab(chemical_clicks, biological_clicks, habitat_clicks):
+    def handle_navigation(click_data, current_parameter, chemical_clicks, biological_clicks, habitat_clicks):
         """
-        Navigate to overview tab when overview links are clicked from other tabs.
+        Handle all navigation: map clicks and overview links.
         
         Args:
+            click_data: Click data from the map
+            current_parameter: Currently selected parameter on the overview map
             chemical_clicks: Number of clicks on chemical tab overview link
             biological_clicks: Number of clicks on biological tab overview link  
             habitat_clicks: Number of clicks on habitat tab overview link
             
         Returns:
-            String indicating which tab should be active
+            Tuple of (target_tab, navigation_data)
         """
         ctx = dash.callback_context
         
-        # Check if any of the overview links were clicked
-        if ctx.triggered:
-            # Any overview link click should navigate to overview tab
-            return "overview-tab"
+        if not ctx.triggered:
+            return dash.no_update, dash.no_update
         
-        # If no trigger, don't update
-        return dash.no_update
+        trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
+        
+        # Handle overview link clicks
+        if trigger_id in ['chemical-overview-link', 'biological-overview-link', 'habitat-overview-link']:
+            return "overview-tab", {'target_tab': None, 'target_site': None}
+        
+        # Handle map clicks
+        if trigger_id == 'site-map-graph' and click_data and current_parameter:
+            try:
+                # Extract site name from click data
+                hover_text = click_data['points'][0]['text']
+                site_name = hover_text.split('<br>')[0].replace('Site: ', '')
+                
+                # Only handle habitat navigation for now (Phase 1)
+                if current_parameter == 'habitat:Habitat_Score':
+                    logger.info(f"Navigating from habitat map to habitat tab for site: {site_name}")
+                    return "habitat-tab", {
+                        'target_tab': 'habitat-tab',
+                        'target_site': site_name,
+                        'source_parameter': current_parameter
+                    }
+                
+                # For other parameters, don't navigate yet
+                return dash.no_update, dash.no_update
+                
+            except Exception as e:
+                logger.error(f"Error handling map click navigation: {e}")
+                return dash.no_update, dash.no_update
+        
+        return dash.no_update, dash.no_update
+
+    @app.callback(
+        Output("navigation-store", "data", allow_duplicate=True),
+        Input("main-tabs", "active_tab"),
+        prevent_initial_call=True
+    )
+    def clear_navigation_store_on_tab_change(active_tab):
+        """Clear navigation store when user manually changes tabs to prevent interference."""
+        return {'target_tab': None, 'target_site': None}

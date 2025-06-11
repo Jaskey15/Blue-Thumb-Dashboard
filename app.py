@@ -67,7 +67,9 @@ app.layout = dbc.Container([
         dcc.Store(id='chemical-data-cache', storage_type='memory', data={}),
         dcc.Store(id='biological-data-cache', storage_type='memory', data={}),
         dcc.Store(id='habitat-data-cache', storage_type='memory', data={}),
-        dcc.Store(id='cache-metadata', storage_type='memory', data={})
+        dcc.Store(id='cache-metadata', storage_type='memory', data={}),
+        # Navigation store for map-to-tab navigation
+        dcc.Store(id='navigation-store', storage_type='memory', data={'target_tab': None, 'target_site': None})
     ], style={'display': 'none'}),
 
     # Footer with improved credits and logo

@@ -51,25 +51,50 @@ def register_habitat_callbacks(app):
     # ===========================
     
     @app.callback(
-        Output('habitat-content-container', 'children'),
-        Input('habitat-site-dropdown', 'value'),
+        [Output('habitat-site-dropdown', 'value'),
+         Output('habitat-content-container', 'children')],
+        [Input('habitat-site-dropdown', 'value'),
+         Input('navigation-store', 'data'),
+         Input('main-tabs', 'active_tab')],
         prevent_initial_call=True
     )
-    def update_habitat_content(selected_site):
-        """Update habitat content based on selected site."""
-        if not selected_site:
-            return create_empty_state("Select a site above to view habitat assessment data.")
+    def update_habitat_content_and_navigation(selected_site, nav_data, active_tab):
+        """Update habitat content based on selected site or navigation from map."""
+        ctx = dash.callback_context
         
-        try:
-            logger.info(f"Creating habitat display for {selected_site}")
-            
-            return create_habitat_display(selected_site)
-            
-        except Exception as e:
-            logger.error(f"Error creating habitat display for {selected_site}: {e}")
-            return create_error_state(
-                "Error Loading Habitat Data",
-                f"Could not load habitat data for {selected_site}. Please try again.",
-                str(e)
-            )
+        # Handle navigation from map
+        if nav_data and nav_data.get('target_tab') == 'habitat-tab' and active_tab == 'habitat-tab':
+            target_site = nav_data.get('target_site')
+            if target_site:
+                logger.info(f"Navigation triggered: Setting habitat site to {target_site}")
+                try:
+                    content = create_habitat_display(target_site)
+                    return target_site, content
+                except Exception as e:
+                    logger.error(f"Error creating habitat display for {target_site}: {e}")
+                    error_content = create_error_state(
+                        "Error Loading Habitat Data",
+                        f"Could not load habitat data for {target_site}. Please try again.",
+                        str(e)
+                    )
+                    return target_site, error_content
+        
+        # Handle normal dropdown selection
+        if selected_site:
+            try:
+                logger.info(f"Creating habitat display for {selected_site}")
+                content = create_habitat_display(selected_site)
+                return dash.no_update, content
+            except Exception as e:
+                logger.error(f"Error creating habitat display for {selected_site}: {e}")
+                error_content = create_error_state(
+                    "Error Loading Habitat Data",
+                    f"Could not load habitat data for {selected_site}. Please try again.",
+                    str(e)
+                )
+                return dash.no_update, error_content
+        
+        # Default case - no site selected
+        empty_content = create_empty_state("Select a site above to view habitat assessment data.")
+        return dash.no_update, empty_content
 
