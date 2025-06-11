@@ -3,7 +3,7 @@ import plotly.graph_objects as go
 import pandas as pd
 
 from dash import dash_table, html
-from data_processing.macro_processing import get_macroinvertebrate_dataframe, get_macro_metrics_data_for_table
+from data_processing.data_queries import get_macroinvertebrate_dataframe, get_macro_metrics_data_for_table
 from utils import create_metrics_accordion, setup_logging
 
 logger = setup_logging("macro_viz", category="visualization")

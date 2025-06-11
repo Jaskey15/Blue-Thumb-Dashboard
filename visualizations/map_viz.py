@@ -186,7 +186,7 @@ def get_latest_data_by_type(data_type):
             df = get_fish_dataframe()  # This already only queries
             
         elif data_type == 'macro':
-            from data_processing.macro_processing import get_macroinvertebrate_dataframe
+            from data_processing.data_queries import get_macroinvertebrate_dataframe
             df = get_macroinvertebrate_dataframe()  # This already only queries
             
         elif data_type == 'habitat':

@@ -6,10 +6,10 @@ and loads it into the database. Handles multiple habitat types per collection ev
 calculates biological condition assessments for Blue Thumb stream monitoring.
 
 Key Functions:
-- load_macroinvertebrate_data(): Main pipeline to process and load macro data
 - process_macro_csv_data(): Process macroinvertebrate data from cleaned CSV
 - insert_macro_collection_events(): Handle complex collection events with multiple habitats
-- get_macroinvertebrate_dataframe(): Query macro data from database
+- insert_metrics_data(): Insert metrics and summary scores into database
+- load_macroinvertebrate_data(): Main pipeline to process and load macro data
 
 Macro Metrics:
 - 6 metrics: Taxa Richness, EPT Taxa, EPT Abundance, HBI Score, 
@@ -24,6 +24,7 @@ Data Structure:
 Usage:
 - Run directly to test macroinvertebrate data processing
 - Import functions for use in the main data pipeline
+- Use data_queries.py for retrieving macroinvertebrate data from database
 """
 
 import pandas as pd
@@ -39,49 +40,6 @@ from data_processing import setup_logging
 
 # Set up logging
 logger = setup_logging("macro_processing", category="processing")
-
-def load_macroinvertebrate_data():
-    """Load macroinvertebrate data into the database."""
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    try:
-        # Check if data already exists
-        cursor.execute('SELECT COUNT(*) FROM macro_summary_scores')
-        data_exists = cursor.fetchone()[0] > 0
-
-        if not data_exists:
-            # Process CSV data once at the top level
-            macro_df = process_macro_csv_data()
-            
-            if macro_df.empty:
-                logger.warning("No macroinvertebrate data to process")
-                return pd.DataFrame()
-            
-            # Insert collection events using shared utility
-            event_id_map = insert_macro_collection_events(cursor, macro_df)
-            
-            # Insert metrics and summary scores (now consolidated into one function)
-            insert_metrics_data(cursor, macro_df, event_id_map)
-
-            conn.commit()   
-            logger.info("Macroinvertebrate data loaded successfully")
-        else:
-            logger.info("Macroinvertebrate data already exists in the database - skipping processing")
-
-    except sqlite3.Error as e:
-        conn.rollback()
-        logger.error(f"SQLite error: {e}")
-        raise
-    except Exception as e:
-        conn.rollback()
-        logger.error(f"Error loading macroinvertebrate: {e}")
-        raise
-    finally:
-        close_connection(conn)
-
-    # Always return current data state
-    return get_macroinvertebrate_dataframe()
 
 def process_macro_csv_data(site_name=None):
     """
@@ -343,147 +301,49 @@ def insert_metrics_data(cursor, macro_df, event_id_map):
         logger.error(f"Error inserting metrics data: {e}")
         return 0
 
-def get_macroinvertebrate_dataframe():
-   """Query to get macroinvertebrate data with collection dates, years and seasons"""
-   conn = None
-   try:
-       conn = get_connection()
-       macro_query = '''
-       SELECT 
-           m.event_id,
-           s.site_name,
-           e.collection_date,
-           e.year,
-           e.season,
-           e.habitat,
-           m.total_score,
-           m.comparison_to_reference,
-           m.biological_condition
-       FROM 
-           macro_summary_scores m
-       JOIN 
-           macro_collection_events e ON m.event_id = e.event_id
-       JOIN 
-           sites s ON e.site_id = s.site_id
-       ORDER BY 
-           s.site_name, e.collection_date
-       '''
-       macro_df = pd.read_sql_query(macro_query, conn)
-       
-       # Convert collection_date to datetime for better handling
-       if 'collection_date' in macro_df.columns:
-           macro_df['collection_date'] = pd.to_datetime(macro_df['collection_date'])
-       
-       # Validation of the dataframe
-       if macro_df.empty:
-           logger.warning("No macroinvertebrate data found in the database")
-       else: 
-           logger.info(f"Retrieved {len(macro_df)} macroinvertebrate collection records")
+def load_macroinvertebrate_data():
+    """Load macroinvertebrate data into the database."""
+    conn = get_connection()
+    cursor = conn.cursor()
 
-           # Check for missing values
-           missing_values = macro_df.isnull().sum().sum()
-           if missing_values > 0:
-               logger.warning(f"Found {missing_values} missing values in the macroinvertebrate data")
-   
-       return macro_df
-   except sqlite3.Error as e:
-       logger.error(f"SQLite error in get_macroinvertebrate_dataframe: {e}")
-       return pd.DataFrame({'error': ['Database error occurred']})
-   except Exception as e:
-       logger.error(f"Error retrieving macroinvertebrate data: {e}")
-       return pd.DataFrame({'error': ['Error retrieving macroinvertebrate data']})
-   finally:
-       if conn:
-           close_connection(conn)
-
-def get_macro_metrics_data_for_table(site_name=None):
-    """
-    Query the database to get detailed macroinvertebrate metrics data for the metrics table display.
-    
-    Args:
-        site_name: Optional site name to filter data for
-    
-    Returns:
-        Tuple of (metrics_df, summary_df) for display
-    """
-    conn = None
     try:
-        conn = get_connection()
-        
-        # Base query for metrics data
-        metrics_query = '''
-        SELECT 
-            s.site_name,
-            e.event_id,
-            e.collection_date,
-            e.year,
-            e.season,
-            e.habitat,
-            m.metric_name,
-            m.raw_value,
-            m.metric_score
-        FROM 
-            macro_metrics m
-        JOIN 
-            macro_collection_events e ON m.event_id = e.event_id
-        JOIN
-            sites s ON e.site_id = s.site_id
-        '''
-        
-        # Base query for summary data
-        summary_query = '''
-        SELECT 
-            st.site_name,
-            e.event_id,
-            e.collection_date,
-            e.year,
-            e.season,
-            e.habitat,
-            s.total_score,
-            s.comparison_to_reference,
-            s.biological_condition
-        FROM 
-            macro_summary_scores s
-        JOIN 
-            macro_collection_events e ON s.event_id = e.event_id
-        JOIN
-            sites st ON e.site_id = st.site_id
-        '''
-        
-        # Add filter for site name if provided
-        params = []
-        if site_name:
-            where_clause = ' WHERE s.site_name = ?'
-            metrics_query += where_clause
-            # Note: using 'st' alias in summary query to avoid conflict
-            summary_query += ' WHERE st.site_name = ?'
-            params.append(site_name)
-        
-        # Add order by clause
-        metrics_query += ' ORDER BY s.site_name, e.collection_date, e.season, m.metric_name'
-        summary_query += ' ORDER BY st.site_name, e.collection_date, e.season'
-        
-        # Execute queries
-        metrics_df = pd.read_sql_query(metrics_query, conn, params=params)
-        summary_df = pd.read_sql_query(summary_query, conn, params=params)
-        
-        # Convert collection_date to datetime
-        if 'collection_date' in metrics_df.columns:
-            metrics_df['collection_date'] = pd.to_datetime(metrics_df['collection_date'])
-        if 'collection_date' in summary_df.columns:
-            summary_df['collection_date'] = pd.to_datetime(summary_df['collection_date'])
-        
-        logger.debug(f"Retrieved macro metrics data: {len(metrics_df)} metric records and {summary_df.shape[0]} summary records")
-        
-        return metrics_df, summary_df
-    
+        # Check if data already exists
+        cursor.execute('SELECT COUNT(*) FROM macro_summary_scores')
+        data_exists = cursor.fetchone()[0] > 0
+
+        if not data_exists:
+            # Process CSV data once at the top level
+            macro_df = process_macro_csv_data()
+            
+            if macro_df.empty:
+                logger.warning("No macroinvertebrate data to process")
+                return pd.DataFrame()
+            
+            # Insert collection events using shared utility
+            event_id_map = insert_macro_collection_events(cursor, macro_df)
+            
+            # Insert metrics and summary scores (now consolidated into one function)
+            insert_metrics_data(cursor, macro_df, event_id_map)
+
+            conn.commit()   
+            logger.info("Macroinvertebrate data loaded successfully")
+        else:
+            logger.info("Macroinvertebrate data already exists in the database - skipping processing")
+
+    except sqlite3.Error as e:
+        conn.rollback()
+        logger.error(f"SQLite error: {e}")
+        raise
     except Exception as e:
-        logger.error(f"Error retrieving macroinvertebrate metrics data for table: {e}")
-        return pd.DataFrame(), pd.DataFrame()
-    
+        conn.rollback()
+        logger.error(f"Error loading macroinvertebrate: {e}")
+        raise
     finally:
-        if conn:
-            close_connection(conn)
+        close_connection(conn)
+
+    # Always return current data state using data_queries function
+    from data_processing.data_queries import get_macroinvertebrate_dataframe
+    return get_macroinvertebrate_dataframe()
            
 if __name__ == "__main__":
    macro_df = load_macroinvertebrate_data()

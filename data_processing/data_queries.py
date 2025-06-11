@@ -302,3 +302,210 @@ def get_fish_metrics_data_for_table(site_name=None):
     finally:
         if conn:
             close_connection(conn) 
+
+# =============================================================================
+# Macroinvertebrate Data Queries
+# =============================================================================
+
+def get_macro_date_range():
+    """
+    Get the date range (min and max years) for all macroinvertebrate data in the database.
+    
+    Returns:
+        Tuple of (min_year, max_year) or (2005, 2025) if no data found
+    """
+    from database.database import get_connection, close_connection
+    
+    conn = None
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        
+        # Query for min and max years from macro collection events
+        cursor.execute("SELECT MIN(year), MAX(year) FROM macro_collection_events")
+        result = cursor.fetchone()
+        
+        if result and result[0] is not None and result[1] is not None:
+            min_year, max_year = result
+            logger.info(f"Macroinvertebrate data date range: {min_year} to {max_year}")
+            return min_year, max_year
+        else:
+            logger.warning("No macroinvertebrate data found in database, using default range")
+            return 2005, 2025
+            
+    except Exception as e:
+        logger.error(f"Error getting macroinvertebrate date range: {e}")
+        logger.info("Falling back to default date range")
+        return 2005, 2025
+        
+    finally:
+        if conn:
+            close_connection(conn)
+
+def get_macroinvertebrate_dataframe(site_name=None):
+    """
+    Query to get macroinvertebrate data with collection dates, years and seasons.
+    
+    Args:
+        site_name: Optional site name to filter data for
+    
+    Returns:
+        DataFrame with macroinvertebrate data
+    """
+    from database.database import get_connection, close_connection
+    
+    conn = None
+    try:
+        conn = get_connection()
+        
+        # Base query
+        macro_query = '''
+        SELECT 
+            m.event_id,
+            s.site_name,
+            e.collection_date,
+            e.year,
+            e.season,
+            e.habitat,
+            m.total_score,
+            m.comparison_to_reference,
+            m.biological_condition
+        FROM 
+            macro_summary_scores m
+        JOIN 
+            macro_collection_events e ON m.event_id = e.event_id
+        JOIN 
+            sites s ON e.site_id = s.site_id
+        '''
+        
+        # Add filter for site if provided
+        params = []
+        if site_name:
+            macro_query += " WHERE s.site_name = ?"
+            params.append(site_name)
+            
+        # Add ordering
+        macro_query += " ORDER BY s.site_name, e.collection_date"
+        
+        # Execute query
+        macro_df = pd.read_sql_query(macro_query, conn, params=params)
+        
+        # Convert collection_date to datetime for better handling
+        if 'collection_date' in macro_df.columns:
+            macro_df['collection_date'] = pd.to_datetime(macro_df['collection_date'])
+        
+        # Validation of the dataframe
+        if macro_df.empty:
+            if site_name:
+                logger.warning(f"No macroinvertebrate data found for site: {site_name}")
+            else:
+                logger.warning("No macroinvertebrate data found in the database")
+        else: 
+            logger.info(f"Retrieved {len(macro_df)} macroinvertebrate collection records")
+
+            # Check for missing values
+            missing_values = macro_df.isnull().sum().sum()
+            if missing_values > 0:
+                logger.warning(f"Found {missing_values} missing values in the macroinvertebrate data")
+   
+        return macro_df
+    except sqlite3.Error as e:
+        logger.error(f"SQLite error in get_macroinvertebrate_dataframe: {e}")
+        return pd.DataFrame({'error': ['Database error occurred']})
+    except Exception as e:
+        logger.error(f"Error retrieving macroinvertebrate data: {e}")
+        return pd.DataFrame({'error': ['Error retrieving macroinvertebrate data']})
+    finally:
+        if conn:
+            close_connection(conn)
+
+def get_macro_metrics_data_for_table(site_name=None):
+    """
+    Query the database to get detailed macroinvertebrate metrics data for the metrics table display.
+    
+    Args:
+        site_name: Optional site name to filter data for
+    
+    Returns:
+        Tuple of (metrics_df, summary_df) for display
+    """
+    from database.database import get_connection, close_connection
+    
+    conn = None
+    try:
+        conn = get_connection()
+        
+        # Base query for metrics data
+        metrics_query = '''
+        SELECT 
+            s.site_name,
+            e.event_id,
+            e.collection_date,
+            e.year,
+            e.season,
+            e.habitat,
+            m.metric_name,
+            m.raw_value,
+            m.metric_score
+        FROM 
+            macro_metrics m
+        JOIN 
+            macro_collection_events e ON m.event_id = e.event_id
+        JOIN
+            sites s ON e.site_id = s.site_id
+        '''
+        
+        # Base query for summary data
+        summary_query = '''
+        SELECT 
+            st.site_name,
+            e.event_id,
+            e.collection_date,
+            e.year,
+            e.season,
+            e.habitat,
+            s.total_score,
+            s.comparison_to_reference,
+            s.biological_condition
+        FROM 
+            macro_summary_scores s
+        JOIN 
+            macro_collection_events e ON s.event_id = e.event_id
+        JOIN
+            sites st ON e.site_id = st.site_id
+        '''
+        
+        # Add filter for site name if provided
+        params = []
+        if site_name:
+            where_clause = ' WHERE s.site_name = ?'
+            metrics_query += where_clause
+            # Note: using 'st' alias in summary query to avoid conflict
+            summary_query += ' WHERE st.site_name = ?'
+            params.append(site_name)
+        
+        # Add order by clause
+        metrics_query += ' ORDER BY s.site_name, e.collection_date, e.season, m.metric_name'
+        summary_query += ' ORDER BY st.site_name, e.collection_date, e.season'
+        
+        # Execute queries
+        metrics_df = pd.read_sql_query(metrics_query, conn, params=params)
+        summary_df = pd.read_sql_query(summary_query, conn, params=params)
+        
+        # Convert collection_date to datetime
+        if 'collection_date' in metrics_df.columns:
+            metrics_df['collection_date'] = pd.to_datetime(metrics_df['collection_date'])
+        if 'collection_date' in summary_df.columns:
+            summary_df['collection_date'] = pd.to_datetime(summary_df['collection_date'])
+        
+        logger.debug(f"Retrieved macro metrics data: {len(metrics_df)} metric records and {summary_df.shape[0]} summary records")
+        
+        return metrics_df, summary_df
+    
+    except Exception as e:
+        logger.error(f"Error retrieving macroinvertebrate metrics data for table: {e}")
+        return pd.DataFrame(), pd.DataFrame()
+    
+    finally:
+        if conn:
+            close_connection(conn)
