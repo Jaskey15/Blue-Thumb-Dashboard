@@ -9,7 +9,7 @@ from utils import load_markdown_content
 
 
 def create_chemical_tab():
-    """Create the chemical data tab layout with simple search functionality."""
+    """Create the chemical data tab layout with searchable dropdown for site selection."""
 
     # Get dynamic date range
     min_year, max_year = get_chemical_date_range()
@@ -28,51 +28,27 @@ def create_chemical_tab():
             ])
         ], className="mb-4"),
         
-        # Site search section
+        # Site selection section - simplified with searchable dropdown
         html.Div([
             html.Label("Select Site:", className="form-label mb-2", style={'fontWeight': 'bold'}),
             
             # Helper text
             html.Small(
-                "Enter a search term and click 'Search' or press enter to find monitoring sites",
+                "Click the dropdown and start typing to search for monitoring sites",
                 className="text-muted mb-2 d-block"
             ),
 
-            # Search input with button
-            html.Div([
-                dbc.InputGroup([
-                    dbc.Input(
-                        id='chemical-search-input',
-                        placeholder="Enter site name (e.g., Tenmile, Boggy, Blue)",
-                        type="text",
-                        value="",
-                        n_submit=0
-                    ),
-                    dbc.Button(
-                        "Search",
-                        id='chemical-search-button',
-                        color="primary",
-                        n_clicks=0
-                    ),
-                    dbc.Button(
-                        "Clear",
-                        id='chemical-clear-button',
-                        color="secondary",
-                        n_clicks=0
-                    )
-                ])
-            ], style={'position': 'relative', 'marginBottom': '5px'}),
+            # Searchable dropdown for site selection
+            dcc.Dropdown(
+                id='chemical-site-dropdown',
+                options=[],  # Will be populated when tab loads
+                placeholder="Search for a site...",
+                searchable=True,
+                clearable=True,
+                className="mb-3"
+            )
             
-            # Search results list (initially hidden)
-            html.Div(
-                id='chemical-search-results',
-                children=[],
-            ),
-            
-            # Hidden store for selected site
-            dcc.Store(id='chemical-selected-site', data=None)
-            
-        ], style={'position': 'relative', 'marginBottom': '20px'}),
+        ], style={'marginBottom': '20px'}),
         
         # Controls and content - hidden until site is selected
         html.Div([

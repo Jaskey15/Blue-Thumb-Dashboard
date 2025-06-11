@@ -3,15 +3,12 @@ Chemical callbacks for the Tenmile Creek Water Quality Dashboard.
 """
 
 import dash
-from dash import html, Input, Output, State, ALL
+from dash import html, Input, Output, State
 from utils import setup_logging, get_sites_with_data
 from data_processing.data_queries import get_chemical_data_from_db
 from data_processing.chemical_utils import KEY_PARAMETERS, get_reference_values
 from .tab_utilities import create_all_parameters_visualization, create_single_parameter_visualization
-from .helper_functions import (
-    should_perform_search, is_item_clicked, extract_selected_item,
-    create_empty_state, create_error_state, create_search_results
-)
+from .helper_functions import create_empty_state, create_error_state
 
 # Configure logging
 logger = setup_logging("chemical_callbacks", category="callbacks")
@@ -20,96 +17,53 @@ def register_chemical_callbacks(app):
     """Register all chemical-related callbacks in logical workflow order."""
     
     # ===========================
-    # 1. SITE SEARCH & SELECTION
+    # 1. DROPDOWN POPULATION
     # ===========================
     
     @app.callback(
-        [Output('chemical-search-results', 'children'),
-         Output('chemical-search-results', 'style')],
-        [Input('chemical-search-button', 'n_clicks'),
-         Input('chemical-search-input', 'n_submit')],
-        [State('chemical-search-input', 'value')],
-        prevent_initial_call=True
+        Output('chemical-site-dropdown', 'options'),
+        Input('main-tabs', 'active_tab')
     )
-    def update_chemical_search_results(button_clicks, enter_presses, search_value):
-        """Filter and display sites based on search input."""
-        if not should_perform_search(button_clicks, enter_presses, search_value, True):
-            return [], {'display': 'none'}
+    def populate_chemical_sites(active_tab):
+        """Populate site dropdown options when chemical tab is opened."""
+        if active_tab != 'chemical-tab':
+            return []
         
         try:
             # Get all sites with chemical data
-            all_sites = get_sites_with_data('chemical')
+            sites = get_sites_with_data('chemical')
             
-            if not all_sites:
-                return [html.Div("No chemical data available.", 
-                            className="p-2 text-warning")], {'display': 'block'}
+            if not sites:
+                logger.warning("No sites with chemical data found")
+                return []
             
-            # Filter sites based on search term (case-insensitive)
-            search_term_lower = search_value.lower()
-            matching_sites = [
-                site for site in all_sites 
-                if search_term_lower in site.lower()
-            ]
+            # Create dropdown options
+            options = [{'label': site, 'value': site} for site in sorted(sites)]
+            logger.info(f"Populated chemical dropdown with {len(options)} sites")
             
-            # Use shared function to create consistent search results
-            return create_search_results(matching_sites, 'chemical', search_value)
+            return options
             
         except Exception as e:
-            logger.error(f"Error in chemical search: {e}")
-            return [html.Div("Error performing search.", 
-                        className="p-2 text-danger")], {'display': 'block'}
+            logger.error(f"Error populating chemical sites: {e}")
+            return []
+    
+    # ===========================
+    # 2. SITE SELECTION & CONTROLS
+    # ===========================
     
     @app.callback(
-        [Output('chemical-selected-site', 'data'),
-         Output('chemical-search-input', 'value'),
-         Output('chemical-search-results', 'style', allow_duplicate=True),
-         Output('chemical-controls-content', 'style')],
-        [Input({'type': 'chemical-site-option', 'site': ALL}, 'n_clicks')],
-        [State('chemical-selected-site', 'data')],
-        prevent_initial_call=True
+        Output('chemical-controls-content', 'style'),
+        Input('chemical-site-dropdown', 'value')
     )
-    def select_chemical_site(site_clicks, current_site):
-        """Handle site selection from search results."""
-        if not is_item_clicked(site_clicks):
-            return current_site, dash.no_update, dash.no_update, dash.no_update
-        
-        try:
-            selected_site = extract_selected_item('site')
+    def show_chemical_controls(selected_site):
+        """Show parameter controls when a site is selected."""
+        if selected_site:
             logger.info(f"Chemical site selected: {selected_site}")
-            
-            return (
-                selected_site,           # Store selected site
-                selected_site,           # Update search input to show selected site
-                {'display': 'none'},     # Hide search results
-                {'display': 'block'}     # Show parameter controls
-            )
-            
-        except Exception as e:
-            logger.error(f"Error in chemical site selection: {e}")
-            return current_site, dash.no_update, dash.no_update, dash.no_update
-    
-    @app.callback(
-        [Output('chemical-search-input', 'value', allow_duplicate=True),
-         Output('chemical-selected-site', 'data', allow_duplicate=True),
-         Output('chemical-search-results', 'style', allow_duplicate=True),
-         Output('chemical-controls-content', 'style', allow_duplicate=True)],
-        [Input('chemical-clear-button', 'n_clicks')],
-        prevent_initial_call=True
-    )
-    def clear_chemical_search(n_clicks):
-        """Clear search input and reset all selections."""
-        if n_clicks:
-            logger.info("Chemical search cleared")
-            return (
-                "",                     # Clear search input
-                None,                   # Clear selected site
-                {'display': 'none'},    # Hide search results
-                {'display': 'none'}     # Hide parameter controls
-            )
-        return dash.no_update, dash.no_update, dash.no_update, dash.no_update
+            return {'display': 'block'}
+        return {'display': 'none'}
     
     # ================================
-    # 2. DATA VISUALIZATION & FILTERS
+    # 3. DATA VISUALIZATION & FILTERS
     # ================================
     
     @app.callback(
@@ -150,7 +104,7 @@ def register_chemical_callbacks(app):
          Input('year-range-slider', 'value'),
          Input('month-checklist', 'value'),
          Input('highlight-thresholds-switch', 'value'),
-         Input('chemical-selected-site', 'data')]
+         Input('chemical-site-dropdown', 'value')]
     )
     def update_chemical_display(selected_parameter, year_range, selected_months, 
                               highlight_thresholds, selected_site):
@@ -158,7 +112,7 @@ def register_chemical_callbacks(app):
         
         # Validate inputs
         if not selected_site:
-            return create_empty_state("Please search for and select a site to view data."), html.Div(), html.Div()
+            return create_empty_state("Please select a site to view data."), html.Div(), html.Div()
         
         if not selected_parameter:
             return create_empty_state("Please select a parameter to visualize."), html.Div(), html.Div()
@@ -184,11 +138,11 @@ def register_chemical_callbacks(app):
             # Create visualization based on parameter selection
             if selected_parameter == 'all_parameters':
                 graph, explanation, diagram = create_all_parameters_visualization(
-                    df_filtered, key_parameters, reference_values, highlight_thresholds
+                    df_filtered, key_parameters, reference_values, highlight_thresholds, selected_site
                 )
             else:
                 graph, explanation, diagram = create_single_parameter_visualization(
-                    df_filtered, selected_parameter, reference_values, highlight_thresholds
+                    df_filtered, selected_parameter, reference_values, highlight_thresholds, selected_site
                 )
                 
             return graph, explanation, diagram

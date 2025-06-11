@@ -4,13 +4,10 @@ This file contains callbacks specific to the biological data tab.
 """
 
 import dash
-from dash import html, Input, Output, State, ALL
+from dash import html, Input, Output, State
 from utils import setup_logging
 from .tab_utilities import create_biological_community_display, create_gallery_navigation_callback
-from .helper_functions import (
-    should_perform_search, is_item_clicked, extract_selected_item,
-    create_empty_state, create_error_state, create_search_results
-)
+from .helper_functions import create_empty_state, create_error_state
 
 # Configure logging
 logger = setup_logging("biological_callbacks", category="callbacks")
@@ -19,137 +16,69 @@ def register_biological_callbacks(app):
     """Register all biological-related callbacks in logical workflow order."""
     
     # ===========================
-    # 1. COMMUNITY SELECTION
+    # 1. COMMUNITY SELECTION & DROPDOWN POPULATION
     # ===========================
     
     @app.callback(
         [Output('biological-site-search-section', 'style'),
-         Output('biological-search-input', 'disabled'),
-         Output('biological-search-button', 'disabled'),
-         Output('biological-clear-button', 'disabled'),  
-         Output('biological-search-input', 'value'),
-         Output('biological-selected-site', 'data'),
-         Output('biological-search-results', 'style'),
-         Output('biological-search-results', 'children')],
+         Output('biological-site-dropdown', 'disabled'),
+         Output('biological-site-dropdown', 'options'),
+         Output('biological-site-dropdown', 'value')],
         [Input('biological-community-dropdown', 'value')]
     )
-    def update_biological_search_visibility(selected_community):
-        """Show/hide search section and reset state when community is selected."""
+    def update_biological_site_dropdown(selected_community):
+        """Show site dropdown and populate options when community is selected."""
         if selected_community:
-            # Show search section and enable inputs
-            return (
-                {'display': 'block', 'position': 'relative', 'marginBottom': '20px'},  # search_section_style
-                False,  # input_disabled
-                False,  # button_disabled
-                False,  # clear_disabled
-                "",     # search_value (clear)
-                None,   # selected_item (clear)
-                {'display': 'none'},  # results_style
-                []      # results_children (clear)
-            )
+            try:
+                # Get sites for the selected community type
+                from utils import get_sites_with_data
+                available_sites = get_sites_with_data(selected_community)
+                
+                if not available_sites:
+                    logger.warning(f"No sites found for community type: {selected_community}")
+                    return (
+                        {'display': 'block', 'marginBottom': '20px'},  # Show section
+                        False,  # Enable dropdown
+                        [],     # No options
+                        None    # Clear value
+                    )
+                
+                # Create dropdown options
+                options = [{'label': site, 'value': site} for site in sorted(available_sites)]
+                logger.info(f"Populated {selected_community} dropdown with {len(options)} sites")
+                
+                return (
+                    {'display': 'block', 'marginBottom': '20px'},  # Show section
+                    False,  # Enable dropdown
+                    options,  # Site options
+                    None    # Clear previous selection
+                )
+                
+            except Exception as e:
+                logger.error(f"Error populating {selected_community} sites: {e}")
+                return (
+                    {'display': 'block', 'marginBottom': '20px'},  # Show section
+                    False,  # Enable dropdown
+                    [],     # No options
+                    None    # Clear value
+                )
         else:
-            # Hide search section and disable inputs
+            # Hide section and disable dropdown when no community selected
             return (
-                {'display': 'none'},  # search_section_style
-                True,   # input_disabled
-                True,   # button_disabled
-                True,   # clear_disabled
-                "",     # search_value (clear)
-                None,   # selected_item (clear)
-                {'display': 'none'},  # results_style
-                []      # results_children (clear)
+                {'display': 'none'},  # Hide section
+                True,   # Disable dropdown
+                [],     # Clear options
+                None    # Clear value
             )
     
     # ===========================
-    # 2. SITE SEARCH & SELECTION
-    # ===========================
-    
-    @app.callback(
-        [Output('biological-search-results', 'children', allow_duplicate=True),
-         Output('biological-search-results', 'style', allow_duplicate=True)],
-        [Input('biological-search-button', 'n_clicks'),
-         Input('biological-search-input', 'n_submit')],
-        [State('biological-search-input', 'value'),
-         State('biological-community-dropdown', 'value')],
-        prevent_initial_call=True
-    )
-    def update_biological_search_results(button_clicks, enter_presses, search_value, selected_community):
-        """Filter and display sites based on search input."""
-        if not should_perform_search(button_clicks, enter_presses, search_value, selected_community):
-            return [], {'display': 'none'}
-        
-        try:
-            # Get sites for the selected community type
-            from utils import get_sites_with_data
-            available_sites = get_sites_with_data(selected_community)
-            
-            if not available_sites:
-                return [html.Div("No sites found for this community type.", 
-                            className="p-2 text-muted")], {'display': 'block'}
-            
-            # Filter sites based on search
-            search_term = search_value.lower().strip()
-            matching_sites = [
-                site for site in available_sites 
-                if search_term in site.lower()
-            ]
-            
-            # Use shared function to create consistent search results
-            return create_search_results(matching_sites, 'biological', search_value)
-            
-        except Exception as e:
-            logger.error(f"Error in biological search: {e}")
-            return [html.Div("Error performing search.", 
-                        className="p-2 text-danger")], {'display': 'block'}
-    
-    @app.callback(
-        [Output('biological-selected-site', 'data', allow_duplicate=True),
-         Output('biological-search-input', 'value', allow_duplicate=True),
-         Output('biological-search-results', 'style', allow_duplicate=True)],
-        [Input({'type': 'biological-site-option', 'site': ALL}, 'n_clicks')],
-        [State('biological-selected-site', 'data')],
-        prevent_initial_call=True
-    )
-    def select_biological_site(site_clicks, current_site):
-        """Handle site selection from search results."""
-        if not is_item_clicked(site_clicks):
-            return current_site, dash.no_update, dash.no_update
-        
-        try:
-            selected_site = extract_selected_item('site')
-            logger.info(f"Biological site selected: {selected_site}")
-            
-            return (
-                selected_site,           # Store selected site
-                selected_site,           # Update search input
-                {'display': 'none'}      # Hide search results
-            )
-        except Exception as e:
-            logger.error(f"Error in biological site selection: {e}")
-            return current_site, dash.no_update, dash.no_update
-    
-    @app.callback(
-        [Output('biological-search-input', 'value', allow_duplicate=True),
-         Output('biological-selected-site', 'data', allow_duplicate=True),
-         Output('biological-search-results', 'style', allow_duplicate=True)],
-        [Input('biological-clear-button', 'n_clicks')],
-        prevent_initial_call=True
-    )
-    def clear_biological_search(n_clicks):
-        """Clear search input and reset selections."""
-        if n_clicks:
-            logger.info("Biological search cleared")
-            return "", None, {'display': 'none'}
-        return dash.no_update, dash.no_update, dash.no_update
-    
-    # ===========================
-    # 3. MAIN CONTENT DISPLAY
+    # 2. MAIN CONTENT DISPLAY
     # ===========================
     
     @app.callback(
         Output('biological-content-container', 'children'),
         [Input('biological-community-dropdown', 'value'),
-         Input('biological-selected-site', 'data')]
+         Input('biological-site-dropdown', 'value')]
     )
     def update_biological_display(selected_community, selected_site):
         """Update biological display based on selected community and site."""
@@ -157,6 +86,7 @@ def register_biological_callbacks(app):
             return create_empty_state("Please select a community type and site to view biological data.")
         
         try:
+            logger.info(f"Creating biological display for {selected_community} at {selected_site}")
             return create_biological_community_display(selected_community, selected_site)
         except Exception as e:
             logger.error(f"Error creating biological display: {e}")
@@ -167,7 +97,7 @@ def register_biological_callbacks(app):
             )
 
     # ===========================
-    # 4. GALLERY NAVIGATION
+    # 3. GALLERY NAVIGATION
     # ===========================
     
     @app.callback(

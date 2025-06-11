@@ -377,7 +377,7 @@ def create_biological_community_display(selected_community, selected_site):
 # ===========================================================================================
 # CHEMICAL TAB UTILITIES
 # ===========================================================================================
-def create_single_parameter_visualization(df_filtered, parameter, reference_values, highlight_thresholds):
+def create_single_parameter_visualization(df_filtered, parameter, reference_values, highlight_thresholds, site_name=None):
     """Create visualization for a single chemical parameter."""
     try:
         if df_filtered.empty or parameter not in df_filtered.columns:
@@ -397,9 +397,9 @@ def create_single_parameter_visualization(df_filtered, parameter, reference_valu
             df_filtered, 
             parameter, 
             reference_values,
-            title=f"{parameter_name} Over Time",
             y_label=get_parameter_label('chem', parameter),
-            highlight_thresholds=highlight_thresholds
+            highlight_thresholds=highlight_thresholds,
+            site_name=site_name
         )
         
         # Create graph component
@@ -438,7 +438,7 @@ def create_single_parameter_visualization(df_filtered, parameter, reference_valu
         )
         return error_state, html.Div(), html.Div()
 
-def create_all_parameters_visualization(df_filtered, key_parameters, reference_values, highlight_thresholds):
+def create_all_parameters_visualization(df_filtered, key_parameters, reference_values, highlight_thresholds, site_name=None):
     """Create visualization for all chemical parameters."""
     try:
         if df_filtered.empty:
@@ -449,7 +449,7 @@ def create_all_parameters_visualization(df_filtered, key_parameters, reference_v
         from visualizations.chemical_viz import create_parameter_dashboard
         
         # Create the comprehensive figure
-        fig = create_parameter_dashboard(df_filtered, key_parameters, reference_values, highlight_thresholds)
+        fig = create_parameter_dashboard(df_filtered, key_parameters, reference_values, highlight_thresholds, site_name=site_name)
         
         # Create the graph component
         graph = dcc.Graph(

@@ -5,6 +5,7 @@ import pandas as pd
 from plotly.subplots import make_subplots
 from data_processing.data_queries import get_chemical_data_from_db
 from data_processing.chemical_utils import KEY_PARAMETERS, get_reference_values
+from callbacks.helper_functions import get_parameter_label, get_parameter_name
 from utils import setup_logging
 
 logger = setup_logging("chemical_viz", category="visualization")
@@ -13,9 +14,8 @@ logger = setup_logging("chemical_viz", category="visualization")
 COLORS = {
     'Normal': '#1e8449',      # Darker green
     'Caution': '#ff9800',     # Orange
-    'Above Normal': '#5e35b1', # Purple-blue (Basic/Alkaline)
-    'Below Normal': '#f57c00', # Dark orange-red (Acidic)
-    'Outside Normal': '#ff9800', # Orange (can remove this later)
+    'Above Normal (Basic/Alkaline)': '#5e35b1', # Purple-blue 
+    'Below Normal (Acidic)': '#f57c00', # Dark orange-red 
     'Poor': '#e74c3c',        # Softer red
     'Unknown': '#95a5a6'      # Gray
 }
@@ -45,8 +45,8 @@ PARAMETER_THRESHOLDS = {
     'pH': {
         'ranges': [
             {'min': 6.5, 'max': 9.0, 'status': 'Normal'},
-            {'min': -float('inf'), 'max': 6.5, 'status': 'Below Normal'},
-            {'min': 9.0, 'max': float('inf'), 'status': 'Above Normal'}
+            {'min': -float('inf'), 'max': 6.5, 'status': 'Below Normal (Acidic)'},
+            {'min': 9.0, 'max': float('inf'), 'status': 'Above Normal (Basic/Alkaline)'}
         ]
     },
     'soluble_nitrogen': {
@@ -97,28 +97,6 @@ REFERENCE_LINES = {
         {'value': 400, 'color': 'red', 'label': 'Poor', 'style': LINE_STYLES['caution']}
     ]
 }
-
-def get_parameter_label(parameter):
-    """Return appropriate Y-axis label for a given parameter."""
-    labels = {
-        'do_percent': 'DO Saturation (%)',
-        'pH': 'pH',
-        'soluble_nitrogen': 'Soluble Nitrogen (mg/L)',
-        'Phosphorus': 'Phosphorus (mg/L)',
-        'Chloride': 'Chloride (mg/L)',
-    }
-    return labels.get(parameter, parameter)
-
-def get_parameter_name(parameter):
-    """Convert parameter code to human-readable name."""
-    names = {
-        'do_percent': 'Dissolved Oxygen',
-        'pH': 'pH',
-        'soluble_nitrogen': 'Nitrogen',
-        'Phosphorus': 'Phosphorus',
-        'Chloride': 'Chloride',
-    }
-    return names.get(parameter, parameter)
 
 def categorize_data_points(df, parameter, reference_values):
     """
@@ -280,7 +258,7 @@ def add_parameter_reference_lines(fig, parameter, df, reference_values, row=None
     
     return fig
 
-def create_time_series_plot(df, parameter, reference_values, title=None, y_label=None, highlight_thresholds=True):
+def create_time_series_plot(df, parameter, reference_values, title=None, y_label=None, highlight_thresholds=True, site_name=None):
     """Generate time series plot for parameter with optional threshold highlighting"""
     # Check if we have data
     if len(df) == 0:
@@ -304,9 +282,10 @@ def create_time_series_plot(df, parameter, reference_values, title=None, y_label
     
     # Use defaults if no custom values provided
     if title is None:
-        title = f'{parameter} Over Time'
+        parameter_name = get_parameter_name(parameter)
+        title = f'{parameter_name} Over Time for {site_name}'
     if y_label is None:
-        y_label = get_parameter_label(parameter)
+        y_label = get_parameter_label('chem', parameter)
     
     # Create the base figure
     fig = go.Figure()
@@ -348,6 +327,8 @@ def create_time_series_plot(df, parameter, reference_values, title=None, y_label
             
             # Add points colored by status
             for status_type, color in color_map.items():
+                if status_type == 'Unknown':
+                    continue  
                 mask = plot_df['status'] == status_type
                 if mask.any():
                     fig.add_trace(
@@ -431,7 +412,7 @@ def create_time_series_plot(df, parameter, reference_values, title=None, y_label
     
     return fig
 
-def create_parameter_dashboard(df=None, parameters=None, reference_values=None, highlight_thresholds=True, get_param_name=None):
+def create_parameter_dashboard(df=None, parameters=None, reference_values=None, highlight_thresholds=True, get_param_name=None, site_name=None):
     """Create a subplot figure for all parameters with optional threshold highlighting"""
     # If no data is provided, get it from database
     if df is None or parameters is None or reference_values is None:
@@ -488,7 +469,7 @@ def create_parameter_dashboard(df=None, parameters=None, reference_values=None, 
     fig = make_subplots(
         rows=n_rows, 
         cols=n_cols,
-        subplot_titles=[get_param_name(p) + " Over Time" for p in parameters],
+        subplot_titles=[get_param_name(p) for p in parameters],
         vertical_spacing=0.10,
         horizontal_spacing=0.08
     )
@@ -506,6 +487,8 @@ def create_parameter_dashboard(df=None, parameters=None, reference_values=None, 
                 
                 # Add points colored by status
                 for status_type, color in color_map.items():
+                    if status_type == 'Unknown':
+                        continue  
                     mask = plot_df['status'] == status_type
                     if mask.any():
                         fig.add_trace(
@@ -575,7 +558,7 @@ def create_parameter_dashboard(df=None, parameters=None, reference_values=None, 
     # Update layout for better appearance
     fig.update_layout(
         height=350 * n_rows,
-        title_text="Water Quality Parameters Over Time",
+        title_text=f"Water Quality Parameters Over Time for {site_name}",
         title_x=0.5,              
         showlegend=False,
         template='plotly_white',
@@ -595,7 +578,7 @@ def create_parameter_dashboard(df=None, parameters=None, reference_values=None, 
         col = (i % 2) + 1
         
         # Get appropriate y-axis label
-        y_label = get_parameter_label(param)
+        y_label = get_parameter_label('chem', param)
         
         # Update y-axis title
         fig.update_yaxes(
@@ -607,13 +590,13 @@ def create_parameter_dashboard(df=None, parameters=None, reference_values=None, 
     
     return fig
 
-def create_chemical_viz(highlight_thresholds=True):
+def create_chemical_viz(highlight_thresholds=True, site_name=None):
     """Create chemical dashboard for the app"""
     try:
         df_clean = get_chemical_data_from_db()
         key_parameters = KEY_PARAMETERS
         reference_values = get_reference_values()
-        return create_parameter_dashboard(df_clean, key_parameters, reference_values, highlight_thresholds)
+        return create_parameter_dashboard(df_clean, key_parameters, reference_values, highlight_thresholds, site_name=site_name)
     except Exception as e:
         print(f"Error creating chemical visualization: {e}")
         # Return empty figure with error message

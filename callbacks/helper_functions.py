@@ -5,129 +5,12 @@ Only shared functionality that is used by multiple tabs is included here.
 """
 
 import dash
-import json
 from dash import html
 from utils import setup_logging
 from config.shared_constants import PARAMETER_DISPLAY_NAMES, PARAMETER_AXIS_LABELS
 
 # Configure logging
 logger = setup_logging("helper_callbacks", category="callbacks")
-
-# ===========================================================================================
-# SEARCH AND SELECTION UTILITIES
-# ===========================================================================================
-
-def should_perform_search(button_clicks, enter_presses, search_value, selection_value):
-    """
-    Check if search should be performed based on user inputs.
-    
-    Args:
-        button_clicks: Number of clicks on search button
-        enter_presses: Number of enter key presses in search input
-        search_value: Current value in search input
-        selection_value: Current dropdown/selection value
-        
-    Returns:
-        bool: True if search should proceed, False otherwise
-    """
-    return (button_clicks or enter_presses) and search_value and selection_value
-
-def create_search_results(matching_sites, tab_prefix, search_value, max_results=10):
-    """
-    Create standardized search results with consistent styling across all tabs.
-    
-    Args:
-        matching_sites: List of site names that match the search
-        tab_prefix: Prefix for the tab (e.g., 'chemical', 'biological', 'habitat')
-        search_value: The search term used (for logging)
-        max_results: Maximum number of results to display
-        
-    Returns:
-        tuple: (list of HTML components, dict with display style)
-    """
-    try:
-        if not matching_sites:
-            return [html.Div("No sites match your search.", 
-                        className="p-2 text-muted")], {'display': 'block'}
-        
-        # Create clickable list items with consistent styling
-        result_items = []
-        for site in matching_sites[:max_results]:
-            result_items.append(
-                html.Div(
-                    site,
-                    id={'type': f'{tab_prefix}-site-option', 'site': site},
-                    style={
-                        'padding': '8px 12px',
-                        'cursor': 'pointer',
-                        'borderBottom': '1px solid #eee'
-                    },
-                    className="site-option",
-                    n_clicks=0
-                )
-            )
-        
-        logger.info(f"{tab_prefix.title()} search for '{search_value}' found {len(matching_sites)} sites")
-        
-        # Consistent dropdown-style results container
-        results_style = {
-            'display': 'block',
-            'position': 'absolute',
-            'top': '100%',
-            'left': '0',
-            'right': '0',
-            'backgroundColor': 'white',
-            'border': '1px solid #ccc',
-            'borderTop': 'none',
-            'maxHeight': '200px',
-            'overflowY': 'auto',
-            'zIndex': '1000',
-            'boxShadow': '0 2px 4px rgba(0,0,0,0.1)'
-        }
-        
-        return result_items, results_style
-        
-    except Exception as e:
-        logger.error(f"Error creating {tab_prefix} search results: {e}")
-        return [html.Div("Error creating search results.", 
-                    className="p-2 text-danger")], {'display': 'block'}
-
-def is_item_clicked(click_list):
-    """
-    Check if any item in a list of click counts was clicked.
-    
-    Args:
-        click_list: List of click counts from Dash ALL pattern matching
-        
-    Returns:
-        bool: True if any item was clicked, False otherwise
-    """
-    return any(click_list) and any(click for click in click_list if click)
-
-def extract_selected_item(item_key='site'):
-    """
-    Extract the selected item from Dash callback context.
-    
-    Args:
-        item_key: Key name to extract from the triggered component ID (default: 'site')
-        
-    Returns:
-        str: The selected item value
-        
-    Raises:
-        ValueError: If no callback was triggered or item key not found
-    """
-    ctx = dash.callback_context
-    if not ctx.triggered:
-        raise ValueError("No callback triggered")
-    
-    triggered_id = ctx.triggered[0]['prop_id']
-    item_info = json.loads(triggered_id.split('.')[0])
-    
-    if item_key not in item_info:
-        raise ValueError(f"Key '{item_key}' not found in triggered component")
-    
-    return item_info[item_key]
 
 # ===========================================================================================
 # SHARED UI STATE FUNCTIONS
