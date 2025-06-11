@@ -8,9 +8,12 @@ habitat grades based on total scores for Blue Thumb stream assessments.
 Key Functions:
 - load_habitat_data(): Main pipeline to process and load habitat data
 - process_habitat_csv_data(): Process habitat data from cleaned CSV
+- insert_habitat_assessments(): Insert assessment records into database
+- insert_metrics_data(): Insert individual metrics and summary scores
+
+Helper Functions:
 - resolve_habitat_duplicates(): Average duplicate assessments for same site/date
 - calculate_habitat_grade(): Convert total scores to letter grades (A-F)
-- get_habitat_dataframe(): Query habitat data from database
 
 Habitat Metrics:
 - 11 habitat parameters scored 1-20 each (total 0-200 scale, converted to 0-100)
@@ -19,6 +22,9 @@ Habitat Metrics:
 Usage:
 - Run directly to test habitat data processing
 - Import functions for use in the main data pipeline
+
+Note: Query functions (get_habitat_dataframe, get_habitat_metrics_data_for_table) 
+are available in data_processing.data_queries module.
 """
 
 import pandas as pd
@@ -29,6 +35,10 @@ from data_processing import setup_logging
 
 # Set up component-specific logging
 logger = setup_logging("habitat_processing", category="processing")
+
+# =============================================================================
+# Helper Functions
+# =============================================================================
 
 def resolve_habitat_duplicates(habitat_df):
     """
@@ -190,6 +200,10 @@ def calculate_habitat_grade(total_score):
     else:
         return "F"
 
+# =============================================================================
+# Main Processing Functions
+# =============================================================================
+
 def load_habitat_data(site_name=None):
     """
     Load habitat data from CSV into the database.
@@ -239,6 +253,7 @@ def load_habitat_data(site_name=None):
         close_connection(conn)
 
     # Always return current data state
+    from data_processing.data_queries import get_habitat_dataframe
     if site_name:
         return get_habitat_dataframe(site_name)
     else:
@@ -507,148 +522,6 @@ def insert_metrics_data(cursor, habitat_df, assessment_id_map):
     except Exception as e:
         logger.error(f"Error inserting metrics data: {e}")
         return 0
-
-def get_habitat_dataframe(site_name=None):
-    """
-    Query to get habitat data with summary scores.
-    
-    Args:
-        site_name: Optional site name to filter data for
-    
-    Returns:
-        DataFrame with habitat data
-    """
-    conn = None
-    try:
-        conn = get_connection()
-        
-        # Base query
-        habitat_query = '''
-        SELECT 
-            a.assessment_id,
-            s.site_name,
-            a.assessment_date,
-            a.year,
-            h.total_score,
-            h.habitat_grade
-        FROM 
-            habitat_summary_scores h
-        JOIN 
-            habitat_assessments a ON h.assessment_id = a.assessment_id
-        JOIN 
-            sites s ON a.site_id = s.site_id
-        '''
-        
-        # Add filter for site if provided
-        params = []
-        if site_name:
-            habitat_query += " WHERE s.site_name = ?"
-            params.append(site_name)
-            
-        # Add ordering
-        habitat_query += " ORDER BY a.year"
-        
-        # Execute query
-        habitat_df = pd.read_sql_query(habitat_query, conn, params=params)
-        
-        # Validation of the dataframe
-        if habitat_df.empty:
-            if site_name:
-                logger.warning(f"No habitat data found for site: {site_name}")
-            else:
-                logger.warning("No habitat data found in the database")
-        else: 
-            logger.info(f"Retrieved {len(habitat_df)} habitat assessment records")
-
-            # Check for missing values
-            missing_values = habitat_df.isnull().sum().sum()
-            if missing_values > 0:
-                logger.warning(f"Found {missing_values} missing values in the habitat data")
-    
-        return habitat_df
-    except sqlite3.Error as e:
-        logger.error(f"SQLite error in get_habitat_dataframe: {e}")
-        return pd.DataFrame({'error': ['Database error occurred']})
-    except Exception as e:
-        logger.error(f"Error retrieving habitat data: {e}")
-        return pd.DataFrame({'error': ['Error retrieving habitat data']})
-    finally:
-        if conn:
-            close_connection(conn)
-
-def get_habitat_metrics_data_for_table(site_name=None):
-    """
-    Query the database to get detailed habitat metrics data for the metrics table display.
-    
-    Args:
-        site_name: Optional site name to filter data for
-    
-    Returns:
-        DataFrame with metrics data formatted for display
-    """
-    conn = None
-    try:
-        conn = get_connection()
-        
-        # Base query for metrics data
-        metrics_query = '''
-        SELECT 
-            s.site_name,
-            a.year,
-            m.metric_name,
-            m.score
-        FROM 
-            habitat_metrics m
-        JOIN 
-            habitat_assessments a ON m.assessment_id = a.assessment_id
-        JOIN
-            sites s ON a.site_id = s.site_id
-        '''
-        
-        # Add site filter if needed
-        params = []
-        if site_name:
-            metrics_query += " WHERE s.site_name = ?"
-            params.append(site_name)
-            
-        # Add order by clause
-        metrics_query += ' ORDER BY s.site_name, a.year, m.metric_name'
-        
-        # Execute query
-        metrics_df = pd.read_sql_query(metrics_query, conn, params=params)
-        
-        # If metrics are found, pivot the data to create a table with years as columns
-        if not metrics_df.empty:
-            # Pivot the data
-            pivot_df = metrics_df.pivot_table(
-                index='metric_name',
-                columns='year',
-                values='score',
-                aggfunc='first'
-            )
-            
-            # Reset index to make metric_name a column
-            pivot_df = pivot_df.reset_index()
-            
-            # Convert column names to strings
-            pivot_df.columns = pivot_df.columns.astype(str)
-            
-            # Rename index column from 'metric_name' to 'Parameter'
-            pivot_df = pivot_df.rename(columns={'metric_name': 'Parameter'})
-            
-            logger.info(f"Retrieved and pivoted habitat metrics data for {len(pivot_df)} metrics")
-            return pivot_df
-        else:
-            logger.warning("No habitat metrics data found")
-            return pd.DataFrame()
-    
-    except Exception as e:
-        logger.error(f"Error retrieving habitat metrics data for table: {e}")
-        return pd.DataFrame()
-    
-    finally:
-        if conn:
-            close_connection(conn)
 
 if __name__ == "__main__":
     habitat_df = load_habitat_data()

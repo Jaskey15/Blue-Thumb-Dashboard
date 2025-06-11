@@ -72,7 +72,7 @@ def create_habitat_viz(site_name=None):
         except Exception as e:
             print(f"Error reading habitat data from file: {e}")
             # Fall back to database data with site filtering
-            from data_processing.habitat_processing import get_habitat_dataframe
+            from data_processing.data_queries import get_habitat_dataframe
             
             if site_name:
                 data = get_habitat_dataframe(site_name)
@@ -223,7 +223,7 @@ def create_habitat_table(site_name=None):
         print(f"Error creating habitat table: {e}")
         # Fall back to database data with site filtering
         try:
-            from data_processing.habitat_processing import get_habitat_metrics_data_for_table
+            from data_processing.data_queries import get_habitat_metrics_data_for_table
             
             # Get data from database with site filtering
             df = get_habitat_metrics_data_for_table(site_name)

@@ -190,7 +190,7 @@ def get_latest_data_by_type(data_type):
             df = get_macroinvertebrate_dataframe()  # This already only queries
             
         elif data_type == 'habitat':
-            from data_processing.habitat_processing import get_habitat_dataframe
+            from data_processing.data_queries import get_habitat_dataframe
             df = get_habitat_dataframe()  # This already only queries
             
         else:
