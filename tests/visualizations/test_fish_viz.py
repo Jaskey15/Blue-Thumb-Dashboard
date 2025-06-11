@@ -6,15 +6,15 @@ To run specific tests, set the flags below to True/False
 To run all tests: python test_fish_viz.py
 """
 
-from data_processing.fish_processing import (
+from data_processing.data_queries import (
     get_fish_dataframe, 
-    get_fish_metrics_data_for_table,
-    get_sites_with_fish_data
+    get_fish_metrics_data_for_table
 )
 from data_processing.fish_viz import (
     create_fish_viz, 
     create_fish_metrics_table_for_accordion
 )
+from utils import get_sites_with_data
 
 # ============================================================================
 # CONFIGURATION - Set these to True/False to run specific tests
@@ -61,7 +61,7 @@ def safe_execute(test_name, test_function):
 def test_basic_system_check():
     """Test basic database connectivity and data retrieval"""
     # Check if we can get a list of sites
-    sites = get_sites_with_fish_data()
+    sites = get_sites_with_data('fish')
     print(f"✅ Found {len(sites)} sites with fish data")
     
     if len(sites) > 0:

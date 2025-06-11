@@ -182,7 +182,7 @@ def get_latest_data_by_type(data_type):
             df = get_chemical_data_from_db()  # Only query, don't process
             
         elif data_type == 'fish':
-            from data_processing.fish_processing import get_fish_dataframe
+            from data_processing.data_queries import get_fish_dataframe
             df = get_fish_dataframe()  # This already only queries
             
         elif data_type == 'macro':

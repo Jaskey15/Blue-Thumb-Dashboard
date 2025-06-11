@@ -286,7 +286,7 @@ def create_biological_community_display(selected_community, selected_site):
         # Import required functions for visualization
         if selected_community == 'fish':
             from visualizations.fish_viz import create_fish_viz, create_fish_metrics_accordion
-            from data_processing.fish_processing import get_fish_dataframe
+            from data_processing.data_queries import get_fish_dataframe
             
             # Get site-specific data to check if it exists
             site_data = get_fish_dataframe(selected_site)

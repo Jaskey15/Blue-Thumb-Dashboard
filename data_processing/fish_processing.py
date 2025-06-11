@@ -6,10 +6,11 @@ Blue Thumb monitoring. Uses bt_fieldwork_validator module to distinguish between
 replicates (separate collection events) and duplicate data entries.
 
 Key Functions:
-- load_fish_data(): Main pipeline to process and load fish data
 - process_fish_csv_data(): Process fish data with replicate handling via bt_fieldwork_validator
 - validate_ibi_scores(): Validate Index of Biotic Integrity calculations
-- get_fish_dataframe(): Query fish data from database
+- insert_fish_collection_events(): Insert collection events into database
+- insert_metrics_data(): Insert fish metrics into database
+- load_fish_data(): Main pipeline to process and load fish data
 
 Fish Metrics:
 - 7 IBI metrics: species counts, tolerances, feeding guilds, spawning types
@@ -18,6 +19,7 @@ Fish Metrics:
 Usage:
 - Run directly to test fish data processing  
 - Import functions for use in the main data pipeline
+- Use data_queries.py for retrieving fish data from database
 """
 
 import pandas as pd
@@ -37,59 +39,62 @@ from data_processing import setup_logging
 
 logger = setup_logging("fish_processing", category="processing")
 
-def load_fish_data(site_name=None):
+# =============================================================================
+# Helper Functions
+# =============================================================================
+
+def validate_ibi_scores(fish_df):
     """
-    Load fish data from CSV into the database (full pipeline).
+    Validate that total_score equals the sum of IBI component scores.
     
     Args:
-        site_name: Optional site name to filter data for (default: None, loads all sites)
+        fish_df: DataFrame with fish metrics data
     
     Returns:
-        DataFrame with processed fish data
+        DataFrame with validated data
     """
-    conn = get_connection()
-    cursor = conn.cursor()
-  
     try:
-        # Check if data already exists
-        cursor.execute('SELECT COUNT(*) FROM fish_summary_scores')
-        data_exists = cursor.fetchone()[0] > 0
-
-        if not data_exists:
-            # Load fish data from CSV
-            fish_df = process_fish_csv_data(site_name)
+        df = fish_df.copy()
+        
+        # Calculate sum of component scores
+        score_columns = ['total_species_score', 'sensitive_benthic_score', 
+                         'sunfish_species_score', 'intolerant_species_score',
+                         'tolerant_score', 'insectivorous_score', 
+                         'lithophilic_score']
+        
+        # Check which columns exist
+        existing_columns = [col for col in score_columns if col in df.columns]
+        
+        if len(existing_columns) < len(score_columns):
+            missing = set(score_columns) - set(existing_columns)
+            logger.warning(f"Missing some IBI component columns: {missing}")
+        
+        if existing_columns and 'total_score' in df.columns:
+            df['calculated_score'] = df[existing_columns].sum(axis=1)
             
-            if fish_df.empty:
-                logger.warning("No fish data found for processing.")
-                return pd.DataFrame()
-                
-            # Insert collection events using shared utility
-            event_id_map = insert_fish_collection_events(cursor, fish_df)
+            # Find mismatches
+            mismatch_mask = df['calculated_score'] != df['total_score']
+            mismatches = df[mismatch_mask]
             
-            # Insert metrics and summary scores
-            insert_metrics_data(cursor, fish_df, event_id_map)
+            if not mismatches.empty:
+                logger.warning(f"Found {len(mismatches)} records where total_score doesn't match sum of components.")
+                df['score_validated'] = ~mismatch_mask
+            else:
+                logger.info("All total_score values match sum of components.")
+                df['score_validated'] = True
             
-            conn.commit()
-            logger.info("Fish data loaded successfully")
-        else:
-            logger.info("Fish data already exists in the database - skipping processing")
-
-    except sqlite3.Error as e:
-        conn.rollback()
-        logger.error(f"SQLite error: {e}")
-        raise
+            # Drop the calculated column
+            df = df.drop(columns=['calculated_score'])
+        
+        return df
+    
     except Exception as e:
-        conn.rollback()
-        logger.error(f"Error loading fish data: {e}")
-        raise
-    finally:
-        close_connection(conn)
+        logger.error(f"Error validating IBI scores: {e}")
+        return fish_df
 
-    # Always return current data state
-    if site_name:
-        return get_fish_dataframe(site_name)
-    else:
-        return get_fish_dataframe()
+# =============================================================================
+# Main Processing and Insertion Functions
+# =============================================================================
 
 def process_fish_csv_data(site_name=None):
     """
@@ -178,55 +183,6 @@ def process_fish_csv_data(site_name=None):
     except Exception as e:
         logger.error(f"Error processing fish CSV data: {e}")
         return pd.DataFrame()
-
-def validate_ibi_scores(fish_df):
-    """
-    Validate that total_score equals the sum of IBI component scores.
-    
-    Args:
-        fish_df: DataFrame with fish metrics data
-    
-    Returns:
-        DataFrame with validated data
-    """
-    try:
-        df = fish_df.copy()
-        
-        # Calculate sum of component scores
-        score_columns = ['total_species_score', 'sensitive_benthic_score', 
-                         'sunfish_species_score', 'intolerant_species_score',
-                         'tolerant_score', 'insectivorous_score', 
-                         'lithophilic_score']
-        
-        # Check which columns exist
-        existing_columns = [col for col in score_columns if col in df.columns]
-        
-        if len(existing_columns) < len(score_columns):
-            missing = set(score_columns) - set(existing_columns)
-            logger.warning(f"Missing some IBI component columns: {missing}")
-        
-        if existing_columns and 'total_score' in df.columns:
-            df['calculated_score'] = df[existing_columns].sum(axis=1)
-            
-            # Find mismatches
-            mismatch_mask = df['calculated_score'] != df['total_score']
-            mismatches = df[mismatch_mask]
-            
-            if not mismatches.empty:
-                logger.warning(f"Found {len(mismatches)} records where total_score doesn't match sum of components.")
-                df['score_validated'] = ~mismatch_mask
-            else:
-                logger.info("All total_score values match sum of components.")
-                df['score_validated'] = True
-            
-            # Drop the calculated column
-            df = df.drop(columns=['calculated_score'])
-        
-        return df
-    
-    except Exception as e:
-        logger.error(f"Error validating IBI scores: {e}")
-        return fish_df
 
 def insert_fish_collection_events(cursor, fish_df):
     """
@@ -390,182 +346,61 @@ def insert_metrics_data(cursor, fish_df, event_id_map):
         logger.error(f"Error inserting metrics data: {e}")
         return 0
 
-def get_fish_dataframe(site_name=None):
+def load_fish_data(site_name=None):
     """
-    Query to get fish data with summary scores.
+    Load fish data from CSV into the database (full pipeline).
     
     Args:
-        site_name: Optional site name to filter data for
+        site_name: Optional site name to filter data for (default: None, loads all sites)
     
     Returns:
-        DataFrame with fish data
+        bool: True if processing was successful, False otherwise
     """
-    conn = None
+    conn = get_connection()
+    cursor = conn.cursor()
+  
     try:
-        conn = get_connection()
-        
-        # Base query
-        fish_query = '''
-        SELECT 
-            e.event_id,
-            s.site_name,
-            e.year,
-            f.total_score,
-            f.comparison_to_reference,
-            f.integrity_class
-        FROM 
-            fish_summary_scores f
-        JOIN 
-            fish_collection_events e ON f.event_id = e.event_id
-        JOIN 
-            sites s ON e.site_id = s.site_id
-        '''
-        
-        # Add filter for site if provided
-        params = []
-        if site_name:
-            fish_query += " WHERE s.site_name = ?"
-            params.append(site_name)
+        # Check if data already exists
+        cursor.execute('SELECT COUNT(*) FROM fish_summary_scores')
+        data_exists = cursor.fetchone()[0] > 0
+
+        if not data_exists:
+            # Load fish data from CSV
+            fish_df = process_fish_csv_data(site_name)
             
-        # Add ordering
-        fish_query += " ORDER BY e.year"
-        
-        # Execute query
-        fish_df = pd.read_sql_query(fish_query, conn, params=params)
-        
-        if fish_df.empty:
-            if site_name:
-                logger.warning(f"No fish data found for site: {site_name}")
-            else:
-                logger.warning("No fish data found in the database")
-        else: 
-            logger.info(f"Retrieved {len(fish_df)} fish collection records")
-    
-        return fish_df
+            if fish_df.empty:
+                logger.warning("No fish data found for processing.")
+                return False
+                
+            # Insert collection events using shared utility
+            event_id_map = insert_fish_collection_events(cursor, fish_df)
+            
+            # Insert metrics and summary scores
+            insert_metrics_data(cursor, fish_df, event_id_map)
+            
+            conn.commit()
+            logger.info("Fish data loaded successfully")
+            return True
+        else:
+            logger.info("Fish data already exists in the database - skipping processing")
+            return True
+
     except sqlite3.Error as e:
-        logger.error(f"SQLite error in get_fish_dataframe: {e}")
-        return pd.DataFrame({'error': ['Database error occurred']})
+        conn.rollback()
+        logger.error(f"SQLite error: {e}")
+        return False
     except Exception as e:
-        logger.error(f"Error retrieving fish data: {e}")
-        return pd.DataFrame({'error': ['Error retrieving fish data']})
+        conn.rollback()
+        logger.error(f"Error loading fish data: {e}")
+        return False
     finally:
-        if conn:
-            close_connection(conn)
-
-def get_fish_metrics_data_for_table(site_name=None):
-    """
-    Query the database to get detailed fish metrics data for the metrics table display.
-    
-    Args:
-        site_name: Optional site name to filter data for
-    
-    Returns:
-        Tuple of (metrics_df, summary_df) for display
-    """
-    conn = None
-    try:
-        conn = get_connection()
-        
-        # Base query for metrics data
-        metrics_query = '''
-        SELECT 
-            s.site_name,
-            e.year,
-            e.sample_id,
-            m.metric_name,
-            m.raw_value,
-            m.metric_score
-        FROM 
-            fish_metrics m
-        JOIN 
-            fish_collection_events e ON m.event_id = e.event_id
-        JOIN
-            sites s ON e.site_id = s.site_id
-        '''
-        
-        # Base query for summary data
-        summary_query = '''
-        SELECT 
-            s.site_name,
-            e.year,
-            e.sample_id,
-            f.total_score,
-            f.comparison_to_reference,
-            f.integrity_class
-        FROM 
-            fish_summary_scores f
-        JOIN 
-            fish_collection_events e ON f.event_id = e.event_id
-        JOIN
-            sites s ON e.site_id = s.site_id
-        '''
-        
-        # Add filter for site name if provided
-        params = []
-        if site_name:
-            where_clause = ' WHERE s.site_name = ?'
-            metrics_query += where_clause
-            summary_query += where_clause
-            params.append(site_name)
-        
-        # Add order by clause
-        metrics_query += ' ORDER BY s.site_name, e.year, m.metric_name'
-        summary_query += ' ORDER BY s.site_name, e.year'
-        
-        # Execute queries
-        metrics_df = pd.read_sql_query(metrics_query, conn, params=params)
-        summary_df = pd.read_sql_query(summary_query, conn, params=params)
-        
-        logger.debug(f"Retrieved fish metrics data: {len(metrics_df)} metric records and {summary_df.shape[0]} summary records")
-        
-        return metrics_df, summary_df
-    
-    except Exception as e:
-        logger.error(f"Error retrieving fish metrics data for table: {e}")
-        return pd.DataFrame(), pd.DataFrame()
-    
-    finally:
-        if conn:
-            close_connection(conn)
-
-def get_sites_with_fish_data():
-    """
-    Get a list of sites that have fish data.
-    
-    Returns:
-        List of site names
-    """
-    conn = None
-    try:
-        conn = get_connection()
-        cursor = conn.cursor()
-        
-        cursor.execute('''
-            SELECT DISTINCT s.site_name
-            FROM sites s
-            JOIN fish_collection_events e ON s.site_id = e.site_id
-            ORDER BY s.site_name
-        ''')
-        
-        sites = [row[0] for row in cursor.fetchall()]
-        logger.debug(f"Found {len(sites)} sites with fish data")
-        return sites
-        
-    except Exception as e:
-        logger.error(f"Error getting sites with fish data: {e}")
-        return []
-        
-    finally:
-        if conn:
-            close_connection(conn)
+        close_connection(conn)
 
 if __name__ == "__main__":
     # Test loading fish data
-    fish_df = load_fish_data()
-    if not fish_df.empty:
-        logger.info("Fish data summary:")
-        logger.info(f"Number of records: {len(fish_df)}")
-        sites = get_sites_with_fish_data()
-        logger.info(f"Sites with fish data: {', '.join(sites[:10])}")  # Show first 10 sites
+    success = load_fish_data()
+    if success:
+        logger.info("Fish data processing completed successfully")
+        # To view the data, use: from data_processing.data_queries import get_fish_dataframe
     else:
-        logger.error("No fish data loaded. Check database setup.")
+        logger.error("Fish data processing failed. Check database setup.")
