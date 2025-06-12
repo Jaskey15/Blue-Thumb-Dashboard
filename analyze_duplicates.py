@@ -11,11 +11,11 @@ def analyze_duplicates():
     print("Reading CSV files...")
     
     # For cleaned_chemical_data.csv
-    df1 = pd.read_csv('data/processed/cleaned_chemical_data.csv')
+    df1 = pd.read_csv('data/interim/cleaned_chemical_data.csv')
     print(f"cleaned_chemical_data.csv: {len(df1)} total rows")
     
     # For cleaned_updated_chemical_data.csv  
-    df2 = pd.read_csv('data/processed/cleaned_updated_chemical_data.csv')
+    df2 = pd.read_csv('data/interim/cleaned_updated_chemical_data.csv')
     print(f"cleaned_updated_chemical_data.csv: {len(df2)} total rows")
     
     # Analyze cleaned_chemical_data.csv

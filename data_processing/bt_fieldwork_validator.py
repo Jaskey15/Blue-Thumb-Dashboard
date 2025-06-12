@@ -114,19 +114,14 @@ def categorize_and_process_duplicates(fish_df, bt_df):
     duplicate_groups_averaged = 0
     date_assignments = []
     
-    logger.info(f"Starting duplicate categorization for {len(fish_processed)} fish records")
-    
     # Find all groups with multiple samples
     duplicate_groups = fish_df.groupby(['site_name', 'year']).filter(lambda x: len(x) > 1)
     
     if duplicate_groups.empty:
-        logger.info("No duplicate groups found")
         return fish_processed
     
     unique_duplicate_groups = duplicate_groups.groupby(['site_name', 'year']).size().reset_index()
     unique_duplicate_groups.columns = ['site_name', 'year', 'sample_count']
-    
-    logger.info(f"Found {len(unique_duplicate_groups)} site/year groups with multiple samples")
     
     # Process each duplicate group
     records_to_remove = []
@@ -173,11 +168,6 @@ def categorize_and_process_duplicates(fish_df, bt_df):
         # Process based on whether we found REP data
         if rep_data is not None and len(rep_data) >= 2:
             # REPLICATE GROUP: Assign BT dates
-            logger.info(f"Processing replicate group: {site_name} ({year}) with {sample_count} samples")
-            
-            if year_used != year:
-                logger.info(f"  Using ±1 year buffer: BT data from {year_used}, fish data from {year}")
-            
             # Sort BT data by date to get original and REP dates
             rep_data_sorted = rep_data.sort_values('Date_Clean')
             original_date = rep_data_sorted.iloc[0]['Date_Clean']
@@ -202,7 +192,6 @@ def categorize_and_process_duplicates(fish_df, bt_df):
                     assignment_type = "REP"
                 else:
                     # Additional samples (shouldn't happen based on our analysis, but handle gracefully)
-                    logger.warning(f"More than 2 samples found for replicate group {site_name} ({year})")
                     assignment_type = f"Extra_{i}"
                 
                 # Log the assignment
@@ -220,8 +209,6 @@ def categorize_and_process_duplicates(fish_df, bt_df):
             
         else:
             # DUPLICATE GROUP: Average scores
-            logger.info(f"Averaging duplicate group: {site_name} ({year}) - no REP data found")
-            
             # Calculate averaged record
             averaged_record = average_group_samples(group_samples)
             
@@ -240,21 +227,9 @@ def categorize_and_process_duplicates(fish_df, bt_df):
     if records_to_add:
         fish_processed = pd.concat([fish_processed, pd.DataFrame(records_to_add)], ignore_index=True)
     
-    # Log summary
-    logger.info(f"Duplicate processing complete:")
-    logger.info(f"  - Replicate groups processed: {rep_groups_processed}")
-    logger.info(f"  - Duplicate groups averaged: {duplicate_groups_averaged}")
-    logger.info(f"  - Total date assignments logged: {len(date_assignments)}")
+    # Log concise summary
+    logger.info(f"Fish duplicate processing: {rep_groups_processed} replicate groups, {duplicate_groups_averaged} groups averaged, {len(date_assignments)} date assignments")
     
-    # Log date assignments for audit
-    if date_assignments:
-        logger.info(f"Date assignment details:")
-        for assignment in date_assignments:
-            buffer_note = " (±1 year buffer)" if assignment['year_buffer_used'] else ""
-            logger.info(f"  {assignment['site_name']} Sample {assignment['sample_id']}: "
-                       f"{assignment['assignment_type']} → {assignment['assigned_date']}{buffer_note}")
-    
-    logger.info(f"Final record count: {len(fish_processed)} (started with {len(fish_df)})")
     return fish_processed
 
 def average_group_samples(group):

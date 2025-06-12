@@ -87,28 +87,14 @@ def resolve_habitat_duplicates(habitat_df):
                 unique_records.append(group)
         
         if not duplicate_groups:
-            logger.info("No habitat duplicate groups found")
             return habitat_df
-        
-        logger.info(f"Found {len(duplicate_groups)} habitat duplicate groups to resolve")
         
         # Process each duplicate group
         averaged_records = []
         
         for site_name, date_str, group in duplicate_groups:
-            # Convert date for logging (handle both string and datetime)
-            if isinstance(date_str, str):
-                date_for_logging = date_str
-            else:
-                date_for_logging = date_str.strftime('%Y-%m-%d') if pd.notna(date_str) else 'Unknown'
-                
-            logger.info(f"Averaging {len(group)} records for {site_name} on {date_for_logging}")
-            
             # Calculate averages for specified columns
             averaged_record = group.iloc[0].copy()  # Start with first record as template
-            
-            # Track original values for logging
-            original_total_scores = []
             
             # Average individual metrics (round to 1 decimal place)
             for col in existing_metric_columns:
@@ -127,7 +113,6 @@ def resolve_habitat_duplicates(habitat_df):
                 if len(total_values) > 0:
                     avg_total = total_values.mean()
                     averaged_record['total_score'] = round(avg_total)
-                    original_total_scores = total_values.tolist()
                 else:
                     averaged_record['total_score'] = None
             
@@ -136,12 +121,6 @@ def resolve_habitat_duplicates(habitat_df):
                 averaged_record['habitat_grade'] = calculate_habitat_grade(averaged_record['total_score'])
             else:
                 averaged_record['habitat_grade'] = "Unknown"
-            
-            # Log the averaging details
-            if original_total_scores:
-                original_scores_str = ', '.join([f"{score:.1f}" for score in original_total_scores])
-                logger.info(f"  {site_name} ({date_for_logging}): Total scores [{original_scores_str}] → "
-                           f"{averaged_record['total_score']} (Grade: {averaged_record['habitat_grade']})")
             
             averaged_records.append(averaged_record)
         
@@ -160,15 +139,12 @@ def resolve_habitat_duplicates(habitat_df):
         else:
             result_df = unique_df
         
-        # Log summary
+        # Log concise summary
         original_count = len(habitat_df)
         final_count = len(result_df)
         duplicates_resolved = original_count - final_count
         
-        logger.info(f"Habitat duplicate resolution complete:")
-        logger.info(f"  - Original records: {original_count}")
-        logger.info(f"  - Final records: {final_count}")
-        logger.info(f"  - Duplicates resolved: {duplicates_resolved}")
+        logger.info(f"Habitat duplicate resolution: {duplicates_resolved} duplicates resolved from {original_count} records")
         
         return result_df
         
@@ -310,7 +286,7 @@ def process_habitat_csv_data(site_name=None):
                 
         habitat_df = habitat_df.rename(columns=valid_mapping)
         
-        # RESOLVE DUPLICATES - NEW STEP
+        # RESOLVE DUPLICATES
         habitat_df = resolve_habitat_duplicates(habitat_df)
         
         # Filter by site name if provided

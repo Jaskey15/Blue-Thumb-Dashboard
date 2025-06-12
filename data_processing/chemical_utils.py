@@ -362,21 +362,8 @@ def get_existing_data(conn):
     Get all existing data for batch processing and duplicate detection.
     
     Returns:
-        tuple: (existing_events, event_lookup, existing_measurements, site_lookup)
+        tuple: (existing_measurements, site_lookup)
     """
-    # Get all existing collection events
-    existing_events_query = """
-    SELECT s.site_name, c.collection_date, c.event_id
-    FROM chemical_collection_events c
-    JOIN sites s ON c.site_id = s.site_id
-    """
-    existing_events_df = pd.read_sql_query(existing_events_query, conn)
-    existing_events = set(zip(existing_events_df['site_name'], existing_events_df['collection_date']))
-    event_lookup = dict(zip(
-        zip(existing_events_df['site_name'], existing_events_df['collection_date']), 
-        existing_events_df['event_id']
-    ))
-    
     # Get all existing measurements
     existing_measurements_query = """
     SELECT event_id, parameter_id
@@ -389,11 +376,11 @@ def get_existing_data(conn):
     existing_sites_df = pd.read_sql_query("SELECT site_name, site_id FROM sites", conn)
     site_lookup = dict(zip(existing_sites_df['site_name'], existing_sites_df['site_id']))
     
-    return existing_events, event_lookup, existing_measurements, site_lookup
+    return existing_measurements, site_lookup
 
-def insert_collection_event(cursor, site_id, date_str, year, month, existing_events, event_lookup, site_name):
+def insert_collection_event(cursor, site_id, date_str, year, month, site_name):
     """
-    Insert collection event if it doesn't exist.
+    Insert collection event (always creates new event, allowing duplicates).
     
     Args:
         cursor: Database cursor
@@ -401,26 +388,19 @@ def insert_collection_event(cursor, site_id, date_str, year, month, existing_eve
         date_str: Date string (YYYY-MM-DD)
         year: Year
         month: Month
-        existing_events: Set of existing (site_name, date) tuples
-        event_lookup: Dictionary for event lookup
-        site_name: Site name for lookup
+        site_name: Site name for logging
         
     Returns:
-        tuple: (event_id, was_created)
+        int: event_id of the newly created event
     """
-    if (site_name, date_str) in existing_events:
-        return event_lookup[(site_name, date_str)], False
-    else:
-        cursor.execute("""
-        INSERT INTO chemical_collection_events 
-        (site_id, collection_date, year, month)
-        VALUES (?, ?, ?, ?)
-        """, (site_id, date_str, year, month))
-        
-        event_id = cursor.lastrowid
-        existing_events.add((site_name, date_str))
-        event_lookup[(site_name, date_str)] = event_id
-        return event_id, True
+    cursor.execute("""
+    INSERT INTO chemical_collection_events 
+    (site_id, collection_date, year, month)
+    VALUES (?, ?, ?, ?)
+    """, (site_id, date_str, year, month))
+    
+    event_id = cursor.lastrowid
+    return event_id
 
 def insert_chemical_measurement(cursor, event_id, parameter_id, value, status, existing_measurements):
     """
@@ -448,13 +428,16 @@ def insert_chemical_measurement(cursor, event_id, parameter_id, value, status, e
         return True
     return False
 
-def insert_chemical_data(df, check_duplicates=True, data_source="unknown"):
+def insert_chemical_data(df, allow_duplicates=True, data_source="unknown"):
     """
-    Shared function to insert chemical data
+    Shared function to insert chemical data.
+    
+    Note: This function now allows duplicate site+date combinations by default.
+    Use chemical_duplicates.py to consolidate replicates after insertion.
  
     Args:
         df: DataFrame with processed chemical data 
-        check_duplicates: Whether to check for existing data
+        allow_duplicates: Whether to allow duplicate site+date combinations (True by default)
         data_source: Description of data source for logging
         
     Returns:
@@ -480,8 +463,8 @@ def insert_chemical_data(df, check_duplicates=True, data_source="unknown"):
         reference_values = get_reference_values()
         
         # load existing data
-        existing_events, event_lookup, existing_measurements, site_lookup = get_existing_data(conn)
-        logger.info(f"Found {len(existing_events)} existing events, {len(existing_measurements)} existing measurements")
+        existing_measurements, site_lookup = get_existing_data(conn)
+        logger.info(f"Found {len(existing_measurements)} existing measurements")
         
         # Track statistics
         stats = {
@@ -506,12 +489,10 @@ def insert_chemical_data(df, check_duplicates=True, data_source="unknown"):
                 month = row['Month']
                 
                 # Insert collection event
-                event_id, event_was_created = insert_collection_event(
-                    cursor, site_id, date_str, year, month, 
-                    existing_events, event_lookup, site_name
+                event_id = insert_collection_event(
+                    cursor, site_id, date_str, year, month, site_name
                 )
-                if event_was_created:
-                    stats['events_added'] += 1
+                stats['events_added'] += 1
                 
                 # Insert measurements for each parameter
                 for param_name, param_id in PARAMETER_MAP.items():
@@ -551,80 +532,3 @@ def insert_chemical_data(df, check_duplicates=True, data_source="unknown"):
     finally:
         close_connection(conn)
 
-def check_for_duplicates_against_db(df, prioritize_existing=True):
-    """
-    Check for duplicates against existing data in the database.
-    
-    Args:
-        df: DataFrame with processed chemical data
-        prioritize_existing: If True, remove duplicates from df; if False, return info only
-        
-    Returns:
-        tuple: (df_no_duplicates, duplicate_count, duplicate_info)
-    """
-    from database.database import get_connection, close_connection
-    from data_processing.data_loader import clean_site_name
-    
-    try:
-        conn = get_connection()
-        
-        # Get all existing (site_name, date) combinations from database
-        existing_query = """
-        SELECT DISTINCT s.site_name, c.collection_date
-        FROM chemical_collection_events c
-        JOIN sites s ON c.site_id = s.site_id
-        """
-        
-        existing_df = pd.read_sql_query(existing_query, conn)
-        close_connection(conn)
-        
-        if existing_df.empty:
-            logger.info("No existing chemical data found in database - no duplicates to check")
-            return df, 0, []
-        
-        # Convert dates to same format for comparison
-        existing_df['collection_date'] = pd.to_datetime(existing_df['collection_date']).dt.date
-        df['date_for_comparison'] = df['Date'].dt.date
-        
-        # Create sets for efficient comparison
-        existing_combinations = set(zip(
-            existing_df['site_name'].apply(clean_site_name), 
-            existing_df['collection_date']
-        ))
-        
-        # Check each row for duplicates
-        duplicate_mask = df.apply(
-            lambda row: (row['Site_Name'], row['date_for_comparison']) in existing_combinations, 
-            axis=1
-        )
-        
-        duplicate_count = duplicate_mask.sum()
-        duplicate_info = []
-        
-        if duplicate_count > 0:
-            duplicate_examples = df[duplicate_mask][['Site_Name', 'Date']].head(10)
-            duplicate_info = [(row['Site_Name'], row['Date'].strftime('%Y-%m-%d')) 
-                            for _, row in duplicate_examples.iterrows()]
-            
-            logger.info(f"Found {duplicate_count} duplicate records out of {len(df)} total records")
-            
-            if prioritize_existing:
-                df_no_duplicates = df[~duplicate_mask].copy()
-                logger.info(f"Removed {duplicate_count} duplicates. {len(df_no_duplicates)} records remaining.")
-            else:
-                df_no_duplicates = df.copy()
-                logger.info("Duplicates found but not removed (prioritize_existing=False)")
-        else:
-            logger.info("No duplicates found - all records are new")
-            df_no_duplicates = df.copy()
-        
-        # Clean up temporary column
-        if 'date_for_comparison' in df_no_duplicates.columns:
-            df_no_duplicates = df_no_duplicates.drop(columns=['date_for_comparison'])
-        
-        return df_no_duplicates, duplicate_count, duplicate_info
-        
-    except Exception as e:
-        logger.error(f"Error checking for duplicates: {e}")
-        logger.warning("Duplicate checking failed - returning all data")
-        return df, 0, []

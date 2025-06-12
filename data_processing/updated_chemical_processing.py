@@ -19,8 +19,8 @@ Usage:
 import os
 import pandas as pd
 from data_processing.chemical_utils import (
-    validate_chemical_data, calculate_soluble_nitrogen, remove_empty_chemical_rows,
-    insert_chemical_data, check_for_duplicates_against_db
+    validate_chemical_data, calculate_soluble_nitrogen, 
+    remove_empty_chemical_rows, insert_chemical_data
 )
 from data_processing import setup_logging
 
@@ -345,7 +345,6 @@ def process_updated_chemical_data():
 def load_updated_chemical_data_to_db():
     """
     Complete pipeline: process updated chemical data and load into database.
-    Handles duplicate checking and uses existing database insertion logic.
     
     Returns:
         bool: True if successful, False otherwise
@@ -363,30 +362,18 @@ def load_updated_chemical_data_to_db():
         
         logger.info(f"Successfully processed {len(processed_df)} records")
         
-        # Step 2: Check for and remove duplicates 
-        logger.info("Step 2: Checking for duplicates against existing database...")
-        df_no_duplicates, duplicate_count, duplicate_info = check_for_duplicates_against_db(
-            processed_df, prioritize_existing=True
-        )
-        
-        if df_no_duplicates.empty:
-            logger.info("No new records to insert after duplicate removal")
-            return True
-        
-        # Step 3: Use batch insertion function
-        logger.info(f"Step 3: Inserting {len(df_no_duplicates)} new records into database...")
+        # Step 2: Use batch insertion function
+        logger.info(f"Step 2: Inserting {len(processed_df)} records into database...")
         
         stats = insert_chemical_data(
-            df_no_duplicates,
-            check_duplicates=False, 
+            processed_df,
             data_source="cleaned_updated_chemical_data.csv"
         )
         
         logger.info("Successfully completed updated chemical data pipeline!")
         logger.info(f"Final summary:")
         logger.info(f"  - Processed: {len(processed_df)} total records")
-        logger.info(f"  - Duplicates removed: {duplicate_count}")
-        logger.info(f"  - New records inserted: {stats['measurements_added']}")
+        logger.info(f"  - Records inserted: {stats['measurements_added']}")
         
         return True
             
@@ -405,7 +392,6 @@ if __name__ == "__main__":
         print("\n🎉 SUCCESS! Updated chemical data pipeline completed successfully!")
         print("Check the logs above for detailed information about:")
         print("  - Number of records processed")
-        print("  - Duplicates found and removed") 
-        print("  - New records inserted into database")
+        print("  - Records inserted into database")
     else:
         print("\n❌ FAILED! Check the logs above for error details.")

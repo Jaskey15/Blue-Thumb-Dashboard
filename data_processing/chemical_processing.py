@@ -187,7 +187,6 @@ def load_chemical_data_to_db(site_name=None):
         # Use shared batch insertion function
         stats = insert_chemical_data(
             df_clean, 
-            check_duplicates=True, 
             data_source="cleaned_chemical_data.csv"
         )
         

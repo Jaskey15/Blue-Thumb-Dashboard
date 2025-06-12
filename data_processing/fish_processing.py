@@ -107,7 +107,7 @@ def process_fish_csv_data(site_name=None):
         DataFrame with processed fish data
     """
     try:
-        logger.info("Starting fish data processing with NEW replicate handling")
+        logger.info("Starting fish data processing with replicate handling")
         
         # Load raw fish data from CLEANED CSV
         fish_df = load_csv_data('fish', parse_dates=['Date'])
@@ -166,7 +166,7 @@ def process_fish_csv_data(site_name=None):
             except Exception as e:
                 logger.error(f"Error processing dates: {e}")
         
-        # NEW: Load BT field work dates and process duplicates
+        # Load BT field work dates and process duplicates
         bt_df = load_bt_field_work_dates()
         fish_df = categorize_and_process_duplicates(fish_df, bt_df)
         
