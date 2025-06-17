@@ -12,7 +12,6 @@ Key Functions:
 - parse_sampling_dates(): Extract dates from datetime strings
 
 Usage:
-- Run directly to process updated chemical data
 - Import functions for use in the main data pipeline
 """
 
@@ -380,18 +379,3 @@ def load_updated_chemical_data_to_db():
     except Exception as e:
         logger.error(f"Error in updated chemical data pipeline: {e}")
         return False
-    
-# Test section if run directly
-if __name__ == "__main__":
-    logger.info("Testing complete updated chemical data pipeline with database insertion...")
-    
-    # Test the complete pipeline including database insertion
-    success = load_updated_chemical_data_to_db()
-    
-    if success:
-        print("\n🎉 SUCCESS! Updated chemical data pipeline completed successfully!")
-        print("Check the logs above for detailed information about:")
-        print("  - Number of records processed")
-        print("  - Records inserted into database")
-    else:
-        print("\n❌ FAILED! Check the logs above for error details.")

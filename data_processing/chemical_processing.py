@@ -11,7 +11,6 @@ Key Functions:
 - Data validation, BDL handling, and soluble nitrogen calculations
 
 Usage: 
-- Run directly to test chemical data processing
 - Import functions for use in the main data pipeline
 """
 
@@ -195,26 +194,3 @@ def load_chemical_data_to_db(site_name=None):
     except Exception as e:
         logger.error(f"Error in chemical data pipeline: {e}")
         return False
-
-if __name__ == "__main__":
-    logger.info("Testing chemical data processing")
-    
-    # Get list of sites with chemical data
-    sites = get_sites_with_data('chemical')
-    if sites:
-        logger.info(f"Found {len(sites)} sites with chemical data")
-        
-        # Process data for the first site as a test
-        test_site = sites[0]
-        logger.info(f"Processing data for test site: {test_site}")
-        
-        # Get data from database
-        from data_processing.data_queries import get_chemical_data_from_db
-        df_clean = get_chemical_data_from_db(test_site)
-        
-        if not df_clean.empty:
-            logger.info(f"Successfully retrieved {len(df_clean)} records for {test_site}")
-        else:
-            logger.warning(f"No data found for test site: {test_site}")
-    else:
-        logger.error("No sites with chemical data found. Check database setup.")

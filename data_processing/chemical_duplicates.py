@@ -15,9 +15,7 @@ Workflow:
    - All others: Highest value (worst case for nutrients/pollutants)
 
 Usage:
-- Import functions for use in data processing pipelines
-- Can be run standalone for maintenance operations
-- Use after data insertion to clean up replicate samples
+- Import functions for use in data processing pipeline
 """
 
 import pandas as pd
@@ -227,16 +225,4 @@ def consolidate_replicate_samples():
         logger.error(f"Error consolidating replicate samples: {e}")
         raise Exception(f"Failed to consolidate replicate samples: {e}")
 
-# Test function for standalone execution
-if __name__ == "__main__":
-    logger.info("Testing chemical duplicate consolidation...")
-    
-    stats = consolidate_replicate_samples()
-    
-    if stats['groups_processed'] > 0:
-        print(f"\n📊 CONSOLIDATION RESULTS:")
-        print(f"  - {stats['groups_processed']} replicate groups processed")
-        print(f"  - {stats['events_removed']} events removed")
-        print(f"  - {stats['measurements_updated']} measurements updated")
-    else:
-        print(f"\n✅ No replicate samples found - database is clean!") 
+ 

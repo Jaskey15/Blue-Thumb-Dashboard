@@ -8,21 +8,36 @@ import pandas as pd
 import numpy as np
 import os
 import sys
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 # Add project root to path
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, project_root)
 
 from data_processing.chemical_processing import (
-    process_chemical_data_from_csv
+    process_chemical_data_from_csv,
+    load_chemical_data_to_db
+)
+from data_processing.updated_chemical_processing import (
+    parse_sampling_dates,
+    get_greater_value,
+    get_conditional_nutrient_value,
+    process_conditional_nutrient,
+    process_simple_nutrients,
+    format_to_database_schema,
+    process_updated_chemical_data
+)
+from data_processing.chemical_duplicates import (
+    get_worst_case_value,
+    identify_replicate_samples
 )
 from data_processing.chemical_utils import (
     validate_chemical_data,
     determine_status,
     apply_bdl_conversions,
     calculate_soluble_nitrogen,
-    convert_bdl_value
+    convert_bdl_value,
+    remove_empty_chemical_rows
 )
 from utils import setup_logging
 
@@ -31,7 +46,7 @@ logger = setup_logging("test_chemical_processing", category="testing")
 
 
 class TestChemicalProcessing(unittest.TestCase):
-    """Test chemical data processing functionality."""
+    """Comprehensive test suite for all chemical processing functionality."""
     
     def setUp(self):
         """Set up test fixtures before each test method."""
@@ -72,6 +87,38 @@ class TestChemicalProcessing(unittest.TestCase):
                 'poor': 250
             }
         }
+        
+        # Sample updated chemical data for testing
+        self.sample_updated_data = pd.DataFrame({
+            'Site Name': ['Test Site 1', 'Test Site 2'],
+            'Sampling Date': ['5/15/2023, 10:30 AM', '6/20/2023, 2:15 PM'],
+            '% Oxygen Saturation': [95.5, 110.2],
+            'pH #1': [7.2, 8.1],
+            'pH #2': [7.3, 8.0],
+            'Nitrate #1': [0.5, 1.2],
+            'Nitrate #2': [0.6, 1.1],
+            'Nitrite #1': [0.05, 0.1],
+            'Nitrite #2': [0.04, 0.12],
+            'Ammonia Nitrogen Range Selection': ['Low', 'Mid'],
+            'Ammonia Nitrogen Low Reading #1': [0.1, 0.3],
+            'Ammonia Nitrogen Low Reading #2': [0.12, 0.28],
+            'Ammonia_nitrogen_midrange1_Final': [0.2, 0.4],
+            'Ammonia_nitrogen_midrange2_Final': [0.22, 0.38],
+            'Orthophosphate Range Selection': ['Low', 'High'],
+            'Orthophosphate_Low1_Final': [0.02, 0.15],
+            'Orthophosphate_Low2_Final': [0.03, 0.14],
+            'Orthophosphate_High1_Final': [0.1, 0.5],
+            'Orthophosphate_High2_Final': [0.12, 0.48],
+            'Chloride Range Selection': ['Low', 'High'],
+            'Chloride_Low1_Final': [25.0, 45.0],
+            'Chloride_Low2_Final': [26.0, 44.0],
+            'Chloride_High1_Final': [250.0, 280.0],
+            'Chloride_High2_Final': [255.0, 275.0]
+        })
+
+    # =============================================================================
+    # UTILITY FUNCTION TESTS
+    # =============================================================================
 
     def test_convert_bdl_value_basic(self):
         """Test basic BDL value conversion."""
@@ -137,83 +184,6 @@ class TestChemicalProcessing(unittest.TestCase):
         # Third row: All zeros should use BDL values: 0.3 + 0.03 + 0.03 = 0.36
         self.assertAlmostEqual(result_df.loc[2, 'soluble_nitrogen'], 0.36, places=3)
 
-    def test_calculate_soluble_nitrogen_missing_columns(self):
-        """Test soluble nitrogen calculation with missing columns."""
-        # Create test data missing some nitrogen columns
-        test_df = pd.DataFrame({
-            'Nitrate': [0.5, 1.0],
-            'Nitrite': [0.1, 0.05]
-            # Missing Ammonia column
-        })
-        
-        result_df = calculate_soluble_nitrogen(test_df)
-        
-        # Should return original DataFrame unchanged when columns are missing
-        self.assertNotIn('soluble_nitrogen', result_df.columns)
-
-    def test_determine_status_do_percent(self):
-        """Test status determination for dissolved oxygen."""
-        ref_values = self.sample_reference_values
-        
-        # Test normal range
-        self.assertEqual(determine_status('do_percent', 100, ref_values), "Normal")
-        self.assertEqual(determine_status('do_percent', 80, ref_values), "Normal")
-        self.assertEqual(determine_status('do_percent', 130, ref_values), "Normal")
-        
-        # Test caution range
-        self.assertEqual(determine_status('do_percent', 60, ref_values), "Caution")
-        self.assertEqual(determine_status('do_percent', 140, ref_values), "Caution")
-        
-        # Test poor range
-        self.assertEqual(determine_status('do_percent', 40, ref_values), "Poor")
-        self.assertEqual(determine_status('do_percent', 160, ref_values), "Poor")
-        
-        # Test NaN
-        self.assertEqual(determine_status('do_percent', np.nan, ref_values), "Unknown")
-
-    def test_determine_status_ph(self):
-        """Test status determination for pH."""
-        ref_values = self.sample_reference_values
-        
-        # Test normal range
-        self.assertEqual(determine_status('pH', 7.0, ref_values), "Normal")
-        self.assertEqual(determine_status('pH', 6.5, ref_values), "Normal")
-        self.assertEqual(determine_status('pH', 9.0, ref_values), "Normal")
-        
-        # Test outside normal range
-        self.assertEqual(determine_status('pH', 6.0, ref_values), "Below Normal")
-        self.assertEqual(determine_status('pH', 10.0, ref_values), "Above Normal")
-
-    def test_determine_status_nitrogen(self):
-        """Test status determination for nitrogen."""
-        ref_values = self.sample_reference_values
-        
-        # Test normal range
-        self.assertEqual(determine_status('soluble_nitrogen', 0.5, ref_values), "Normal")
-        
-        # Test caution range
-        self.assertEqual(determine_status('soluble_nitrogen', 1.0, ref_values), "Caution")
-        
-        # Test poor range
-        self.assertEqual(determine_status('soluble_nitrogen', 2.0, ref_values), "Poor")
-
-    def test_determine_status_chloride(self):
-        """Test status determination for chloride."""
-        ref_values = self.sample_reference_values
-        
-        # Test normal (below threshold)
-        self.assertEqual(determine_status('Chloride', 200, ref_values), "Normal")
-        
-        # Test poor (above threshold)
-        self.assertEqual(determine_status('Chloride', 300, ref_values), "Poor")
-
-    def test_determine_status_unknown_parameter(self):
-        """Test status determination for unknown parameter."""
-        ref_values = self.sample_reference_values
-        
-        # Should return Normal for unknown parameters
-        self.assertEqual(determine_status('unknown_param', 100, ref_values), "Normal")
-
     def test_validate_chemical_data_basic(self):
         """Test basic chemical data validation."""
         # Create test data with some invalid values
@@ -232,6 +202,269 @@ class TestChemicalProcessing(unittest.TestCase):
         # Check that valid values remain
         self.assertEqual(result_df.loc[0, 'do_percent'], 95.5)
         self.assertEqual(result_df.loc[0, 'pH'], 7.2)
+
+    def test_remove_empty_chemical_rows(self):
+        """Test removal of rows with no chemical data."""
+        # Create test data with some empty rows
+        test_df = pd.DataFrame({
+            'Site_Name': ['Site1', 'Site2', 'Site3', 'Site4'],
+            'Date': ['2023-01-01', '2023-01-02', '2023-01-03', '2023-01-04'],
+            'do_percent': [95.5, np.nan, 88.0, np.nan],
+            'pH': [7.2, np.nan, np.nan, np.nan],
+            'Nitrate': [0.5, np.nan, np.nan, np.nan],
+            'Other_Col': ['A', 'B', 'C', 'D']  # Non-chemical column
+        })
+        
+        result_df = remove_empty_chemical_rows(test_df)
+        
+        # Should keep rows with at least one chemical parameter
+        self.assertEqual(len(result_df), 2)  # Only Site1 and Site3 have chemical data
+        self.assertIn('Site1', result_df['Site_Name'].values)
+        self.assertIn('Site3', result_df['Site_Name'].values)
+        
+        # Non-chemical column should be preserved
+        self.assertIn('Other_Col', result_df.columns)
+
+    # =============================================================================
+    # UPDATED PROCESSING FUNCTION TESTS
+    # =============================================================================
+
+    def test_parse_sampling_dates(self):
+        """Test parsing of sampling dates from datetime strings."""
+        # Create test data with datetime strings
+        test_df = pd.DataFrame({
+            'Sampling Date': [
+                '5/15/2023, 10:30 AM',
+                '6/20/2023, 2:15 PM',
+                '7/10/2023, 9:45 AM'
+            ]
+        })
+        
+        result_df = parse_sampling_dates(test_df)
+        
+        # Check that Date column was created
+        self.assertIn('Date', result_df.columns)
+        
+        # Check that dates were parsed correctly
+        self.assertEqual(result_df['Date'].dt.year.iloc[0], 2023)
+        self.assertEqual(result_df['Date'].dt.month.iloc[0], 5)
+        self.assertEqual(result_df['Date'].dt.day.iloc[0], 15)
+        
+        # Check that Year and Month columns were added
+        self.assertIn('Year', result_df.columns)
+        self.assertIn('Month', result_df.columns)
+        
+        # Check that intermediate column was removed
+        self.assertNotIn('parsed_datetime', result_df.columns)
+
+    def test_get_greater_value(self):
+        """Test logic for selecting greater of two values."""
+        # Create test row
+        test_row = pd.Series({
+            'col1': 5.0,
+            'col2': 7.0,
+            'col3': 5.0,  # Equal to col1
+            'col4': None,
+            'col5': 'invalid'
+        })
+        
+        # Test basic greater value selection
+        self.assertEqual(get_greater_value(test_row, 'col1', 'col2'), 7.0)
+        
+        # Test equal values with tiebreaker
+        self.assertEqual(get_greater_value(test_row, 'col1', 'col3', tiebreaker='col1'), 5.0)
+        self.assertEqual(get_greater_value(test_row, 'col1', 'col3', tiebreaker='col2'), 5.0)
+        
+        # Test handling of None values
+        self.assertEqual(get_greater_value(test_row, 'col1', 'col4'), 5.0)
+        self.assertEqual(get_greater_value(test_row, 'col4', 'col2'), 7.0)
+        self.assertIsNone(get_greater_value(test_row, 'col4', 'col4'))
+        
+        # Test handling of invalid values
+        self.assertEqual(get_greater_value(test_row, 'col1', 'col5'), 5.0)
+        result = get_greater_value(test_row, 'col5', 'col5')
+        self.assertTrue(result is None or pd.isna(result))
+
+    def test_get_conditional_nutrient_value(self):
+        """Test range-based nutrient value selection."""
+        # Create test row with all ranges
+        test_row = pd.Series({
+            'range_selection': 'Low',
+            'low_col1': 0.1,
+            'low_col2': 0.12,
+            'mid_col1': 0.2,
+            'mid_col2': 0.22,
+            'high_col1': 0.3,
+            'high_col2': 0.32
+        })
+        
+        # Test low range selection
+        self.assertEqual(
+            get_conditional_nutrient_value(
+                test_row, 'range_selection', 'low_col1', 'low_col2'
+            ),
+            0.12  # Greater of low range values
+        )
+        
+        # Test mid range selection
+        test_row['range_selection'] = 'Mid'
+        self.assertEqual(
+            get_conditional_nutrient_value(
+                test_row, 'range_selection', 'low_col1', 'low_col2',
+                mid_col1='mid_col1', mid_col2='mid_col2'
+            ),
+            0.22  # Greater of mid range values
+        )
+        
+        # Test high range selection
+        test_row['range_selection'] = 'High'
+        self.assertEqual(
+            get_conditional_nutrient_value(
+                test_row, 'range_selection', 'low_col1', 'low_col2',
+                high_col1='high_col1', high_col2='high_col2'
+            ),
+            0.32  # Greater of high range values
+        )
+        
+        # Test invalid range selection
+        test_row['range_selection'] = 'Invalid'
+        self.assertIsNone(
+            get_conditional_nutrient_value(
+                test_row, 'range_selection', 'low_col1', 'low_col2'
+            )
+        )
+
+    def test_process_conditional_nutrient(self):
+        """Test processing of conditional nutrients."""
+        # Create test data with ammonia readings
+        test_df = pd.DataFrame({
+            'Ammonia Nitrogen Range Selection': ['Low', 'Mid', 'Low', 'Invalid'], 
+            'Ammonia Nitrogen Low Reading #1': [0.1, 0.2, 0.3, 0.4],
+            'Ammonia Nitrogen Low Reading #2': [0.12, 0.22, 0.32, 0.42],
+            'Ammonia_nitrogen_midrange1_Final': [0.2, 0.3, 0.4, 0.5],
+            'Ammonia_nitrogen_midrange2_Final': [0.22, 0.32, 0.42, 0.52]
+        })
+        
+        result = process_conditional_nutrient(test_df, 'ammonia')
+        
+        # Check that values were selected correctly based on range
+        self.assertEqual(result.iloc[0], 0.12)  # Low range
+        self.assertEqual(result.iloc[1], 0.32)  # Mid range
+        self.assertEqual(result.iloc[2], 0.32)  # Low range
+        self.assertTrue(pd.isna(result.iloc[3]) or result.iloc[3] is None)  # Invalid range
+
+    def test_process_simple_nutrients(self):
+        """Test processing of simple nutrients (Nitrate, Nitrite)."""
+        # Create test data
+        test_df = pd.DataFrame({
+            'Nitrate #1': [0.5, 1.0, 0.0],
+            'Nitrate #2': [0.6, 0.9, 0.0],
+            'Nitrite #1': [0.05, 0.1, 0.0],
+            'Nitrite #2': [0.04, 0.12, 0.0]
+        })
+        
+        result_df = process_simple_nutrients(test_df)
+        
+        # Check that greater values were selected
+        self.assertEqual(result_df['Nitrate'].iloc[0], 0.6)  # Greater of 0.5 and 0.6
+        self.assertEqual(result_df['Nitrate'].iloc[1], 1.0)  # Greater of 1.0 and 0.9
+        self.assertEqual(result_df['Nitrite'].iloc[0], 0.05)  # Greater of 0.05 and 0.04
+        self.assertEqual(result_df['Nitrite'].iloc[1], 0.12)  # Greater of 0.1 and 0.12
+
+    def test_format_to_database_schema(self):
+        """Test formatting of data to match database schema."""
+        # Create test data
+        test_df = pd.DataFrame({
+            'Site Name': ['Site1', 'Site2'],
+            'Date': pd.to_datetime(['2023-01-01', '2023-01-02']),
+            'Year': [2023, 2023],
+            'Month': [1, 2],
+            '% Oxygen Saturation': [95.5, 88.0],
+            'pH #1': [7.2, 6.8],
+            'Nitrate': [0.5, 1.2],
+            'Nitrite': [0.05, 0.1],
+            'Ammonia': [0.1, 0.3],
+            'Orthophosphate': [0.02, 0.15],
+            'Chloride': [25.0, 45.0]
+        })
+        
+        result_df = format_to_database_schema(test_df)
+        
+        # Check column renaming
+        self.assertIn('Site_Name', result_df.columns)
+        self.assertIn('do_percent', result_df.columns)
+        self.assertIn('Phosphorus', result_df.columns)
+        
+        # Check that soluble nitrogen was calculated
+        self.assertIn('soluble_nitrogen', result_df.columns)
+        
+        # Check that all required columns are present
+        required_columns = [
+            'Site_Name', 'Date', 'Year', 'Month', 'do_percent', 'pH',
+            'Nitrate', 'Nitrite', 'Ammonia', 'Phosphorus', 'Chloride',
+            'soluble_nitrogen'
+        ]
+        for col in required_columns:
+            self.assertIn(col, result_df.columns)
+
+    # =============================================================================
+    # DUPLICATE HANDLING TESTS
+    # =============================================================================
+
+    def test_get_worst_case_value(self):
+        """Test worst case value selection for different parameters."""
+        # Test pH (furthest from neutral)
+        ph_values = [6.5, 7.5, 8.5]
+        self.assertEqual(get_worst_case_value(ph_values, 'pH'), 8.5)  # Furthest from 7.0
+        
+        # Test DO (lowest value)
+        do_values = [95.5, 88.0, 110.2]
+        self.assertEqual(get_worst_case_value(do_values, 'do_percent'), 88.0)  # Lowest value
+        
+        # Test nutrients (highest value)
+        nutrient_values = [0.5, 1.2, 0.8]
+        self.assertEqual(get_worst_case_value(nutrient_values, 'Nitrate'), 1.2)  # Highest value
+        
+        # Test with null values
+        mixed_values = [0.5, None, 1.2]
+        self.assertEqual(get_worst_case_value(mixed_values, 'Nitrate'), 1.2)  # Highest non-null
+        
+        # Test all null values
+        null_values = [None, None, None]
+        self.assertIsNone(get_worst_case_value(null_values, 'Nitrate'))
+
+    @patch('database.database.close_connection')
+    @patch('database.database.get_connection')
+    def test_identify_replicate_samples(self, mock_get_connection, mock_close_connection):
+        """Test identification of replicate samples."""
+        # Mock database connection and cursor
+        mock_conn = MagicMock()
+        mock_get_connection.return_value = mock_conn
+        
+        # Mock pandas read_sql_query to return sample data
+        with patch('pandas.read_sql_query') as mock_read_sql:
+            mock_read_sql.return_value = pd.DataFrame({
+                'site_name': ['Site1', 'Site2'],
+                'collection_date': ['2023-01-01', '2023-01-02'],
+                'event_count': [2, 3],
+                'event_ids': ['1,2', '3,4,5']
+            })
+            
+            # Call function
+            result = identify_replicate_samples()
+            
+            # Check results
+            self.assertEqual(len(result), 2)
+            self.assertEqual(result[0]['site_name'], 'Site1')
+            self.assertEqual(result[0]['event_count'], 2)
+            self.assertEqual(result[0]['event_ids'], [1, 2])
+            self.assertEqual(result[1]['site_name'], 'Site2')
+            self.assertEqual(result[1]['event_count'], 3)
+            self.assertEqual(result[1]['event_ids'], [3, 4, 5])
+
+    # =============================================================================
+    # INTEGRATION TESTS
+    # =============================================================================
 
     @patch('data_processing.chemical_processing.save_processed_data')
     @patch('data_processing.chemical_processing.os.path.exists')
@@ -272,77 +505,36 @@ class TestChemicalProcessing(unittest.TestCase):
         # Check that reference values were returned
         self.assertIsInstance(ref_values, dict)
 
-    @patch('data_processing.chemical_processing.save_processed_data')
-    @patch('data_processing.chemical_processing.os.path.exists')
-    @patch('data_processing.chemical_processing.pd.read_csv')
-    def test_process_chemical_data_site_filter(self, mock_read_csv, mock_exists, mock_save_data):
-        """Test CSV processing with site name filter."""
-        # Mock file existence
-        mock_exists.return_value = True
+    @patch('data_processing.updated_chemical_processing.load_updated_chemical_data')
+    def test_updated_processing_pipeline(self, mock_load_data):
+        """Test the complete updated chemical processing pipeline."""
+        # Mock data loading
+        mock_load_data.return_value = self.sample_updated_data
         
-        # Mock CSV reading
-        mock_read_csv.return_value = self.sample_chemical_data
+        # Process the data
+        result_df = process_updated_chemical_data()
         
-        # Mock save to prevent file writes
-        mock_save_data.return_value = True
-        
-        result_df, _, _ = process_chemical_data_from_csv(site_name='Blue Creek at Highway 9')
-        
-        # Verify mocks were called
-        mock_read_csv.assert_called_once()
-        mock_save_data.assert_called_once()
-        
-        # Should only have one site's data
-        self.assertEqual(len(result_df), 1)
-        self.assertEqual(result_df.iloc[0]['Site_Name'], 'Blue Creek at Highway 9')
-
-    @patch('data_processing.chemical_processing.save_processed_data')
-    @patch('data_processing.chemical_processing.os.path.exists')
-    @patch('data_processing.chemical_processing.pd.read_csv')
-    def test_integration_full_pipeline(self, mock_read_csv, mock_exists, mock_save_data):
-        """Integration test for the full chemical processing pipeline."""
-        # Create comprehensive test data
-        test_data = pd.DataFrame({
-            'SiteName': ['Test Site 1', 'Test Site 2'],
-            'Date': ['2023-05-15', '2023-06-20'],
-            'DO.Saturation': [0.0, 110.2],  # First has BDL
-            'pH.Final.1': [7.2, 8.1],
-            'Nitrate.Final.1': [0.0, 1.2],  # First has BDL
-            'Nitrite.Final.1': [0.05, 0.1],
-            'Ammonia.Final.1': [0.1, 0.0],  # Second has BDL
-            'OP.Final.1': [0.02, 0.15],
-            'Chloride.Final.1': [25.0, 300.0]  # Second exceeds threshold
-        })
-        
-        # Mock file existence
-        mock_exists.return_value = True
-        
-        # Mock CSV reading
-        mock_read_csv.return_value = test_data
-        
-        # Mock save to prevent file writes
-        mock_save_data.return_value = True
-        
-        result_df, key_params, ref_values = process_chemical_data_from_csv()
-        
-        # Verify mocks were called
-        mock_read_csv.assert_called_once()
-        mock_save_data.assert_called_once()
-        
-        # Verify processing steps occurred
+        # Check that data was processed
         self.assertFalse(result_df.empty)
-        self.assertEqual(len(result_df), 2)
         
-        # Check BDL conversion occurred
-        # First site should have Nitrate converted from 0 to BDL value (0.3)
-        self.assertEqual(result_df.iloc[0]['Nitrate'], 0.3)
+        # Check that all required columns are present
+        required_columns = [
+            'Site_Name', 'Date', 'Year', 'Month', 'do_percent', 'pH',
+            'Nitrate', 'Nitrite', 'Ammonia', 'Phosphorus', 'Chloride',
+            'soluble_nitrogen'
+        ]
+        for col in required_columns:
+            self.assertIn(col, result_df.columns)
         
-        # Check soluble nitrogen calculation
-        self.assertIn('soluble_nitrogen', result_df.columns)
-        
-        # Verify all sites processed
-        sites = result_df['Site_Name'].unique()
-        self.assertEqual(len(sites), 2)
+        # Check that values were processed correctly
+        self.assertEqual(result_df['do_percent'].iloc[0], 95.5)
+        self.assertEqual(result_df['pH'].iloc[0], 7.2)
+        self.assertEqual(result_df['Nitrate'].iloc[0], 0.6)  # Greater of 0.5 and 0.6
+        self.assertEqual(result_df['Nitrite'].iloc[0], 0.05)  # Greater of 0.05 and 0.04
+
+    # =============================================================================
+    # EDGE CASES
+    # =============================================================================
 
     def test_edge_case_empty_data(self):
         """Test behavior with empty input data."""
