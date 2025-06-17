@@ -8,14 +8,17 @@ import pandas as pd
 import numpy as np
 import os
 import sys
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 # Add project root to path
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, project_root)
 
 from data_processing.macro_processing import (
-    process_macro_csv_data
+    process_macro_csv_data,
+    insert_macro_collection_events,
+    insert_metrics_data,
+    load_macroinvertebrate_data
 )
 from data_processing.biological_utils import (
     remove_invalid_biological_values,
@@ -28,7 +31,7 @@ logger = setup_logging("test_macro_processing", category="testing")
 
 
 class TestMacroProcessing(unittest.TestCase):
-    """Test macroinvertebrate data processing functionality."""
+    """Test macroinvertebrate-specific processing functionality."""
     
     def setUp(self):
         """Set up test fixtures before each test method."""
@@ -121,40 +124,38 @@ class TestMacroProcessing(unittest.TestCase):
         else:
             return "Severely Impaired"
 
-    def test_determine_biological_condition_non_impaired(self):
-        """Test biological condition determination for non-impaired range."""
-        # Test ≥83% = Non-impaired
-        self.assertEqual(self.determine_biological_condition(0.90), "Non-impaired")
-        self.assertEqual(self.determine_biological_condition(0.83), "Non-impaired")
-
-    def test_determine_biological_condition_slightly_impaired(self):
-        """Test biological condition determination for slightly impaired range."""
-        # Test 54-82% = Slightly Impaired
-        self.assertEqual(self.determine_biological_condition(0.75), "Slightly Impaired")
-        self.assertEqual(self.determine_biological_condition(0.54), "Slightly Impaired")
-
-    def test_determine_biological_condition_moderately_impaired(self):
-        """Test biological condition determination for moderately impaired range."""
-        # Test 17-53% = Moderately Impaired
-        self.assertEqual(self.determine_biological_condition(0.40), "Moderately Impaired")
-        self.assertEqual(self.determine_biological_condition(0.17), "Moderately Impaired")
-
-    def test_determine_biological_condition_severely_impaired(self):
-        """Test biological condition determination for severely impaired range."""
-        # Test <17% = Severely Impaired
-        self.assertEqual(self.determine_biological_condition(0.15), "Severely Impaired")
-        self.assertEqual(self.determine_biological_condition(0.05), "Severely Impaired")
-
-    def test_determine_biological_condition_edge_cases(self):
-        """Test biological condition determination for edge cases."""
-        # Test boundary values
-        self.assertEqual(self.determine_biological_condition(0.82), "Slightly Impaired")  # Just below 83%
-        self.assertEqual(self.determine_biological_condition(0.53), "Moderately Impaired")  # Just below 54%
-        self.assertEqual(self.determine_biological_condition(0.16), "Severely Impaired")  # Just below 17%
+    def test_determine_biological_condition_all_classifications(self):
+        """Test biological condition determination for all classifications and edge cases."""
+        test_cases = [
+            # Non-impaired (≥83%)
+            (0.90, "Non-impaired"),
+            (0.83, "Non-impaired"),
+            
+            # Slightly Impaired (54-82%)
+            (0.82, "Slightly Impaired"),  
+            (0.75, "Slightly Impaired"),
+            (0.54, "Slightly Impaired"),
+            
+            # Moderately Impaired (17-53%)
+            (0.53, "Moderately Impaired"),  
+            (0.40, "Moderately Impaired"),
+            (0.17, "Moderately Impaired"),
+            
+            # Severely Impaired (<17%)
+            (0.16, "Severely Impaired"), 
+            (0.15, "Severely Impaired"),
+            (0.05, "Severely Impaired"),
+            
+            # Edge cases and invalid values
+            (np.nan, "Unknown"),
+            ("not a number", "Unknown"),
+            (None, "Unknown")
+        ]
         
-        # Test NaN and invalid values
-        self.assertEqual(self.determine_biological_condition(np.nan), "Unknown")
-        self.assertEqual(self.determine_biological_condition("not a number"), "Unknown")
+        for comparison_value, expected_condition in test_cases:
+            with self.subTest(comparison=comparison_value, expected=expected_condition):
+                result = self.determine_biological_condition(comparison_value)
+                self.assertEqual(result, expected_condition)
 
     def test_total_score_calculation(self):
         """Test that total score is calculated correctly from component scores."""
@@ -416,6 +417,278 @@ class TestMacroProcessing(unittest.TestCase):
         
         for season in seasons_in_data:
             self.assertIn(season, valid_seasons)
+
+    # =============================================================================
+    # MACRO-SPECIFIC DATABASE TESTS  
+    # =============================================================================
+    
+    def test_insert_macro_collection_events(self):
+        """Test macro collection event insertion with habitat grouping."""
+        # Create properly formatted test data
+        test_data = pd.DataFrame({
+            'site_name': ['Blue Creek at Highway 9', 'Blue Creek at Highway 9', 'Red River at Bridge'],
+            'sample_id': [101, 101, 201],  # Same sample, different habitats
+            'habitat': ['Riffle', 'Pool', 'Vegetation'],
+            'season': ['Spring', 'Spring', 'Fall'],
+            'collection_date_str': ['2023-05-15', '2023-05-15', '2023-06-20'],
+            'year': [2023, 2023, 2023]
+        })
+        
+        mock_cursor = MagicMock()
+        
+        result = insert_macro_collection_events(mock_cursor, test_data)
+        
+        # Should return mapping for (sample_id, habitat) -> event_id
+        self.assertIsInstance(result, dict)
+    
+    def test_insert_metrics_data_macro(self):
+        """Test insertion of macro metrics data."""
+        mock_cursor = MagicMock()
+        # Macro uses (sample_id, habitat) as key
+        event_id_map = {
+            (101, 'Riffle'): 123, 
+            (201, 'Vegetation'): 456,
+            (301, 'Woody'): 789
+        }
+        
+        # Create processed data with proper column names
+        processed_data = pd.DataFrame({
+            'sample_id': [101, 201, 301],
+            'habitat': ['Riffle', 'Vegetation', 'Woody'],
+            'taxa_richness': [25, 18, 12],
+            'taxa_richness_score': [5, 3, 1],
+            'hbi_score': [4.2, 5.8, 7.1],
+            'hbi_score_score': [5, 3, 1],
+            'ept_abundance': [65.5, 42.3, 15.2],
+            'ept_abundance_score': [5, 3, 1],
+            'ept_taxa_richness': [12, 8, 3],
+            'ept_taxa_richness_score': [5, 3, 1],
+            'contribution_dominants': [35.2, 55.8, 75.4],
+            'contribution_dominants_score': [5, 3, 1],
+            'shannon_weaver': [2.8, 2.1, 1.4],
+            'shannon_weaver_score': [5, 3, 1],
+            'total_score': [30, 18, 6],
+            'comparison_to_reference': [0.90, 0.65, 0.25]
+        })
+        
+        result = insert_metrics_data(mock_cursor, processed_data, event_id_map)
+        
+        # Should return count of inserted metrics
+        self.assertIsInstance(result, int)
+        
+        # Verify that INSERT statements were called
+        self.assertTrue(mock_cursor.execute.called)
+    
+    def test_insert_metrics_data_biological_condition_calculation(self):
+        """Test biological condition calculation during metrics insertion."""
+        mock_cursor = MagicMock()
+        event_id_map = {(101, 'Riffle'): 123}
+        
+        # Test data with known comparison values
+        test_cases = [
+            (0.90, "Non-impaired"),      # ≥83%
+            (0.75, "Slightly Impaired"), # 54-82%
+            (0.40, "Moderately Impaired"), # 17-53%
+            (0.10, "Severely Impaired")  # <17%
+        ]
+        
+        for comparison_value, expected_condition in test_cases:
+            with self.subTest(comparison=comparison_value):
+                test_data = pd.DataFrame({
+                    'sample_id': [101],
+                    'habitat': ['Riffle'],
+                    'taxa_richness': [20],
+                    'taxa_richness_score': [4],
+                    'total_score': [24],
+                    'comparison_to_reference': [comparison_value]
+                })
+                
+                result = insert_metrics_data(mock_cursor, test_data, event_id_map)
+                
+                # Should process without error
+                self.assertIsInstance(result, int)
+
+    def test_insert_metrics_data_missing_event_id(self):
+        """Test handling when (sample_id, habitat) is not in event_id_map."""
+        mock_cursor = MagicMock()
+        event_id_map = {(999, 'Pool'): 123}  # Different sample_id/habitat
+        
+        test_data = pd.DataFrame({
+            'sample_id': [101],
+            'habitat': ['Riffle'],  # Not in event_id_map
+            'total_score': [24],
+            'comparison_to_reference': [0.75]
+        })
+        
+        result = insert_metrics_data(mock_cursor, test_data, event_id_map)
+        
+        # Should return 0 when no matching event_ids
+        self.assertEqual(result, 0)
+
+    # =============================================================================
+    # HABITAT AND SEASON SPECIFIC TESTS
+    # =============================================================================
+    
+    def test_multiple_habitats_per_site(self):
+        """Test processing sites with multiple habitat types."""
+        multi_habitat_data = pd.DataFrame({
+            'SiteName': ['Test Site', 'Test Site', 'Test Site'],
+            'SAMPLEID': [101, 101, 101],  # Same sample, different habitats
+            'Date': ['2023-05-15', '2023-05-15', '2023-05-15'],
+            'Year': [2023, 2023, 2023],
+            'Season': ['Spring', 'Spring', 'Spring'],
+            'Habitat_Type': ['Riffle', 'Pool', 'Vegetation'],
+            'Taxa_Richness': [25, 20, 15],
+            'Taxa_Richness_Score': [5, 4, 3],
+            'Modified_HBI': [4.2, 5.0, 6.5],
+            'Mod_HBI_Score': [5, 4, 2],
+            'EPT_perc': [65.5, 55.0, 35.0],
+            'EPT_perc_Score': [5, 4, 2],
+            'EPT_Taxa': [12, 10, 6],
+            'EPT_Taxa_Score': [5, 4, 2],
+            'Dom_2_Taxa': [35.2, 45.0, 60.0],
+            'Dom2_Taxa_Score': [5, 4, 2],
+            'Shannon_Weaver': [2.8, 2.5, 1.8],
+            'Shannon_Weaver_Score': [5, 4, 2],
+            'Percent_Reference': [0.90, 0.75, 0.45]
+        })
+        
+        # Process the data (simulate column mapping)
+        multi_habitat_data.columns = [col.lower().replace('_', '') for col in multi_habitat_data.columns]
+        
+        # Should create separate records for each habitat
+        grouped = multi_habitat_data.groupby(['sampleid', 'habitattype'])
+        self.assertEqual(len(grouped), 3)  # 3 habitat combinations
+        
+        # Each group should have different scores reflecting habitat quality
+        for (sample_id, habitat), group in grouped:
+            self.assertEqual(len(group), 1)  # One row per habitat
+            self.assertIn(habitat.lower(), ['riffle', 'pool', 'vegetation'])
+
+    def test_seasonal_variation_handling(self):
+        """Test handling of seasonal data collection."""
+        seasonal_data = pd.DataFrame({
+            'SiteName': ['Test Site', 'Test Site'],
+            'SAMPLEID': [101, 102],
+            'Date': ['2023-05-15', '2023-11-15'],  # Spring and Fall
+            'Year': [2023, 2023],
+            'Season': ['Spring', 'Fall'],
+            'Habitat_Type': ['Riffle', 'Riffle'],  # Same habitat, different seasons
+            'Taxa_Richness': [25, 18],  # Different richness by season
+            'Taxa_Richness_Score': [5, 3],
+            'Percent_Reference': [0.85, 0.70]
+        })
+        
+        # Should handle seasonal differences appropriately
+        spring_data = seasonal_data[seasonal_data['Season'] == 'Spring']
+        fall_data = seasonal_data[seasonal_data['Season'] == 'Fall']
+        
+        self.assertEqual(len(spring_data), 1)
+        self.assertEqual(len(fall_data), 1)
+        
+        # Spring should generally have higher taxa richness
+        self.assertGreater(
+            spring_data['Taxa_Richness'].iloc[0],
+            fall_data['Taxa_Richness'].iloc[0]
+        )
+
+    def test_habitat_quality_differences(self):
+        """Test that different habitats show expected quality patterns."""
+        # Riffle habitats typically have higher quality than vegetation
+        riffle_data = self.sample_macro_data[self.sample_macro_data['Habitat_Type'] == 'Riffle']
+        vegetation_data = self.sample_macro_data[self.sample_macro_data['Habitat_Type'] == 'Vegetation']
+        
+        if not riffle_data.empty and not vegetation_data.empty:
+            # Riffle should generally have better scores
+            riffle_score = riffle_data['Percent_Reference'].iloc[0]
+            vegetation_score = vegetation_data['Percent_Reference'].iloc[0] if not vegetation_data.empty else 0
+            
+            # This reflects typical ecological patterns
+            self.assertGreaterEqual(riffle_score, vegetation_score)
+
+    # =============================================================================
+    # INTEGRATION TESTS
+    # =============================================================================
+    
+    @patch('data_processing.macro_processing.close_connection')
+    @patch('data_processing.macro_processing.get_connection')
+    def test_load_macroinvertebrate_data_full_pipeline(self, mock_get_conn, mock_close):
+        """Test the complete macro data loading pipeline."""
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_get_conn.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+        
+        # Mock that no data exists yet
+        mock_cursor.fetchone.return_value = (0,)
+        
+        with patch('data_processing.macro_processing.process_macro_csv_data') as mock_process:
+            with patch('data_processing.macro_processing.insert_macro_collection_events') as mock_events:
+                with patch('data_processing.macro_processing.insert_metrics_data') as mock_metrics:
+                    with patch('data_processing.data_queries.get_macroinvertebrate_dataframe') as mock_query:
+                        mock_process.return_value = self.sample_macro_data
+                        mock_events.return_value = {(101, 'Riffle'): 123, (201, 'Vegetation'): 456}
+                        mock_metrics.return_value = 12
+                        mock_query.return_value = self.sample_macro_data
+                        
+                        result = load_macroinvertebrate_data()
+                        
+                        # Should complete successfully and return data
+                        self.assertFalse(result.empty)
+                        mock_conn.commit.assert_called_once()
+
+    @patch('data_processing.macro_processing.close_connection')
+    @patch('data_processing.macro_processing.get_connection')
+    def test_load_macroinvertebrate_data_existing_data(self, mock_get_conn, mock_close):
+        """Test pipeline when data already exists."""
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_get_conn.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+        
+        # Mock that data already exists
+        mock_cursor.fetchone.return_value = (15,)  # 15 existing records
+        
+        with patch('data_processing.data_queries.get_macroinvertebrate_dataframe') as mock_query:
+            mock_query.return_value = self.sample_macro_data
+            
+            result = load_macroinvertebrate_data()
+            
+            # Should skip processing and return existing data
+            self.assertFalse(result.empty)
+            # Should not call commit since no new data was processed
+            mock_conn.commit.assert_not_called()
+
+    def test_macro_score_validation_integration(self):
+        """Test that macro total scores match sum of components."""
+        # Use the existing total score calculation test logic
+        test_df = self.sample_macro_data.copy()
+        
+        # Apply column name cleaning and mapping
+        test_df.columns = [col.lower().replace('_', '') for col in test_df.columns]
+        
+        column_mapping = {
+            'taxarichnessscore': 'taxa_richness_score',
+            'modhbiscore': 'hbi_score_score',
+            'eptpercscore': 'ept_abundance_score',
+            'epttaxascore': 'ept_taxa_richness_score',
+            'dom2taxascore': 'contribution_dominants_score',
+            'shannonweaverscore': 'shannon_weaver_score',
+            'score': 'total_score'
+        }
+        test_df = test_df.rename(columns=column_mapping)
+        
+        # Calculate expected totals
+        component_cols = [
+            'taxa_richness_score', 'hbi_score_score', 'ept_abundance_score',
+            'ept_taxa_richness_score', 'contribution_dominants_score', 'shannon_weaver_score'
+        ]
+        
+        calculated_totals = test_df[component_cols].sum(axis=1)
+        
+        # Verify calculations match expected values
+        for i, expected_total in enumerate([30, 18, 6]):
+            self.assertEqual(calculated_totals.iloc[i], expected_total)
 
 
 if __name__ == '__main__':
