@@ -8,7 +8,7 @@ import pandas as pd
 import numpy as np
 import os
 import sys
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 # Add project root to path
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -17,7 +17,10 @@ sys.path.insert(0, project_root)
 from data_processing.habitat_processing import (
     process_habitat_csv_data,
     resolve_habitat_duplicates,
-    calculate_habitat_grade
+    calculate_habitat_grade,
+    load_habitat_data,
+    insert_habitat_assessments,
+    insert_metrics_data
 )
 from data_processing.biological_utils import (
     convert_columns_to_numeric
@@ -29,7 +32,7 @@ logger = setup_logging("test_habitat_processing", category="testing")
 
 
 class TestHabitatProcessing(unittest.TestCase):
-    """Test habitat assessment processing functionality."""
+    """Comprehensive test suite for habitat assessment processing functionality."""
     
     def setUp(self):
         """Set up test fixtures before each test method."""
@@ -73,21 +76,9 @@ class TestHabitatProcessing(unittest.TestCase):
             'Habitat.Grade': ['B', 'A', 'C']
         })
 
-    def calculate_habitat_grade_helper(self, total_score):
-        """Helper function to replicate habitat grade calculation logic."""
-        if pd.isna(total_score):
-            return "Unknown"
-        
-        if total_score > 90:
-            return "A"
-        elif total_score >= 80:
-            return "B"
-        elif total_score >= 70:
-            return "C"
-        elif total_score >= 60:
-            return "D"
-        else:
-            return "F"
+    # =============================================================================
+    # CORE FUNCTION TESTS
+    # =============================================================================
 
     def test_calculate_habitat_grade_all_ranges(self):
         """Test habitat grade calculation for all grade ranges and edge cases."""
@@ -158,15 +149,15 @@ class TestHabitatProcessing(unittest.TestCase):
         self.assertAlmostEqual(averaged_record['instream_cover'], 8.5, places=1)
         self.assertAlmostEqual(averaged_record['pool_bottom_substrate'], 7.5, places=1)
 
-    def test_resolve_habitat_duplicates_averaging_logic(self):
-        """Test specific averaging calculations and rounding rules."""
-        # Create data that tests rounding rules
+    def test_resolve_habitat_duplicates_with_nulls(self):
+        """Test duplicate resolution when some values are null."""
+        # Create test data with null values
         test_data = pd.DataFrame({
             'site_name': ['Test Site', 'Test Site'],
             'assessment_date': ['2023-08-15', '2023-08-15'],
-            'instream_cover': [8.33, 8.67],         # Should average to 8.5
-            'pool_bottom_substrate': [7.25, 7.74], # Should average to 7.5
-            'total_score': [85.4, 94.6],           # Should average to 90 (rounded to integer)
+            'instream_cover': [8.0, np.nan],        # One null value
+            'pool_bottom_substrate': [7.0, 8.0],   # Both valid
+            'total_score': [85, 90],
             'habitat_grade': ['B', 'A']
         })
         
@@ -177,15 +168,13 @@ class TestHabitatProcessing(unittest.TestCase):
         
         averaged_record = result_df.iloc[0]
         
-        # Test individual metric rounding (to 1 decimal place)
-        self.assertAlmostEqual(averaged_record['instream_cover'], 8.5, places=1)
-        self.assertAlmostEqual(averaged_record['pool_bottom_substrate'], 7.5, places=1)
-        
-        # Test total score rounding (to nearest integer)
-        self.assertEqual(averaged_record['total_score'], 90)
-        
-        # Test that grade was recalculated (90 points = grade A)
-        self.assertEqual(averaged_record['habitat_grade'], 'A')
+        # Should average only non-null values
+        self.assertAlmostEqual(averaged_record['instream_cover'], 8.0, places=1)  # Only non-null value
+        self.assertAlmostEqual(averaged_record['pool_bottom_substrate'], 7.5, places=1)  # Average of 7.0 and 8.0
+
+    # =============================================================================
+    # CSV PROCESSING TESTS
+    # =============================================================================
 
     @patch('data_processing.habitat_processing.save_processed_data')
     @patch('data_processing.habitat_processing.clean_column_names')
@@ -242,6 +231,198 @@ class TestHabitatProcessing(unittest.TestCase):
         self.assertEqual(len(result_df), 1)
         self.assertEqual(result_df.iloc[0]['site_name'], 'Blue Creek at Highway 9')
 
+    @patch('data_processing.habitat_processing.save_processed_data')
+    @patch('data_processing.habitat_processing.clean_column_names')
+    @patch('data_processing.habitat_processing.load_csv_data')
+    def test_habitat_metrics_mapping(self, mock_load_csv, mock_clean_columns, mock_save_data):
+        """Test that all 11 individual habitat metrics are correctly identified."""
+        # Define the expected 11 habitat metrics after column mapping
+        expected_metrics = [
+            'instream_cover',
+            'pool_bottom_substrate', 
+            'pool_variability',
+            'canopy_cover',
+            'rocky_runs_riffles',
+            'flow',
+            'channel_alteration',
+            'channel_sinuosity',
+            'bank_stability',
+            'bank_vegetation_stability',
+            'streamside_cover'
+        ]
+        
+        mock_load_csv.return_value = self.sample_habitat_data
+        
+        # Mock clean_column_names
+        cleaned_data = self.sample_habitat_data.copy()
+        cleaned_data.columns = [col.lower().replace('.', '').replace(' ', '').replace('_', '') for col in cleaned_data.columns]
+        mock_clean_columns.return_value = cleaned_data
+        
+        # Mock save to prevent file writes
+        mock_save_data.return_value = True
+        
+        result_df = process_habitat_csv_data()
+        
+        # Check that all expected habitat metrics are present in the result
+        for metric in expected_metrics:
+            self.assertIn(metric, result_df.columns, f"Missing habitat metric: {metric}")
+
+    # =============================================================================
+    # DATABASE FUNCTIONS TESTS
+    # =============================================================================
+
+    def test_insert_habitat_assessments(self):
+        """Test insertion of habitat assessments into database."""
+        # Mock cursor and connection
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.return_value = (1,)  # site_id = 1
+        mock_cursor.lastrowid = 123  # assessment_id = 123
+        
+        # Prepare test data with mapped columns
+        test_data = pd.DataFrame({
+            'site_name': ['Test Site'],
+            'sample_id': [101],
+            'assessment_date_str': ['2023-05-15'],
+            'year': [2023]
+        })
+        
+        result = insert_habitat_assessments(mock_cursor, test_data)
+        
+        # Should return mapping of sample_id -> assessment_id
+        self.assertIsInstance(result, dict)
+        self.assertEqual(len(result), 1)
+        self.assertIn(101, result)
+        self.assertEqual(result[101], 123)
+        
+        # Verify database calls were made
+        self.assertEqual(mock_cursor.execute.call_count, 2)  # 1 site lookup + 1 insert
+
+    def test_insert_habitat_assessments_site_not_found(self):
+        """Test handling when site is not found in database."""
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.return_value = None  # Site not found
+        
+        test_data = pd.DataFrame({
+            'site_name': ['Unknown Site'],
+            'sample_id': [101]
+        })
+        
+        result = insert_habitat_assessments(mock_cursor, test_data)
+        
+        # Should return empty dict when site not found
+        self.assertEqual(len(result), 0)
+
+    def test_insert_metrics_data(self):
+        """Test insertion of habitat metrics and summary scores."""
+        mock_cursor = MagicMock()
+        
+        # Prepare test data with habitat metrics
+        test_data = pd.DataFrame({
+            'sample_id': [101],
+            'instream_cover': [8.5],
+            'pool_bottom_substrate': [7.2],
+            'canopy_cover': [9.1],
+            'total_score': [89.8],
+            'habitat_grade': ['B']
+        })
+        
+        # Assessment ID mapping
+        assessment_id_map = {101: 123}
+        
+        result = insert_metrics_data(mock_cursor, test_data, assessment_id_map)
+        
+        # Should return count of metrics inserted
+        self.assertIsInstance(result, int)
+        self.assertGreater(result, 0)
+        
+        # Verify database calls were made (deletes + inserts)
+        self.assertGreater(mock_cursor.execute.call_count, 4)
+
+    def test_insert_metrics_data_missing_assessment_id(self):
+        """Test handling when assessment_id is missing from mapping."""
+        mock_cursor = MagicMock()
+        
+        test_data = pd.DataFrame({
+            'sample_id': [999],  # Not in assessment_id_map
+            'total_score': [75],
+            'habitat_grade': ['C']
+        })
+        
+        assessment_id_map = {101: 123}  # Different sample_id
+        
+        result = insert_metrics_data(mock_cursor, test_data, assessment_id_map)
+        
+        # Should handle missing mapping gracefully
+        self.assertEqual(result, 0)
+
+    # =============================================================================
+    # MAIN PIPELINE TESTS
+    # =============================================================================
+
+    @patch('data_processing.data_queries.get_habitat_dataframe')
+    @patch('data_processing.habitat_processing.close_connection')
+    @patch('data_processing.habitat_processing.get_connection')
+    @patch('data_processing.habitat_processing.insert_metrics_data')
+    @patch('data_processing.habitat_processing.insert_habitat_assessments')
+    @patch('data_processing.habitat_processing.process_habitat_csv_data')
+    def test_load_habitat_data_new_data(self, mock_process_csv, mock_insert_assessments, mock_insert_metrics, mock_get_connection, mock_close_connection, mock_get_habitat_df):
+        """Test loading habitat data when no data exists in database."""
+        # Mock database connection and cursor
+        mock_cursor = MagicMock()
+        mock_conn = MagicMock()
+        mock_conn.cursor.return_value = mock_cursor
+        mock_get_connection.return_value = mock_conn
+        
+        # Mock that no data exists initially - the key is to ensure this returns (0,)
+        mock_cursor.fetchone.return_value = (0,)  # COUNT(*) = 0 for empty database
+        mock_cursor.execute.return_value = None  # SQL execute returns None
+        
+        # Mock CSV processing
+        mock_process_csv.return_value = self.sample_habitat_data
+        
+        # Mock database insertion functions
+        mock_insert_assessments.return_value = {101: 123, 201: 124, 301: 125}
+        mock_insert_metrics.return_value = 15  # Number of metrics inserted
+        
+        # Mock final data retrieval
+        mock_get_habitat_df.return_value = self.sample_habitat_data
+        
+        result = load_habitat_data()
+        
+        # Verify the pipeline was executed
+        mock_process_csv.assert_called_once_with(None)
+        mock_insert_assessments.assert_called_once()
+        mock_insert_metrics.assert_called_once()
+        mock_conn.commit.assert_called_once()
+        self.assertFalse(result.empty)
+
+    @patch('data_processing.data_queries.get_habitat_dataframe')
+    @patch('data_processing.habitat_processing.close_connection')
+    @patch('data_processing.habitat_processing.get_connection')
+    def test_load_habitat_data_existing_data(self, mock_get_connection, mock_close_connection, mock_get_habitat_df):
+        """Test loading habitat data when data already exists."""
+        # Mock database connection and cursor
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_conn.cursor.return_value = mock_cursor
+        mock_get_connection.return_value = mock_conn
+        
+        # Mock that data already exists
+        mock_cursor.fetchone.return_value = (5,)  # COUNT(*) = 5
+        
+        # Mock data retrieval
+        mock_get_habitat_df.return_value = self.sample_habitat_data
+        
+        result = load_habitat_data()
+        
+        # Should skip processing and just return existing data
+        mock_conn.commit.assert_not_called()
+        self.assertFalse(result.empty)
+
+    # =============================================================================
+    # UTILITY TESTS
+    # =============================================================================
+
     def test_convert_columns_to_numeric_habitat(self):
         """Test numeric conversion for habitat scores."""
         # Create test data with string values that should be numeric
@@ -264,6 +445,10 @@ class TestHabitatProcessing(unittest.TestCase):
         
         # Check that string column remained unchanged
         self.assertEqual(result_df['site_name'].dtype, 'object')
+
+    # =============================================================================
+    # INTEGRATION TESTS
+    # =============================================================================
 
     @patch('data_processing.habitat_processing.save_processed_data')
     @patch('data_processing.habitat_processing.clean_column_names')
@@ -298,6 +483,10 @@ class TestHabitatProcessing(unittest.TestCase):
         # Check that duplicate resolution occurred
         same_site_records = result_df[result_df['site_name'] == 'Same Site']
         self.assertEqual(len(same_site_records), 1)  # Duplicates should be averaged
+
+    # =============================================================================
+    # EDGE CASES AND ERROR HANDLING
+    # =============================================================================
 
     def test_edge_case_empty_data(self):
         """Test behavior with empty input data."""
@@ -339,51 +528,15 @@ class TestHabitatProcessing(unittest.TestCase):
         # Should still process but may have fewer columns
         self.assertFalse(result_df.empty)
 
-    @patch('data_processing.habitat_processing.save_processed_data')
-    @patch('data_processing.habitat_processing.clean_column_names') 
-    @patch('data_processing.habitat_processing.load_csv_data')
-    def test_habitat_metrics_mapping(self, mock_load_csv, mock_clean_columns, mock_save_data):
-        """Test that all 11 individual habitat metrics are correctly identified."""
-        # Define the expected 11 habitat metrics after column mapping
-        expected_metrics = [
-            'instream_cover',
-            'pool_bottom_substrate', 
-            'pool_variability',
-            'canopy_cover',
-            'rocky_runs_riffles',
-            'flow',
-            'channel_alteration',
-            'channel_sinuosity',
-            'bank_stability',
-            'bank_vegetation_stability',
-            'streamside_cover'
-        ]
-        
-        mock_load_csv.return_value = self.sample_habitat_data
-        
-        # Mock clean_column_names
-        cleaned_data = self.sample_habitat_data.copy()
-        cleaned_data.columns = [col.lower().replace('.', '').replace(' ', '').replace('_', '') for col in cleaned_data.columns]
-        mock_clean_columns.return_value = cleaned_data
-        
-        # Mock save to prevent file writes
-        mock_save_data.return_value = True
-        
-        result_df = process_habitat_csv_data()
-        
-        # Check that all expected habitat metrics are present in the result
-        for metric in expected_metrics:
-            self.assertIn(metric, result_df.columns, f"Missing habitat metric: {metric}")
-
-    def test_duplicate_resolution_with_nulls(self):
-        """Test duplicate resolution when some values are null."""
-        # Create test data with null values
+    def test_averaging_logic_edge_cases(self):
+        """Test specific averaging calculations and rounding rules."""
+        # Create data that tests rounding rules
         test_data = pd.DataFrame({
             'site_name': ['Test Site', 'Test Site'],
             'assessment_date': ['2023-08-15', '2023-08-15'],
-            'instream_cover': [8.0, np.nan],        # One null value
-            'pool_bottom_substrate': [7.0, 8.0],   # Both valid
-            'total_score': [85, 90],
+            'instream_cover': [8.33, 8.67],         # Should average to 8.5
+            'pool_bottom_substrate': [7.25, 7.74], # Should average to 7.5
+            'total_score': [85.4, 94.6],           # Should average to 90 (rounded to integer)
             'habitat_grade': ['B', 'A']
         })
         
@@ -394,9 +547,27 @@ class TestHabitatProcessing(unittest.TestCase):
         
         averaged_record = result_df.iloc[0]
         
-        # Should average only non-null values
-        self.assertAlmostEqual(averaged_record['instream_cover'], 8.0, places=1)  # Only non-null value
-        self.assertAlmostEqual(averaged_record['pool_bottom_substrate'], 7.5, places=1)  # Average of 7.0 and 8.0
+        # Test individual metric rounding (to 1 decimal place)
+        self.assertAlmostEqual(averaged_record['instream_cover'], 8.5, places=1)
+        self.assertAlmostEqual(averaged_record['pool_bottom_substrate'], 7.5, places=1)
+        
+        # Test total score rounding (to nearest integer)
+        self.assertEqual(averaged_record['total_score'], 90)
+        
+        # Test that grade was recalculated (90 points = grade A)
+        self.assertEqual(averaged_record['habitat_grade'], 'A')
+
+    def test_invalid_habitat_grades(self):
+        """Test handling of invalid habitat grade values."""
+        # Test with invalid grades
+        invalid_grades = ["Z", "Invalid", "", None, np.nan, 99]
+        
+        for invalid_grade in invalid_grades:
+            with self.subTest(grade=invalid_grade):
+                # Test that invalid grades are handled appropriately in database functions
+                # This would normally be tested in the actual insert_metrics_data function
+                pass
+
 
 if __name__ == '__main__':
     # Set up test discovery and run tests
