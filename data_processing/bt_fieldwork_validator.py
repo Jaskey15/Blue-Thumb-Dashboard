@@ -107,7 +107,16 @@ def categorize_and_process_duplicates(fish_df, bt_df):
         DataFrame with replicates assigned correct dates and duplicates averaged
     """
     fish_processed = fish_df.copy()
-    bt_sites = set(bt_df['Site_Clean'].unique())
+    
+    # Handle empty fish DataFrame
+    if fish_df.empty:
+        return fish_processed
+    
+    # Handle empty BT DataFrame
+    if bt_df.empty or 'Site_Clean' not in bt_df.columns:
+        bt_sites = set()
+    else:
+        bt_sites = set(bt_df['Site_Clean'].unique())
     
     # Track processing decisions
     rep_groups_processed = 0
