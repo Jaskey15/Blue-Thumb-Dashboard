@@ -6,7 +6,6 @@ with grade threshold reference lines and data tables for Blue Thumb stream asses
 
 Key Functions:
 - create_habitat_viz(): Create line chart with habitat grade threshold lines
-- add_habitat_grade_reference_lines(): Add reference lines for grades A, B, C, D, F
 - create_habitat_table(): Create data table for habitat metrics
 - create_habitat_metrics_accordion(): Create accordion layout for habitat metrics
 
@@ -16,45 +15,41 @@ Usage:
 """
 
 import os
-import plotly.express as px
-import plotly.graph_objects as go
 import pandas as pd
 
 from dash import html, dash_table
 from utils import create_metrics_accordion, setup_logging
+from .biological_utils import (
+    create_biological_line_plot,
+    update_biological_figure_layout,
+    add_reference_lines,
+    format_biological_metrics_table,
+    create_biological_table_styles,
+    create_biological_data_table,
+    create_hover_text,
+    update_hover_data,
+    create_empty_biological_figure,
+    create_error_biological_figure,
+    FONT_SIZES
+)
 
 logger = setup_logging("habitat_viz", category="visualization")
 
-# Styling constants
-COLORS = {
-    'line': '#3366CC',
-    'marker': '#3366CC',
-    'background': 'rgba(240, 248, 255, 0.8)',
-    'grid': 'white',
-    'habitat_grades': {
-        'A': '#1e8449',    # Green (A grade)
-        'B': '#7cb342',    # Light green (B grade)
-        'C': '#ff9800',    # Orange (C grade)
-        'D': '#e53e3e',    # Red-orange (D grade)
-        'F': '#e74c3c'     # Red (F grade)
-    },
-    'default': '#666666'
-}
-
-FONT_SIZES = {
-    'title': 16,
-    'axis_title': 14,
-    'header': 12,
-    'cell': 11
-}
-
-# Habitat grade thresholds
+# Habitat-specific configuration
 HABITAT_GRADE_THRESHOLDS = {
     'A': 90,
     'B': 80,
     'C': 70,
     'D': 60
     # F is anything below 60
+}
+
+HABITAT_GRADE_COLORS = {
+    'A': '#1e8449',    # Green (A grade)
+    'B': '#7cb342',    # Light green (B grade)
+    'C': '#ff9800',    # Orange (C grade)
+    'D': '#e53e3e',    # Red-orange (D grade)
+    'F': '#e74c3c'     # Red (F grade)
 }
 
 # Habitat metrics to include in the table
@@ -75,49 +70,6 @@ def get_habitat_data_path():
     """
     base_dir = os.path.dirname(os.path.dirname(__file__))
     return os.path.join(base_dir, 'data', 'processed', 'processed_habitat_data.csv')
-
-def add_habitat_grade_reference_lines(fig, df):
-    """
-    Add reference lines for habitat grade thresholds to the figure.
-    
-    Args:
-        fig: Plotly figure to add reference lines to
-        df: DataFrame containing the data with year values
-    
-    Returns:
-        Updated figure with reference lines
-    """
-    if df.empty:
-        return fig
-        
-    # Get min and max year for reference lines
-    x_min = df['Year'].min() - 1
-    x_max = df['Year'].max() + 1
-    
-    # Add reference lines for each habitat grade threshold
-    for grade, threshold in HABITAT_GRADE_THRESHOLDS.items():
-        color = COLORS['habitat_grades'].get(grade, COLORS['default'])
-        
-        # Add line
-        fig.add_shape(
-            type="line",
-            x0=x_min,
-            y0=threshold,
-            x1=x_max,
-            y1=threshold,
-            line=dict(color=color, width=1, dash="dash"),
-        )
-        
-        # Add annotation
-        fig.add_annotation(
-            x=x_min - 0.5,
-            y=threshold,
-            text=f"{grade}",
-            showarrow=False,
-            yshift=10
-        )
-    
-    return fig
 
 def create_habitat_viz(site_name=None):
     """
@@ -142,8 +94,8 @@ def create_habitat_viz(site_name=None):
             
             # Create a DataFrame in the format needed for the chart
             data = pd.DataFrame({
-                'Year': years,
-                'Total_Points': total_points
+                'year': years,  # Use 'year' to match biological_utils expectations
+                'total_score': total_points  # Use 'total_score' to match biological_utils expectations
             })
             
         except Exception as e:
@@ -159,91 +111,51 @@ def create_habitat_viz(site_name=None):
             if data.empty:
                 # Fall back to hardcoded data if database is also empty
                 data = pd.DataFrame({
-                    'Year': [2012, 2016, 2022],
-                    'Total_Points': [118.2, 88.5, 96.1]
+                    'year': [2012, 2016, 2022],
+                    'total_score': [118.2, 88.5, 96.1]
                 })
             else:
-                # Rename columns to match expected format and include habitat_grade
-                data = data.rename(columns={'year': 'Year', 'total_score': 'Total_Points'})
+                # Rename columns to match expected format
+                data = data.rename(columns={'Year': 'year', 'Total_Points': 'total_score'})
 
-        # Create the line chart
-        title = f'Habitat Assessment Scores Over Time for{site_name}' if site_name else 'Habitat Assessment Scores Over Time'
-        fig = px.line(
+        # Check if we have any data
+        if data.empty:
+            return create_empty_biological_figure(site_name, "habitat")
+
+        # Create the line plot using shared utilities
+        title = f'Habitat Assessment Scores Over Time for {site_name}' if site_name else 'Habitat Assessment Scores Over Time'
+        fig = create_biological_line_plot(
             data, 
-            x='Year', 
-            y='Total_Points',
-            markers=True,
-            title=title,
-            labels={'Total_Points': 'Habitat Assessment Score', 'Year': 'Year'}
+            title, 
+            y_column='total_score',
+            has_seasons=False
         )
 
-        # Add reference lines for habitat grades
-        add_habitat_grade_reference_lines(fig, data)
-
-        # Calculate dynamic y-axis range based on data
-        max_value = data['Total_Points'].max()
-        y_upper_limit = max(130, max_value * 1.1)  # Use at least 130 or 110% of max value
-
-        # Customize styling
-        fig.update_traces(
-            line=dict(color=COLORS['line'], width=2.5),
-            marker=dict(size=6, color=COLORS['marker'], line=dict(width=1, color=COLORS['marker']))
+        # Update layout using shared utilities
+        fig = update_biological_figure_layout(
+            fig, 
+            data, 
+            title,
+            y_label='Habitat Assessment Score'
         )
 
-        # Update layout
-        fig.update_layout(
-            plot_bgcolor=COLORS['background'],
-            font=dict(family='Arial', size=12),
-            yaxis=dict(
-                gridcolor=COLORS['grid'],
-                gridwidth=1,
-                zeroline=False,
-                range=[0, y_upper_limit],
-                title_font=dict(size=FONT_SIZES['axis_title'])
-            ),
-            xaxis=dict(
-                tickmode='array',
-                tickvals=data['Year'].tolist(),
-                title_font=dict(size=FONT_SIZES['axis_title']),
-                gridcolor=COLORS['grid']
-            ),
-            hovermode='closest',
-            title_x=0.5,
-            title_font=dict(size=FONT_SIZES['title']),
-            height=500,
-            margin=dict(l=50, r=30, t=50, b=10)
-        )
+        # Add habitat grade reference lines using shared utilities
+        fig = add_reference_lines(fig, data, HABITAT_GRADE_THRESHOLDS, HABITAT_GRADE_COLORS)
 
-        # Add hover data
+        # Create custom hover text for habitat data
         hover_text = []
         for _, row in data.iterrows():
             grade = row.get('habitat_grade', 'Unknown')
-            hover_text.append(f"<b>Year</b>: {row['Year']}<br><b>Score</b>: {int(row['Total_Points'])}<br><b>Grade</b>: {grade}")
+            hover_text.append(f"<b>Year</b>: {row['year']}<br><b>Score</b>: {int(row['total_score'])}<br><b>Grade</b>: {grade}")
         
-        fig.update_traces(
-            text=hover_text,
-            hovertemplate='%{text}<extra></extra>',
-            hoverinfo='text'
-        )
+        # Update hover data using shared utilities
+        fig = update_hover_data(fig, hover_text)
 
         return fig
         
     except Exception as e:
-        print(f"Error creating habitat visualization: {e}")
-        # Return empty figure with error message
-        fig = go.Figure()
-        fig.update_layout(
-            title="Error creating habitat visualization",
-            annotations=[dict(
-                text=f"Error: {str(e)}",
-                showarrow=False,
-                xref="paper",
-                yref="paper",
-                x=0.5,
-                y=0.5
-            )]
-        )
-        return fig
+        logger.error(f"Error creating habitat visualization: {e}")
+        return create_error_biological_figure(str(e))
 
 def create_habitat_table(site_name=None):
     """
@@ -319,45 +231,29 @@ def create_habitat_table(site_name=None):
             site_msg = f" for site '{site_name}'" if site_name else ""
             return html.Div(f"No habitat assessment data available{site_msg} in processed_habitat_data.csv.")
         
-        # Create the table component
-        table = dash_table.DataTable(
-            id='habitat-metrics-table',
-            columns=[{"name": col, "id": col} for col in df_filtered.columns],
-            data=df_filtered.to_dict('records'),
-            style_table={
-                'maxWidth': '100%',
-                'overflowX': 'auto',
-                'height': '500px'  # Match the height of the graph
-            },
-            style_header={
-                'backgroundColor': 'rgb(230, 230, 230)',
-                'fontWeight': 'bold',
-                'textAlign': 'center',
-                'fontSize': FONT_SIZES['header']
-            },
-            style_cell={
-                'textAlign': 'center',
-                'padding': '5px',
-                'fontFamily': 'Arial',
-                'fontSize': FONT_SIZES['cell'],
-                'minWidth': '50px',
-                'maxWidth': '150px'
-            },
-            style_cell_conditional=[
-                {
-                    'if': {'column_id': 'Parameter'},
-                    'textAlign': 'left',
-                    'fontWeight': 'bold'
-                }
-            ],
-            style_data_conditional=[
+        # Use shared table styling utilities
+        styles = create_biological_table_styles(df_filtered)
+        
+        # Create the table using shared utilities
+        table = create_biological_data_table(
+            df_filtered, 
+            'habitat-metrics-table', 
+            styles
+        )
+        
+        # Override specific style for habitat table if needed
+        if isinstance(table, dash_table.DataTable):
+            # Add habitat-specific styling
+            table.style_table.update({'height': '500px'})  # Match the height of the graph
+            
+            # Update conditional styling for Total Points row
+            table.style_data_conditional = [
                 {
                     'if': {'filter_query': '{Parameter} = "Total Points"'},
                     'borderTop': '2px solid black',
                     'fontWeight': 'bold'
                 }
             ]
-        )
         
         # Wrap table in a container
         return html.Div([
@@ -365,7 +261,7 @@ def create_habitat_table(site_name=None):
         ], style={"marginBottom": "0px", "paddingBottom": "0px"})
     
     except Exception as e:
-        print(f"Error creating habitat table: {e}")
+        logger.error(f"Error creating habitat table: {e}")
         # Fall back to database data with site filtering
         try:
             from data_processing.data_queries import get_habitat_metrics_data_for_table
@@ -376,52 +272,24 @@ def create_habitat_table(site_name=None):
             if df.empty:
                 return html.Div(f"No habitat assessment data available{' for ' + site_name if site_name else ''}.")
             
-            # Create table from database data
-            table = dash_table.DataTable(
-                id='habitat-metrics-table',
-                columns=[{"name": col, "id": col} for col in df.columns],
-                data=df.to_dict('records'),
-                style_table={
-                    'maxWidth': '100%',
-                    'overflowX': 'auto',
-                    'height': '500px'
-                },
-                style_header={
-                    'backgroundColor': 'rgb(230, 230, 230)',
-                    'fontWeight': 'bold',
-                    'textAlign': 'center',
-                    'fontSize': FONT_SIZES['header']
-                },
-                style_cell={
-                    'textAlign': 'center',
-                    'padding': '5px',
-                    'fontFamily': 'Arial',
-                    'fontSize': FONT_SIZES['cell'],
-                    'minWidth': '50px',
-                    'maxWidth': '150px'
-                },
-                style_cell_conditional=[
-                    {
-                        'if': {'column_id': 'Parameter'},
-                        'textAlign': 'left',
-                        'fontWeight': 'bold'
-                    }
-                ],
-                style_data_conditional=[
-                    {
-                        'if': {'filter_query': '{Parameter} = "Total Points"'},
-                        'borderTop': '2px solid black',
-                        'fontWeight': 'bold'
-                    }
-                ]
+            # Use shared table styling utilities for database fallback
+            styles = create_biological_table_styles(df)
+            
+            table = create_biological_data_table(
+                df,
+                'habitat-metrics-table',
+                styles
             )
+            
+            # Override height for habitat table
+            if isinstance(table, dash_table.DataTable):
+                table.style_table.update({'height': '500px'})
             
             return html.Div([table])
             
         except Exception as db_error:
-            print(f"Error loading habitat data from database: {db_error}")
+            logger.error(f"Error loading habitat data from database: {db_error}")
             return html.Div(f"Error loading habitat assessment data: {str(e)}")
-
 
 def create_habitat_metrics_accordion(site_name=None):
     """
@@ -437,5 +305,5 @@ def create_habitat_metrics_accordion(site_name=None):
         table = create_habitat_table(site_name)
         return create_metrics_accordion(table, "Habitat Assessment Scores", "habitat-accordion")
     except Exception as e:
-        print(f"Error creating habitat metrics accordion: {e}")
+        logger.error(f"Error creating habitat metrics accordion: {e}")
         return html.Div(f"Error creating habitat metrics accordion: {str(e)}")
