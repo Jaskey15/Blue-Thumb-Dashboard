@@ -23,12 +23,12 @@ import plotly.graph_objects as go
 
 from database.database import get_connection, close_connection
 from utils import setup_logging
-
-from visualizations.map_queries import (
-    get_latest_chemical_data_for_maps,
-    get_latest_fish_data_for_maps,
-    get_latest_macro_data_for_maps,
-    get_latest_habitat_data_for_maps
+from visualizations.cached_map_queries import (
+    get_latest_chemical_data_for_maps_cached as get_latest_chemical_data_for_maps,
+    get_latest_fish_data_for_maps_cached as get_latest_fish_data_for_maps,
+    get_latest_macro_data_for_maps_cached as get_latest_macro_data_for_maps,
+    get_latest_habitat_data_for_maps_cached as get_latest_habitat_data_for_maps,
+    load_sites_from_database_cached
 )
 
 logger = setup_logging("map_viz", category="visualization")
@@ -578,7 +578,7 @@ def create_basic_site_map(active_only=False):
         fig = go.Figure()
         
         # Load sites from database
-        monitoring_sites = load_sites_from_database()
+        monitoring_sites = load_sites_from_database_cached()
         
         # Check if we have sites loaded
         if not monitoring_sites:
@@ -642,7 +642,7 @@ def add_parameter_colors_to_map(fig, param_type, param_name, sites=None):
         if sites is not None:
             sites_to_use = sites
         else:
-            sites_to_use = load_sites_from_database()
+            sites_to_use = load_sites_from_database_cached()
         
         # Clear existing traces (basic blue markers)
         fig.data = []

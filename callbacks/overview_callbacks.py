@@ -93,15 +93,16 @@ def register_overview_callbacks(app):
         try:
             from visualizations.map_viz import (
                 create_basic_site_map, add_parameter_colors_to_map, 
-                filter_sites_by_active_status, load_sites_from_database
+                filter_sites_by_active_status
             )
+            from visualizations.cached_map_queries import load_sites_from_database_cached
             
             # If no parameter selected, show basic map with filtering applied
             if not parameter_value:
                 basic_map, active_count, historic_count, total_count = create_basic_site_map(active_only=active_only_toggle)
 
                 if active_only_toggle:
-                    monitoring_sites = load_sites_from_database()
+                    monitoring_sites = load_sites_from_database_cached()
                     total_sites_count = len(monitoring_sites)
                     legend_html = create_map_legend_html(total_count=total_count, active_only=active_only_toggle, total_sites_count=total_sites_count)
                 else:
@@ -120,7 +121,7 @@ def register_overview_callbacks(app):
             param_type, param_name = parameter_value.split(':', 1)
             
             # Filter sites based on toggle state
-            monitoring_sites = load_sites_from_database()
+            monitoring_sites = load_sites_from_database_cached()
             filtered_sites, active_count, historic_count, total_original = filter_sites_by_active_status(
                 monitoring_sites, active_only_toggle
             )

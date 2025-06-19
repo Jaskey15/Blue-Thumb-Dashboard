@@ -36,38 +36,40 @@ def get_latest_chemical_data_for_maps(site_name=None):
     conn = get_connection()
     try:
         query = """
-        WITH latest_events AS (
-            SELECT 
-                site_id,
-                event_id,
-                collection_date,
-                year,
-                month,
-                ROW_NUMBER() OVER (PARTITION BY site_id ORDER BY collection_date DESC) as rn
-            FROM chemical_collection_events
-        ),
-        latest_data AS (
+        WITH latest_measurements AS (
             SELECT 
                 s.site_name AS Site_Name,
-                le.collection_date AS Date,
-                le.year AS Year,
-                le.month AS Month,
+                c.collection_date AS Date,
+                c.year AS Year,
+                c.month AS Month,
                 p.parameter_code,
                 m.value,
-                m.status
-            FROM latest_events le
-            JOIN sites s ON le.site_id = s.site_id
-            JOIN chemical_measurements m ON le.event_id = m.event_id
+                m.status,
+                ROW_NUMBER() OVER (
+                    PARTITION BY s.site_id, p.parameter_code 
+                    ORDER BY c.collection_date DESC
+                ) as rn
+            FROM chemical_measurements m
+            JOIN chemical_collection_events c ON m.event_id = c.event_id
+            JOIN sites s ON c.site_id = s.site_id
             JOIN chemical_parameters p ON m.parameter_id = p.parameter_id
-            WHERE le.rn = 1
         )
-        SELECT * FROM latest_data
+        SELECT 
+            Site_Name,
+            Date,
+            Year,
+            Month,
+            parameter_code,
+            value,
+            status
+        FROM latest_measurements
+        WHERE rn = 1
         """
         
         # Add site filter if needed
         params = []
         if site_name:
-            query = query.replace("WHERE le.rn = 1", "WHERE le.rn = 1 AND s.site_name = ?")
+            query = query.replace("WHERE rn = 1", "WHERE rn = 1 AND Site_Name = ?")
             params.append(site_name)
             
         # Execute query
@@ -80,20 +82,30 @@ def get_latest_chemical_data_for_maps(site_name=None):
         # Convert date column to datetime
         df['Date'] = pd.to_datetime(df['Date'])
         
-        # Create separate pivots for values and status (same as before)
+        # Create pivots using only Site_Name as index (not date, since dates differ per parameter)
         value_pivot = df.pivot_table(
-            index=['Site_Name', 'Date', 'Year', 'Month'],
+            index='Site_Name',
             columns='parameter_code',
             values='value',
             aggfunc='first'
         ).reset_index()
         
         status_pivot = df.pivot_table(
-            index=['Site_Name', 'Date', 'Year', 'Month'],
+            index='Site_Name',
             columns='parameter_code',
             values='status',
             aggfunc='first'
         ).reset_index()
+        
+        # Add the most recent overall date and year/month info for each site
+        site_dates = df.groupby('Site_Name')['Date'].max().reset_index()
+        site_years = df.groupby('Site_Name')['Year'].max().reset_index()
+        site_months = df.groupby('Site_Name')['Month'].max().reset_index()
+        
+        # Merge date info
+        value_pivot = value_pivot.merge(site_dates, on='Site_Name', how='left')
+        value_pivot = value_pivot.merge(site_years, on='Site_Name', how='left')
+        value_pivot = value_pivot.merge(site_months, on='Site_Name', how='left')
         
         # Add status columns with '_status' suffix
         for param in KEY_PARAMETERS:

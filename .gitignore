@@ -21,8 +21,12 @@ ENV/
 tenmile_creek.log
 tenmile_creek_setup.log
 
+# Cache files
+cache/
+*.pkl
+
 # Database files you don't want to include (uncomment if needed)
-# *.db
+.db
 
 # Environment variables
 .env
