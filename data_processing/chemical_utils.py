@@ -274,9 +274,9 @@ def determine_status(parameter, value, reference_values):
     elif parameter == 'pH':
         if 'normal min' in ref and 'normal max' in ref:
             if value < ref['normal min']:
-                return "Below Normal"
+                return "Below Normal (Acidic)"
             elif value > ref['normal max']:
-                return "Above Normal"
+                return "Above Normal (Basic/Alkaline)"
             else:
                 return "Normal"
                 

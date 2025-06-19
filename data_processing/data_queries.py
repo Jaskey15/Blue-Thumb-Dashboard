@@ -58,7 +58,7 @@ def get_chemical_data_from_db(site_name=None):
         site_name: Optional site name to filter data for
         
     Returns:
-        DataFrame with chemical data
+        DataFrame with chemical data including status columns
     """
     from database.database import get_connection, close_connection
     from data_processing.chemical_utils import KEY_PARAMETERS
@@ -101,20 +101,32 @@ def get_chemical_data_from_db(site_name=None):
         # Convert date column to datetime
         df['Date'] = pd.to_datetime(df['Date'])
         
-        # Pivot the data to get one row per date/site
-        pivot_df = df.pivot_table(
+        # Create separate pivots for values and status
+        value_pivot = df.pivot_table(
             index=['Site_Name', 'Date', 'Year', 'Month'],
             columns='parameter_code',
             values='value',
             aggfunc='first'
         ).reset_index()
         
+        status_pivot = df.pivot_table(
+            index=['Site_Name', 'Date', 'Year', 'Month'],
+            columns='parameter_code',
+            values='status',
+            aggfunc='first'
+        ).reset_index()
+        
+        # Add status columns with '_status' suffix
+        for param in KEY_PARAMETERS:
+            if param in status_pivot.columns:
+                value_pivot[f'{param}_status'] = status_pivot[param]
+        
         # Check if we have the key parameters
         for param in KEY_PARAMETERS:
-            if param not in pivot_df.columns:
+            if param not in value_pivot.columns:
                 logger.warning(f"Key parameter {param} not found in database data")
                 
-        return pivot_df
+        return value_pivot
         
     except Exception as e:
         logger.error(f"Error retrieving chemical data from database: {e}")
