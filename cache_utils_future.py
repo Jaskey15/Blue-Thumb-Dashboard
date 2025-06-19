@@ -1,5 +1,5 @@
 """
-Cache utility functions for the Tenmile Creek Water Quality Dashboard.
+Cache utility functions for the Blue Thumb Dashboard.
 Provides caching functionality to improve dashboard performance.
 """
 

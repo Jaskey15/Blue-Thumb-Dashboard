@@ -24,6 +24,13 @@ import plotly.graph_objects as go
 from database.database import get_connection, close_connection
 from utils import setup_logging
 
+from visualizations.map_queries import (
+    get_latest_chemical_data_for_maps,
+    get_latest_fish_data_for_maps,
+    get_latest_macro_data_for_maps,
+    get_latest_habitat_data_for_maps
+)
+
 logger = setup_logging("map_viz", category="visualization")
 
 # Styling constants
@@ -134,45 +141,35 @@ def load_sites_from_database():
 
 def get_latest_data_by_type(data_type):
     """
-    Get the latest data for each site by data type.
+    Get the latest data for each site by data type using efficient SQL queries.
+    Uses database indexes and window functions to get only latest data per site.
     
     Args:
         data_type: 'chemical', 'fish', 'macro', or 'habitat'
     
     Returns:
-        DataFrame with latest data per site (and season for macro data)
+        DataFrame with latest data per site (already filtered, no Python grouping needed)
     """
-    if data_type == 'chemical':
-        from data_processing.data_queries import get_chemical_data_from_db
-        df = get_chemical_data_from_db() 
-        
-    elif data_type == 'fish':
-        from data_processing.data_queries import get_fish_dataframe
-        df = get_fish_dataframe()  
-        
-    elif data_type == 'macro':
-        from data_processing.data_queries import get_macroinvertebrate_dataframe
-        df = get_macroinvertebrate_dataframe()  
-        
-    elif data_type == 'habitat':
-        from data_processing.data_queries import get_habitat_dataframe
-        df = get_habitat_dataframe() 
-        
-    else:
+    # Define query functions for each data type
+    query_functions = {
+        'chemical': get_latest_chemical_data_for_maps,
+        'fish': get_latest_fish_data_for_maps,
+        'macro': get_latest_macro_data_for_maps,
+        'habitat': get_latest_habitat_data_for_maps
+    }
+    
+    if data_type not in query_functions:
         raise ValueError(f"Unknown data type: {data_type}")
+    
+    # Execute the optimized query
+    df = query_functions[data_type]()
     
     if df.empty:
         logger.warning(f"No {data_type} data found in database")
         return pd.DataFrame()
     
-    # Handle different grouping logic based on data type
-    if data_type == 'chemical':
-        latest_data = df.sort_values('Date').groupby('Site_Name').last().reset_index()
-    else:
-        latest_data = df.sort_values('year').groupby('site_name').last().reset_index()
-    
-    logger.info(f"Retrieved latest {data_type} data for {len(latest_data)} records")
-    return latest_data
+    logger.info(f"Retrieved latest {data_type} data for {len(df)} sites")
+    return df
 
 def get_status_color_from_database(data_type, status_value):
     """

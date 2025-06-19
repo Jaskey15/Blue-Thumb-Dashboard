@@ -132,7 +132,8 @@ def get_chemical_data_from_db(site_name=None):
         logger.error(f"Error retrieving chemical data from database: {e}")
         return pd.DataFrame()
     finally:
-        close_connection(conn)
+        if conn:
+            close_connection(conn)
 
 # =============================================================================
 # Fish Data Queries
