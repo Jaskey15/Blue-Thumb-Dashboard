@@ -1,3 +1,20 @@
+"""
+chemical_viz.py - Water Quality Chemical Data Visualization
+
+This module creates visualizations for water quality chemical parameters including 
+time series plots with threshold-based color coding and reference lines for 
+Blue Thumb stream monitoring data.
+
+Key Functions:
+- create_time_series_plot(): Individual parameter time series with threshold highlighting
+- create_all_parameters_view(): Multi-parameter subplot dashboard view
+- Helper functions for threshold plotting, reference lines, and status color mapping
+
+Parameters Supported:
+- Dissolved Oxygen, pH, Soluble Nitrogen, Phosphorus, Chloride
+- Status categories: Normal, Caution, Poor, Above/Below Normal for pH
+"""
+
 import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
@@ -6,6 +23,7 @@ from plotly.subplots import make_subplots
 from data_processing.data_queries import get_chemical_data_from_db
 from data_processing.chemical_utils import KEY_PARAMETERS, get_reference_values
 from callbacks.helper_functions import get_parameter_label, get_parameter_name
+from visualizations.visualization_utils import create_empty_figure, create_error_figure, FONT_SIZES
 from utils import setup_logging
 
 logger = setup_logging("chemical_viz", category="visualization")
@@ -26,24 +44,6 @@ MARKER_SIZES = {
 }
 
 # Helper functions
-def _create_empty_figure(message, title="No data available"):
-    """Create an empty figure with an error/info message"""
-    fig = go.Figure()
-    fig.update_layout(
-        title=title,
-        annotations=[
-            dict(
-                text=message,
-                showarrow=False,
-                xref="paper",
-                yref="paper",
-                x=0.5,
-                y=0.5
-            )
-        ]
-    )
-    return fig
-
 def _add_threshold_plot(fig, df, parameter, reference_values, marker_size, y_label, row=None, col=None):
     """Add threshold-based colored scatter plot with connecting lines and reference lines"""
     plot_df = df.copy()
@@ -165,7 +165,7 @@ def _add_parameter_reference_lines(fig, parameter, df, reference_values, row=Non
                     showarrow=False,
                     xanchor="left",
                     yanchor="bottom",
-                    font=dict(size=10, color=color),
+                    font=dict(size=FONT_SIZES['cell'], color=color),
                     opacity=0.7,
                     xshift=-5
                 )
@@ -206,7 +206,7 @@ def create_time_series_plot(df, parameter, reference_values, title=None, y_label
     """Generate time series plot for parameter with optional threshold highlighting"""
     # Check if we have data
     if len(df) == 0:
-        return _create_empty_figure("No data available for the selected time range")
+        return create_empty_figure(site_name, "chemical")
     
     # Use defaults if no custom values provided
     if title is None:
@@ -287,7 +287,7 @@ def create_time_series_plot(df, parameter, reference_values, title=None, y_label
     
     return fig
 
-def create_parameter_dashboard(df=None, parameters=None, reference_values=None, highlight_thresholds=True, get_param_name=None, site_name=None):
+def create_all_parameters_view(df=None, parameters=None, reference_values=None, highlight_thresholds=True, get_param_name=None, site_name=None):
     """Create a subplot figure for all parameters with optional threshold highlighting"""
     # If no data is provided, get it from database
     if df is None or parameters is None or reference_values is None:
@@ -297,7 +297,7 @@ def create_parameter_dashboard(df=None, parameters=None, reference_values=None, 
             reference_values = get_reference_values()
         except Exception as e:
             print(f"Error loading chemical data: {e}")
-            return _create_empty_figure(f"Error: {str(e)}", "Error loading data")
+            return create_error_figure(str(e))
 
     # If no parameter name function provided, use the standard function
     if get_param_name is None:
@@ -305,7 +305,7 @@ def create_parameter_dashboard(df=None, parameters=None, reference_values=None, 
 
     # Check if there is data
     if len(df) == 0:
-        return _create_empty_figure("No data available for the selected time range")
+        return create_empty_figure(site_name, "chemical")
     
     # Calculate rows and columns needed
     n_params = len(parameters)
@@ -374,8 +374,8 @@ def create_parameter_dashboard(df=None, parameters=None, reference_values=None, 
         # Update y-axis title
         fig.update_yaxes(
             title_text=y_label,
-            title_font=dict(size=12),
-            tickfont=dict(size=10),
+            title_font=dict(size=FONT_SIZES['header']),
+            tickfont=dict(size=FONT_SIZES['cell']),
             row=row, col=col
         )
     

@@ -1,21 +1,37 @@
+"""
+fish_viz.py - Fish Community Assessment Data Visualization
+
+This module creates visualizations for fish community Index of Biotic Integrity (IBI) 
+data including line charts with integrity class reference lines and data tables for 
+Blue Thumb bioassessment monitoring.
+
+Key Functions:
+- create_fish_viz(): Create IBI score line chart with integrity thresholds
+- create_fish_metrics_table(): Create data table for fish community metrics
+- create_fish_metrics_accordion(): Create accordion layout for fish metrics
+
+Integrity Classes:
+- Excellent (0.97+), Good (0.76+), Fair (0.60+), Poor (0.47+)
+"""
+
 import plotly.graph_objects as go
 import pandas as pd
 
 from dash import dash_table, html
 from data_processing.data_queries import get_fish_dataframe, get_fish_metrics_data_for_table
 from utils import create_metrics_accordion, setup_logging
-from .biological_utils import (
-    BIOLOGICAL_COLORS, 
-    create_biological_line_plot,
-    update_biological_figure_layout,
+from .visualization_utils import (
+    DEFAULT_COLORS, 
+    create_line_plot,
+    update_figure_layout,
     add_reference_lines,
-    format_biological_metrics_table,
-    create_biological_table_styles,
-    create_biological_data_table,
+    format_metrics_table,
+    create_table_styles,
+    create_data_table,
     create_hover_text,
     update_hover_data,
-    create_empty_biological_figure,
-    create_error_biological_figure
+    create_empty_figure,
+    create_error_figure
 )
 
 logger = setup_logging("fish_viz", category="visualization")
@@ -29,10 +45,10 @@ INTEGRITY_THRESHOLDS = {
 }
 
 INTEGRITY_COLORS = {
-    'Excellent': BIOLOGICAL_COLORS['excellent'],
-    'Good': BIOLOGICAL_COLORS['good'],
-    'Fair': BIOLOGICAL_COLORS['fair'],
-    'Poor': BIOLOGICAL_COLORS['poor']
+    'Excellent': DEFAULT_COLORS['excellent'],
+    'Good': DEFAULT_COLORS['good'],
+    'Fair': DEFAULT_COLORS['fair'],
+    'Poor': DEFAULT_COLORS['poor']
 }
 
 FISH_METRIC_ORDER = [
@@ -62,11 +78,11 @@ def create_fish_viz(site_name=None):
         fish_df = get_fish_dataframe(site_name)
         
         if fish_df.empty:
-            return create_empty_biological_figure(site_name, "fish")
+            return create_empty_figure(site_name, "fish")
 
         # Create the line plot using shared utilities
         title = f"IBI Scores Over Time for {site_name}" if site_name else "IBI Scores Over Time"
-        fig_fish = create_biological_line_plot(
+        fig_fish = create_line_plot(
             fish_df, 
             title, 
             y_column='comparison_to_reference',
@@ -74,7 +90,7 @@ def create_fish_viz(site_name=None):
         )
 
         # Update layout using shared utilities
-        fig_fish = update_biological_figure_layout(
+        fig_fish = update_figure_layout(
             fig_fish, 
             fish_df, 
             title,
@@ -92,7 +108,7 @@ def create_fish_viz(site_name=None):
     
     except Exception as e:
         logger.error(f"Error creating fish visualization for {site_name}: {e}")
-        return create_error_biological_figure(str(e))
+        return create_error_figure(str(e))
 
 def create_fish_metrics_table(metrics_df, summary_df):
     """
@@ -107,7 +123,7 @@ def create_fish_metrics_table(metrics_df, summary_df):
     """
     try:
         # Format the data using shared utilities
-        metrics_table, summary_rows = format_biological_metrics_table(
+        metrics_table, summary_rows = format_metrics_table(
             metrics_df, 
             summary_df, 
             FISH_METRIC_ORDER,
@@ -117,9 +133,9 @@ def create_fish_metrics_table(metrics_df, summary_df):
         # Combine metrics and summary rows
         full_table = pd.concat([metrics_table, summary_rows], ignore_index=True)
     
-        styles = create_biological_table_styles(metrics_table)
+        styles = create_table_styles(metrics_table)
         
-        table = create_biological_data_table(full_table, 'fish-metrics-table', styles)
+        table = create_data_table(full_table, 'fish-metrics-table', styles)
         
         return table
     

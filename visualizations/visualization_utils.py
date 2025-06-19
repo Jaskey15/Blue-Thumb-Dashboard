@@ -1,15 +1,15 @@
 """
-biological_utils.py - Shared utilities for biological community visualizations
+visualization_utils.py - Shared utilities for data visualizations
 
-This module contains helper functions and constants shared between fish and 
-macroinvertebrate visualization modules to ensure consistent styling and 
-reduce code duplication.
+This module contains helper functions and constants shared between different 
+visualization modules (fish, macroinvertebrate, habitat) to ensure consistent 
+styling and reduce code duplication.
 
 Key Functions:
-- create_biological_line_plot(): Generic line plot creation
+- create_line_plot(): Generic line plot creation
 - add_reference_lines(): Add threshold reference lines to plots
-- format_biological_metrics_table(): Format metrics data into table structure
-- create_biological_table_styles(): Consistent table styling
+- format_metrics_table(): Format metrics data into table structure
+- create_table_styles(): Consistent table styling
 - Helper functions for error handling and data processing
 """
 
@@ -19,10 +19,10 @@ import pandas as pd
 from dash import dash_table, html
 from utils import setup_logging
 
-logger = setup_logging("biological_utils", category="visualization")
+logger = setup_logging("visualization_utils", category="visualization")
 
 # Shared styling constants
-BIOLOGICAL_COLORS = {
+DEFAULT_COLORS = {
     'Winter': 'blue',
     'Summer': 'red',
     'excellent': 'green',
@@ -39,10 +39,10 @@ FONT_SIZES = {
     'cell': 11
 }
 
-def create_biological_line_plot(df, title, y_column='comparison_to_reference', 
-                               has_seasons=False, color_map=None):
+def create_line_plot(df, title, y_column='comparison_to_reference', 
+                    has_seasons=False, color_map=None):
     """
-    Create a generic line plot for biological data.
+    Create a generic line plot for data visualizations.
     
     Args:
         df: DataFrame containing the data
@@ -68,7 +68,7 @@ def create_biological_line_plot(df, title, y_column='comparison_to_reference',
                     'year': 'Year',
                     'season': 'Season'
                 },
-                color_discrete_map=color_map or BIOLOGICAL_COLORS
+                color_discrete_map=color_map or DEFAULT_COLORS
             )
         else:
             # Create single line plot
@@ -87,8 +87,8 @@ def create_biological_line_plot(df, title, y_column='comparison_to_reference',
         return fig
     
     except Exception as e:
-        logger.error(f"Error creating biological line plot: {e}")
-        return create_error_biological_figure(str(e))
+        logger.error(f"Error creating line plot: {e}")
+        return create_error_figure(str(e))
 
 def calculate_dynamic_y_range(df, column='comparison_to_reference'):
     """
@@ -113,15 +113,16 @@ def calculate_dynamic_y_range(df, column='comparison_to_reference'):
         logger.warning(f"Error calculating y-range: {e}")
         return 0, 1.1
 
-def update_biological_figure_layout(fig, df, title, y_label=None):
+def update_figure_layout(fig, df, title, y_label=None, y_column='comparison_to_reference'):
     """
-    Apply common layout settings to biological figures.
+    Apply common layout settings to figures.
     
     Args:
         fig: Plotly figure to update
         df: DataFrame containing the data
         title: Plot title
         y_label: Custom y-axis label
+        y_column: Column name to use for y-range calculation
     
     Returns:
         Updated figure
@@ -130,8 +131,8 @@ def update_biological_figure_layout(fig, df, title, y_label=None):
         if df.empty:
             return fig
         
-        # Calculate y-range
-        y_min, y_max = calculate_dynamic_y_range(df)
+        # Calculate y-range using the specified column
+        y_min, y_max = calculate_dynamic_y_range(df, column=y_column)
         
         # Get unique years for x-axis
         years = sorted(df['year'].unique()) if 'year' in df.columns else []
@@ -190,8 +191,8 @@ def add_reference_lines(fig, df, thresholds, line_colors=None):
             color = 'gray'
             if line_colors and label in line_colors:
                 color = line_colors[label]
-            elif label.lower() in BIOLOGICAL_COLORS:
-                color = BIOLOGICAL_COLORS[label.lower()]
+            elif label.lower() in DEFAULT_COLORS:
+                color = DEFAULT_COLORS[label.lower()]
             
             # Add line
             fig.add_shape(
@@ -218,10 +219,10 @@ def add_reference_lines(fig, df, thresholds, line_colors=None):
         logger.error(f"Error adding reference lines: {e}")
         return fig
 
-def format_biological_metrics_table(metrics_df, summary_df, metric_order, 
-                                   summary_labels=None, season=None):
+def format_metrics_table(metrics_df, summary_df, metric_order, 
+                        summary_labels=None, season=None):
     """
-    Format biological metrics data into a table structure.
+    Format metrics data into a table structure.
     
     Args:
         metrics_df: DataFrame containing metrics data
@@ -260,10 +261,23 @@ def format_biological_metrics_table(metrics_df, summary_df, metric_order,
                 metric_row = year_metrics[year_metrics['metric_name'] == metric]
                 if not metric_row.empty:
                     try:
-                        score_value = metric_row['metric_score'].values[0]
-                        scores.append(int(score_value))
+                        # Handle different column names for score values
+                        if 'metric_score' in metric_row.columns:
+                            score_value = metric_row['metric_score'].values[0]
+                        elif 'score' in metric_row.columns:
+                            score_value = metric_row['score'].values[0]
+                        else:
+                            logger.warning(f"No score column found for metric {metric}")
+                            scores.append('-')
+                            continue
+                        
+                        # Round to 1 decimal place for habitat scores, int for others
+                        if isinstance(score_value, float) and score_value != int(score_value):
+                            scores.append(round(score_value, 1))
+                        else:
+                            scores.append(int(score_value))
                     except (ValueError, TypeError) as e:
-                        logger.warning(f"Could not convert metric score to int: {score_value}, error: {e}")
+                        logger.warning(f"Could not convert metric score to number: {score_value}, error: {e}")
                         scores.append('-')
                 else:
                     scores.append('-')
@@ -284,31 +298,48 @@ def format_biological_metrics_table(metrics_df, summary_df, metric_order,
             if not year_summary.empty:
                 try:
                     total_score = int(year_summary['total_score'].values[0])
-                    comparison = f"{year_summary['comparison_to_reference'].values[0]:.2f}"
                     
-                    # Get condition/integrity class
-                    condition = 'Unknown'
-                    if 'biological_condition' in year_summary.columns:
-                        condition = year_summary['biological_condition'].values[0]
-                    elif 'integrity_class' in year_summary.columns:
-                        condition = year_summary['integrity_class'].values[0]
+                    # Create summary row data based on available columns
+                    summary_data = [total_score]
                     
-                    summary_rows[str(year)] = [total_score, comparison, condition]
+                    # Add comparison to reference if available (fish/macro data)
+                    if 'comparison_to_reference' in year_summary.columns:
+                        comparison = f"{year_summary['comparison_to_reference'].values[0]:.2f}"
+                        summary_data.append(comparison)
+                        
+                        # Get condition/integrity class
+                        condition = 'Unknown'
+                        if 'biological_condition' in year_summary.columns:
+                            condition = year_summary['biological_condition'].values[0]
+                        elif 'integrity_class' in year_summary.columns:
+                            condition = year_summary['integrity_class'].values[0]
+                        summary_data.append(condition)
+                    
+                    # Handle habitat data (has habitat_grade instead of comparison)
+                    elif 'habitat_grade' in year_summary.columns:
+                        habitat_grade = year_summary['habitat_grade'].values[0]
+                        summary_data.append(habitat_grade)
+                    
+                    # Fill remaining positions if summary_labels has more items
+                    while len(summary_data) < len(summary_labels):
+                        summary_data.append('-')
+                    
+                    summary_rows[str(year)] = summary_data
                 except (ValueError, TypeError) as e:
                     logger.warning(f"Error processing summary data for year {year}: {e}")
-                    summary_rows[str(year)] = ['-', '-', '-']
+                    summary_rows[str(year)] = ['-'] * len(summary_labels)
             else:
-                summary_rows[str(year)] = ['-', '-', '-']
+                summary_rows[str(year)] = ['-'] * len(summary_labels)
         
         return metrics_table, summary_rows
     
     except Exception as e:
-        logger.error(f"Error formatting biological metrics table: {e}")
+        logger.error(f"Error formatting metrics table: {e}")
         return pd.DataFrame({'Metric': metric_order}), pd.DataFrame({'Metric': ['Error']})
 
-def create_biological_table_styles(metrics_table):
+def create_table_styles(metrics_table):
     """
-    Create consistent styling for biological metrics tables.
+    Create consistent styling for metrics tables.
     
     Args:
         metrics_table: DataFrame with the metrics rows (used for row indexing)
@@ -359,14 +390,14 @@ def create_biological_table_styles(metrics_table):
         ]
     }
 
-def create_biological_data_table(full_table, table_id, styles):
+def create_data_table(full_table, table_id, styles):
     """
-    Create a standardized DataTable component for biological data.
+    Create a standardized DataTable component for data.
     
     Args:
         full_table: DataFrame containing the table data
         table_id: Unique ID for the table
-        styles: Style dictionary from create_biological_table_styles()
+        styles: Style dictionary from create_table_styles()
     
     Returns:
         Dash DataTable component
@@ -379,12 +410,12 @@ def create_biological_data_table(full_table, table_id, styles):
             **styles
         )
     except Exception as e:
-        logger.error(f"Error creating biological data table: {e}")
+        logger.error(f"Error creating data table: {e}")
         return html.Div(f"Error creating table: {str(e)}")
 
 def create_hover_text(df, has_seasons=False, condition_column='biological_condition'):
     """
-    Generate hover text for biological plots.
+    Generate hover text for plots.
     
     Args:
         df: DataFrame containing the data
@@ -447,13 +478,13 @@ def update_hover_data(fig, hover_text):
         logger.error(f"Error updating hover data: {e}")
         return fig
 
-def create_empty_biological_figure(site_name=None, data_type="biological"):
+def create_empty_figure(site_name=None, data_type="data"):
     """
     Create an empty figure with appropriate message.
     
     Args:
         site_name: Optional site name
-        data_type: Type of biological data
+        data_type: Type of data
     
     Returns:
         Empty Plotly figure with message
@@ -473,7 +504,7 @@ def create_empty_biological_figure(site_name=None, data_type="biological"):
     )
     return fig
 
-def create_error_biological_figure(error_message):
+def create_error_figure(error_message):
     """
     Create an error figure with error message.
     
@@ -495,5 +526,4 @@ def create_error_biological_figure(error_message):
             y=0.5
         )]
     )
-    return fig
-
+    return fig 

@@ -640,7 +640,7 @@ def get_habitat_metrics_data_for_table(site_name=None):
         site_name: Optional site name to filter data for
     
     Returns:
-        DataFrame with metrics data formatted for display
+        Tuple of (metrics_df, summary_df) for display (following fish/macro pattern)
     """
     from database.database import get_connection, close_connection
     
@@ -653,6 +653,7 @@ def get_habitat_metrics_data_for_table(site_name=None):
         SELECT 
             s.site_name,
             a.year,
+            a.assessment_id,
             m.metric_name,
             m.score
         FROM 
@@ -663,46 +664,45 @@ def get_habitat_metrics_data_for_table(site_name=None):
             sites s ON a.site_id = s.site_id
         '''
         
+        # Base query for summary data
+        summary_query = '''
+        SELECT 
+            s.site_name,
+            a.year,
+            a.assessment_id,
+            h.total_score,
+            h.habitat_grade
+        FROM 
+            habitat_summary_scores h
+        JOIN 
+            habitat_assessments a ON h.assessment_id = a.assessment_id
+        JOIN
+            sites s ON a.site_id = s.site_id
+        '''
+        
         # Add site filter if needed
         params = []
         if site_name:
-            metrics_query += " WHERE s.site_name = ?"
+            where_clause = " WHERE s.site_name = ?"
+            metrics_query += where_clause
+            summary_query += where_clause
             params.append(site_name)
             
         # Add order by clause
         metrics_query += ' ORDER BY s.site_name, a.year, m.metric_name'
+        summary_query += ' ORDER BY s.site_name, a.year'
         
-        # Execute query
+        # Execute queries
         metrics_df = pd.read_sql_query(metrics_query, conn, params=params)
+        summary_df = pd.read_sql_query(summary_query, conn, params=params)
         
-        # If metrics are found, pivot the data to create a table with years as columns
-        if not metrics_df.empty:
-            # Pivot the data
-            pivot_df = metrics_df.pivot_table(
-                index='metric_name',
-                columns='year',
-                values='score',
-                aggfunc='first'
-            )
-            
-            # Reset index to make metric_name a column
-            pivot_df = pivot_df.reset_index()
-            
-            # Convert column names to strings
-            pivot_df.columns = pivot_df.columns.astype(str)
-            
-            # Rename index column from 'metric_name' to 'Parameter'
-            pivot_df = pivot_df.rename(columns={'metric_name': 'Parameter'})
-            
-            logger.info(f"Retrieved and pivoted habitat metrics data for {len(pivot_df)} metrics")
-            return pivot_df
-        else:
-            logger.warning("No habitat metrics data found")
-            return pd.DataFrame()
+        logger.debug(f"Retrieved habitat metrics data: {len(metrics_df)} metric records and {len(summary_df)} summary records")
+        
+        return metrics_df, summary_df
     
     except Exception as e:
         logger.error(f"Error retrieving habitat metrics data for table: {e}")
-        return pd.DataFrame()
+        return pd.DataFrame(), pd.DataFrame()
     
     finally:
         if conn:

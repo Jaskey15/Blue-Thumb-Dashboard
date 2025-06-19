@@ -447,10 +447,10 @@ def create_all_parameters_visualization(df_filtered, key_parameters, reference_v
             return empty_state, html.Div(), html.Div()
         
         # Import the visualization function
-        from visualizations.chemical_viz import create_parameter_dashboard
+        from visualizations.chemical_viz import create_all_parameters_view
         
         # Create the comprehensive figure
-        fig = create_parameter_dashboard(df_filtered, key_parameters, reference_values, highlight_thresholds, site_name=site_name)
+        fig = create_all_parameters_view(df_filtered, key_parameters, reference_values, highlight_thresholds, site_name=site_name)
         
         # Create the graph component
         graph = dcc.Graph(

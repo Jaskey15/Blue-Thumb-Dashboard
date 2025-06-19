@@ -1,6 +1,6 @@
 """
-Test suite for biological visualization utilities.
-Tests the shared functions in visualizations.biological_utils module.
+Test suite for visualization utilities.
+Tests the shared functions in visualizations.visualization_utils module.
 """
 
 import unittest
@@ -16,38 +16,37 @@ from unittest.mock import patch, MagicMock
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, project_root)
 
-from visualizations.biological_utils import (
+from visualizations.visualization_utils import (
     # Core visualization functions
-    create_biological_line_plot,
+    create_line_plot,
     calculate_dynamic_y_range,
-    update_biological_figure_layout,
+    update_figure_layout,
     add_reference_lines,
     
     # Table formatting functions
-    format_biological_metrics_table,
-    create_biological_table_styles,
-    create_biological_data_table,
+    format_metrics_table,
+    create_table_styles,
+    create_data_table,
     
     # Hover and interaction functions
     create_hover_text,
     update_hover_data,
     
     # Error handling functions
-    create_empty_biological_figure,
-    create_error_biological_figure,
+    create_empty_figure,
+    create_error_figure,
     
     # Constants
-    BIOLOGICAL_COLORS,
+    DEFAULT_COLORS,
     FONT_SIZES
 )
 from utils import setup_logging
 
 # Set up logging for tests
-logger = setup_logging("test_biological_utils", category="testing")
+logger = setup_logging("test_visualization_utils", category="testing")
 
-
-class TestBiologicalUtils(unittest.TestCase):
-    """Test biological visualization utility functions."""
+class TestVisualizationUtils(unittest.TestCase):
+    """Test visualization utility functions."""
     
     def setUp(self):
         """Set up test fixtures before each test method."""
@@ -107,9 +106,9 @@ class TestBiologicalUtils(unittest.TestCase):
     # CORE VISUALIZATION FUNCTION TESTS
     # =============================================================================
 
-    def test_create_biological_line_plot_single_line(self):
+    def test_create_line_plot_single_line(self):
         """Test creating line plot without seasons (fish-style)."""
-        fig = create_biological_line_plot(
+        fig = create_line_plot(
             self.sample_fish_data,
             "Test Fish Plot",
             y_column='comparison_to_reference',
@@ -130,14 +129,14 @@ class TestBiologicalUtils(unittest.TestCase):
         self.assertEqual(list(trace.x), [2020, 2021, 2022, 2023])
         self.assertAlmostEqual(list(trace.y), [0.85, 0.72, 0.91, 0.68])
 
-    def test_create_biological_line_plot_multi_line(self):
+    def test_create_line_plot_multi_line(self):
         """Test creating line plot with seasons (macro-style)."""
-        fig = create_biological_line_plot(
+        fig = create_line_plot(
             self.sample_macro_data,
             "Test Macro Plot",
             y_column='comparison_to_reference',
             has_seasons=True,
-            color_map=BIOLOGICAL_COLORS
+            color_map=DEFAULT_COLORS
         )
         
         # Should return a plotly Figure
@@ -154,11 +153,11 @@ class TestBiologicalUtils(unittest.TestCase):
         self.assertIn('Summer', trace_names)
         self.assertIn('Winter', trace_names)
 
-    def test_create_biological_line_plot_empty_data(self):
+    def test_create_line_plot_empty_data(self):
         """Test line plot creation with empty data."""
         empty_df = pd.DataFrame()
         
-        fig = create_biological_line_plot(
+        fig = create_line_plot(
             empty_df,
             "Empty Plot",
             has_seasons=False
@@ -201,12 +200,12 @@ class TestBiologicalUtils(unittest.TestCase):
         self.assertEqual(y_min, 0)
         self.assertEqual(y_max, 1.1)
 
-    def test_update_biological_figure_layout_basic(self):
+    def test_update_figure_layout_basic(self):
         """Test basic figure layout update."""
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=[1, 2, 3], y=[1, 2, 3]))
         
-        updated_fig = update_biological_figure_layout(
+        updated_fig = update_figure_layout(
             fig, 
             self.sample_fish_data, 
             "Test Title",
@@ -228,12 +227,12 @@ class TestBiologicalUtils(unittest.TestCase):
         # Should center title
         self.assertEqual(fig.layout.title.x, 0.5)
 
-    def test_update_biological_figure_layout_empty_data(self):
+    def test_update_figure_layout_empty_data(self):
         """Test figure layout update with empty data."""
         fig = go.Figure()
         empty_df = pd.DataFrame()
         
-        updated_fig = update_biological_figure_layout(fig, empty_df, "Test Title")
+        updated_fig = update_figure_layout(fig, empty_df, "Test Title")
         
         # Should handle gracefully
         self.assertIs(updated_fig, fig)
@@ -284,12 +283,12 @@ class TestBiologicalUtils(unittest.TestCase):
     # TABLE FORMATTING FUNCTION TESTS
     # =============================================================================
 
-    def test_format_biological_metrics_table_basic(self):
+    def test_format_metrics_table_basic(self):
         """Test basic metrics table formatting."""
         metric_order = ['Taxa Richness', 'EPT Taxa Richness', 'HBI Score']
         summary_labels = ['Total Score', 'Comparison to Reference', 'Biological Condition']
         
-        metrics_table, summary_rows = format_biological_metrics_table(
+        metrics_table, summary_rows = format_metrics_table(
             self.sample_metrics_data,
             self.sample_summary_data,
             metric_order,
@@ -308,11 +307,11 @@ class TestBiologicalUtils(unittest.TestCase):
         # Summary table should have correct structure
         self.assertEqual(summary_rows['Metric'].tolist(), summary_labels)
 
-    def test_format_biological_metrics_table_with_season(self):
+    def test_format_metrics_table_with_season(self):
         """Test metrics table formatting with season filter."""
         metric_order = ['Taxa Richness', 'EPT Taxa Richness', 'HBI Score']
         
-        metrics_table, summary_rows = format_biological_metrics_table(
+        metrics_table, summary_rows = format_metrics_table(
             self.sample_metrics_data,
             self.sample_summary_data,
             metric_order,
@@ -323,12 +322,12 @@ class TestBiologicalUtils(unittest.TestCase):
         self.assertIsInstance(metrics_table, pd.DataFrame)
         self.assertIsInstance(summary_rows, pd.DataFrame)
 
-    def test_format_biological_metrics_table_empty_data(self):
+    def test_format_metrics_table_empty_data(self):
         """Test metrics table formatting with empty data."""
         metric_order = ['Taxa Richness', 'EPT Taxa Richness']
         empty_df = pd.DataFrame()
         
-        metrics_table, summary_rows = format_biological_metrics_table(
+        metrics_table, summary_rows = format_metrics_table(
             empty_df, empty_df, metric_order
         )
         
@@ -337,11 +336,11 @@ class TestBiologicalUtils(unittest.TestCase):
         self.assertIsInstance(summary_rows, pd.DataFrame)
         self.assertEqual(metrics_table['Metric'].tolist(), metric_order)
 
-    def test_create_biological_table_styles(self):
+    def test_create_table_styles(self):
         """Test table styling creation."""
         mock_metrics_table = pd.DataFrame({'Metric': ['A', 'B', 'C']})
         
-        styles = create_biological_table_styles(mock_metrics_table)
+        styles = create_table_styles(mock_metrics_table)
         
         # Should return dictionary with expected keys
         expected_keys = ['style_table', 'style_header', 'style_cell', 
@@ -356,7 +355,7 @@ class TestBiologicalUtils(unittest.TestCase):
         # Should have conditional styling for summary rows
         self.assertGreater(len(styles['style_data_conditional']), 0)
 
-    def test_create_biological_data_table(self):
+    def test_create_data_table(self):
         """Test data table component creation."""
         from dash import dash_table
         
@@ -374,7 +373,7 @@ class TestBiologicalUtils(unittest.TestCase):
             'style_data_conditional': []
         }
         
-        table = create_biological_data_table(test_data, 'test-table', styles)
+        table = create_data_table(test_data, 'test-table', styles)
         
         # Should return DataTable component
         self.assertIsInstance(table, dash_table.DataTable)
@@ -444,9 +443,9 @@ class TestBiologicalUtils(unittest.TestCase):
     # ERROR HANDLING FUNCTION TESTS
     # =============================================================================
 
-    def test_create_empty_biological_figure_with_site(self):
+    def test_create_empty_figure_with_site(self):
         """Test empty figure creation with site name."""
-        fig = create_empty_biological_figure(site_name="Test Site", data_type="fish")
+        fig = create_empty_figure(site_name="Test Site", data_type="fish")
         
         # Should return plotly Figure
         self.assertIsInstance(fig, go.Figure)
@@ -459,10 +458,10 @@ class TestBiologicalUtils(unittest.TestCase):
         self.assertEqual(len(fig.layout.annotations), 1)
         self.assertEqual(fig.layout.annotations[0].text, "No data available")
 
-    def test_create_error_biological_figure(self):
+    def test_create_error_figure(self):
         """Test error figure creation."""
         error_message = "Test error message"
-        fig = create_error_biological_figure(error_message)
+        fig = create_error_figure(error_message)
         
         # Should return plotly Figure
         self.assertIsInstance(fig, go.Figure)
@@ -478,23 +477,23 @@ class TestBiologicalUtils(unittest.TestCase):
     # CONSTANTS TESTS
     # =============================================================================
 
-    def test_biological_colors_constant(self):
-        """Test BIOLOGICAL_COLORS constant structure."""
+    def test_default_colors_constant(self):
+        """Test DEFAULT_COLORS constant structure."""
         # Should have seasonal colors
-        self.assertIn('Winter', BIOLOGICAL_COLORS)
-        self.assertIn('Summer', BIOLOGICAL_COLORS)
+        self.assertIn('Winter', DEFAULT_COLORS)
+        self.assertIn('Summer', DEFAULT_COLORS)
         
         # Should have condition colors
-        self.assertIn('excellent', BIOLOGICAL_COLORS)
-        self.assertIn('good', BIOLOGICAL_COLORS)
-        self.assertIn('fair', BIOLOGICAL_COLORS)
-        self.assertIn('poor', BIOLOGICAL_COLORS)
+        self.assertIn('excellent', DEFAULT_COLORS)
+        self.assertIn('good', DEFAULT_COLORS)
+        self.assertIn('fair', DEFAULT_COLORS)
+        self.assertIn('poor', DEFAULT_COLORS)
         
         # Should have default color
-        self.assertIn('default', BIOLOGICAL_COLORS)
+        self.assertIn('default', DEFAULT_COLORS)
         
         # All values should be strings (color names/codes)
-        for color in BIOLOGICAL_COLORS.values():
+        for color in DEFAULT_COLORS.values():
             self.assertIsInstance(color, str)
 
     def test_font_sizes_constant(self):
@@ -509,7 +508,6 @@ class TestBiologicalUtils(unittest.TestCase):
         # Title should be largest
         self.assertGreaterEqual(FONT_SIZES['title'], FONT_SIZES['axis_title'])
         self.assertGreaterEqual(FONT_SIZES['axis_title'], FONT_SIZES['header'])
-
 
 if __name__ == '__main__':
     unittest.main(verbosity=2) 

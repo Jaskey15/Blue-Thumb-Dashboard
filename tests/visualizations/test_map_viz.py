@@ -39,8 +39,7 @@ from visualizations.map_viz import (
     # Constants
     COLORS,
     PARAMETER_LABELS,
-    MAP_PARAMETER_LABELS,
-    MONITORING_SITES
+    MAP_PARAMETER_LABELS
 )
 from utils import setup_logging
 
@@ -557,7 +556,7 @@ class TestMapViz(unittest.TestCase):
 
     def test_create_basic_site_map_all_sites(self):
         """Test creation of basic site map with all sites."""
-        with patch('visualizations.map_viz.MONITORING_SITES', self.sample_sites):
+        with patch('visualizations.map_viz.load_sites_from_database', return_value=self.sample_sites):
             fig, active_count, historic_count, total_count = create_basic_site_map(active_only=False)
         
         # Should return a plotly Figure
@@ -576,7 +575,7 @@ class TestMapViz(unittest.TestCase):
 
     def test_create_basic_site_map_active_only(self):
         """Test creation of basic site map with active sites only."""
-        with patch('visualizations.map_viz.MONITORING_SITES', self.sample_sites):
+        with patch('visualizations.map_viz.load_sites_from_database', return_value=self.sample_sites):
             fig, active_count, historic_count, total_count = create_basic_site_map(active_only=True)
         
         # Should return a plotly Figure
@@ -592,7 +591,7 @@ class TestMapViz(unittest.TestCase):
 
     def test_create_basic_site_map_no_sites(self):
         """Test creation of basic site map with no sites."""
-        with patch('visualizations.map_viz.MONITORING_SITES', []):
+        with patch('visualizations.map_viz.load_sites_from_database', return_value=[]):
             fig, active_count, historic_count, total_count = create_basic_site_map()
         
         # Should return error map
@@ -663,16 +662,16 @@ class TestMapViz(unittest.TestCase):
 
     @patch('visualizations.map_viz.add_data_markers')
     def test_add_parameter_colors_to_map_default_sites(self, mock_add_markers):
-        """Test adding parameter colors with default MONITORING_SITES."""
+        """Test adding parameter colors when no sites are provided (loads from database)."""
         mock_add_markers.return_value = (go.Figure(), 3, 3)
         
-        with patch('visualizations.map_viz.MONITORING_SITES', self.sample_sites):
+        with patch('visualizations.map_viz.load_sites_from_database', return_value=self.sample_sites):
             fig = go.Figure()
             updated_fig, sites_with_data, total_sites = add_parameter_colors_to_map(
                 fig, 'chem', 'pH'  # No sites parameter provided
             )
             
-            # Should use MONITORING_SITES
+            # Should use sites loaded from database
             call_args = mock_add_markers.call_args[0]
             self.assertEqual(call_args[1], self.sample_sites)
 
@@ -771,7 +770,7 @@ class TestMapViz(unittest.TestCase):
         """Test complete workflow for creating a chemical parameter map."""
         mock_get_data.return_value = self.sample_chemical_data
         
-        with patch('visualizations.map_viz.MONITORING_SITES', self.sample_sites):
+        with patch('visualizations.map_viz.load_sites_from_database', return_value=self.sample_sites):
             # Create basic map
             fig, active_count, historic_count, total_count = create_basic_site_map()
             

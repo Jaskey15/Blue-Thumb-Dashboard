@@ -1,21 +1,38 @@
+"""
+macro_viz.py - Macroinvertebrate Community Assessment Data Visualization
+
+This module creates visualizations for macroinvertebrate bioassessment data including 
+seasonal line charts with biological condition reference lines and data tables for 
+Blue Thumb stream monitoring.
+
+Key Functions:
+- create_macro_viz(): Create bioassessment score line chart with condition thresholds
+- create_macro_metrics_table_for_season(): Create season-specific metrics tables
+- create_macro_metrics_accordion(): Create accordion layout for summer/winter metrics
+
+Biological Conditions:
+- Non-impaired (0.83+), Slightly Impaired (0.54+), Moderately Impaired (0.17+)
+- Supports both Summer and Winter seasonal data
+"""
+
 import plotly.graph_objects as go
 import pandas as pd
 
 from dash import dash_table, html
 from data_processing.data_queries import get_macroinvertebrate_dataframe, get_macro_metrics_data_for_table
 from utils import create_metrics_accordion, setup_logging
-from .biological_utils import (
-    BIOLOGICAL_COLORS,
-    create_biological_line_plot,
-    update_biological_figure_layout,
+from .visualization_utils import (
+    DEFAULT_COLORS,
+    create_line_plot,
+    update_figure_layout,
     add_reference_lines,
-    format_biological_metrics_table,
-    create_biological_table_styles,
-    create_biological_data_table,
+    format_metrics_table,
+    create_table_styles,
+    create_data_table,
     create_hover_text,
     update_hover_data,
-    create_empty_biological_figure,
-    create_error_biological_figure
+    create_empty_figure,
+    create_error_figure
 )
 
 logger = setup_logging("macro_viz", category="visualization")
@@ -63,20 +80,20 @@ def create_macro_viz(site_name=None):
             macro_df = macro_df[macro_df['site_name'] == site_name]
         
         if macro_df.empty:
-            return create_empty_biological_figure(site_name, "macroinvertebrate")
+            return create_empty_figure(site_name, "macroinvertebrate")
 
         # Create the line plot using shared utilities
         title = f"Bioassessment Scores Over Time for {site_name}" if site_name else "Bioassessment Scores Over Time"
-        fig_macro = create_biological_line_plot(
+        fig_macro = create_line_plot(
             macro_df,
             title,
             y_column='comparison_to_reference',
             has_seasons=True,
-            color_map=BIOLOGICAL_COLORS
+            color_map=DEFAULT_COLORS
         )
 
         # Update layout using shared utilities
-        fig_macro = update_biological_figure_layout(
+        fig_macro = update_figure_layout(
             fig_macro,
             macro_df,
             title,
@@ -99,7 +116,7 @@ def create_macro_viz(site_name=None):
     
     except Exception as e:
         logger.error(f"Error creating macroinvertebrate visualization for {site_name}: {e}")
-        return create_error_biological_figure(str(e))
+        return create_error_figure(str(e))
 
 def create_macro_metrics_table_for_season(metrics_df, summary_df, season):
     """
@@ -115,7 +132,7 @@ def create_macro_metrics_table_for_season(metrics_df, summary_df, season):
     """
     try:
         # Format data for the selected season using shared utilities
-        season_metrics, season_summary = format_biological_metrics_table(
+        season_metrics, season_summary = format_metrics_table(
             metrics_df, 
             summary_df, 
             MACRO_METRIC_ORDER,
@@ -125,10 +142,10 @@ def create_macro_metrics_table_for_season(metrics_df, summary_df, season):
         season_full_table = pd.concat([season_metrics, season_summary], ignore_index=True)
         
         # Get styling using shared utilities
-        styles = create_biological_table_styles(season_metrics)
+        styles = create_table_styles(season_metrics)
         
         # Create the table component using shared utilities
-        table = create_biological_data_table(
+        table = create_data_table(
             season_full_table, 
             f'{season.lower()}-macro-metrics-table', 
             styles

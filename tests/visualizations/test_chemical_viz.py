@@ -16,16 +16,16 @@ project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(_
 sys.path.insert(0, project_root)
 
 from visualizations.chemical_viz import (
-    _create_empty_figure,
     _add_threshold_plot,
     _add_standard_plot,
     _format_date_axes,
     _add_parameter_reference_lines,
     create_time_series_plot,
-    create_parameter_dashboard,
+    create_all_parameters_view,
     COLORS,
     MARKER_SIZES
 )
+from visualizations.visualization_utils import create_empty_figure, create_error_figure
 from utils import setup_logging
 
 # Set up logging for tests
@@ -89,33 +89,38 @@ class TestChemicalViz(unittest.TestCase):
     # =============================================================================
 
     def test_create_empty_figure_basic(self):
-        """Test creation of empty figure with message."""
-        message = "No data available"
-        title = "Test Title"
+        """Test creation of empty figure with site name and data type."""
+        site_name = "Test Site"
+        data_type = "chemical"
         
-        fig = _create_empty_figure(message, title)
+        fig = create_empty_figure(site_name, data_type)
         
         # Should return a plotly Figure
         self.assertIsInstance(fig, go.Figure)
         
-        # Should have the specified title
-        self.assertEqual(fig.layout.title.text, title)
+        # Should have appropriate title
+        self.assertIn(data_type, fig.layout.title.text)
+        self.assertIn(site_name, fig.layout.title.text)
         
         # Should have annotation with message
         self.assertEqual(len(fig.layout.annotations), 1)
-        self.assertEqual(fig.layout.annotations[0].text, message)
+        self.assertIn("No data available", fig.layout.annotations[0].text)
 
-    def test_create_empty_figure_defaults(self):
-        """Test empty figure creation with default parameters."""
-        message = "Test message"
+    def test_create_error_figure_basic(self):
+        """Test creation of error figure with message."""
+        error_message = "Database connection failed"
         
-        fig = _create_empty_figure(message)
+        fig = create_error_figure(error_message)
         
-        # Should use default title
-        self.assertEqual(fig.layout.title.text, "No data available")
+        # Should return a plotly Figure
+        self.assertIsInstance(fig, go.Figure)
         
-        # Should have the message
-        self.assertEqual(fig.layout.annotations[0].text, message)
+        # Should have error title
+        self.assertEqual(fig.layout.title.text, "Error creating visualization")
+        
+        # Should have annotation with error message
+        self.assertEqual(len(fig.layout.annotations), 1)
+        self.assertIn(error_message, fig.layout.annotations[0].text)
 
     def test_format_date_axes_basic(self):
         """Test date axis formatting."""
@@ -335,13 +340,13 @@ class TestChemicalViz(unittest.TestCase):
 
     @patch('visualizations.chemical_viz.get_chemical_data_from_db')
     @patch('visualizations.chemical_viz.get_reference_values')
-    def test_create_parameter_dashboard_basic(self, mock_get_ref, mock_get_data):
+    def test_create_all_parameters_view_basic(self, mock_get_ref, mock_get_data):
         """Test basic parameter dashboard creation."""
         # Mock data loading functions
         mock_get_data.return_value = self.sample_chemical_data
         mock_get_ref.return_value = self.sample_reference_values
         
-        fig = create_parameter_dashboard()
+        fig = create_all_parameters_view()
         
         # Should return a plotly Figure
         self.assertIsInstance(fig, go.Figure)
@@ -352,12 +357,12 @@ class TestChemicalViz(unittest.TestCase):
         # Should have title
         self.assertIsNotNone(fig.layout.title.text)
 
-    def test_create_parameter_dashboard_with_data(self):
+    def test_create_all_parameters_view_with_data(self):
         """Test parameter dashboard with provided data."""
         df = self.sample_chemical_data
         parameters = ['do_percent', 'pH', 'Phosphorus', 'Chloride']
         
-        fig = create_parameter_dashboard(
+        fig = create_all_parameters_view(
             df=df, 
             parameters=parameters,
             reference_values=self.sample_reference_values,
@@ -373,12 +378,12 @@ class TestChemicalViz(unittest.TestCase):
         # Should have multiple traces
         self.assertGreater(len(fig.data), len(parameters))
 
-    def test_create_parameter_dashboard_with_thresholds(self):
+    def test_create_all_parameters_view_with_thresholds(self):
         """Test dashboard with threshold highlighting enabled."""
         df = self.sample_chemical_data
         parameters = ['do_percent', 'pH']
         
-        fig = create_parameter_dashboard(
+        fig = create_all_parameters_view(
             df=df,
             parameters=parameters,
             reference_values=self.sample_reference_values,
@@ -388,12 +393,12 @@ class TestChemicalViz(unittest.TestCase):
         # Should have threshold-colored traces
         self.assertGreater(len(fig.data), len(parameters))
 
-    def test_create_parameter_dashboard_without_thresholds(self):
+    def test_create_all_parameters_view_without_thresholds(self):
         """Test dashboard without threshold highlighting."""
         df = self.sample_chemical_data
         parameters = ['do_percent', 'pH']
         
-        fig = create_parameter_dashboard(
+        fig = create_all_parameters_view(
             df=df,
             parameters=parameters,
             reference_values=self.sample_reference_values,
@@ -403,12 +408,12 @@ class TestChemicalViz(unittest.TestCase):
         # Should have standard plots
         self.assertGreaterEqual(len(fig.data), len(parameters))
 
-    def test_create_parameter_dashboard_empty_data(self):
+    def test_create_all_parameters_view_empty_data(self):
         """Test dashboard creation with empty data."""
         empty_df = pd.DataFrame()
         parameters = ['do_percent', 'pH']
         
-        fig = create_parameter_dashboard(
+        fig = create_all_parameters_view(
             df=empty_df,
             parameters=parameters,
             reference_values=self.sample_reference_values

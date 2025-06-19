@@ -1,3 +1,23 @@
+"""
+map_viz.py - Interactive Map Visualization for Monitoring Sites
+
+This module creates interactive maps displaying monitoring site locations with 
+parameter-specific color coding based on water quality status, biological conditions, 
+and habitat assessments for Blue Thumb stream monitoring data.
+
+Key Functions:
+- create_basic_site_map(): Basic site map with active/historic site differentiation
+- add_parameter_colors_to_map(): Add parameter-specific status color coding
+- add_data_markers(): Add markers for chemical, biological, or habitat data
+- Helper functions for data loading, status mapping, and hover text generation
+
+Supported Data Types:
+- Chemical parameters (DO, pH, nutrients) with Normal/Caution/Poor status
+- Fish IBI with Excellent/Good/Fair/Poor integrity classes  
+- Macroinvertebrate bioassessment with impairment levels
+- Habitat assessment with A/B/C/D/F grade classifications
+"""
+
 import pandas as pd
 import plotly.graph_objects as go
 
@@ -560,17 +580,20 @@ def create_basic_site_map(active_only=False):
         # Create the base map
         fig = go.Figure()
         
+        # Load sites from database
+        monitoring_sites = load_sites_from_database()
+        
         # Check if we have sites loaded
-        if not MONITORING_SITES:
+        if not monitoring_sites:
             return create_error_map("Error: No monitoring sites available"), 0, 0, 0
         
         # Apply filtering if requested
         if active_only:
             sites_to_use, active_count, historic_count, total_original = filter_sites_by_active_status(
-                MONITORING_SITES, active_only
+                monitoring_sites, active_only
             )
         else:
-            sites_to_use = MONITORING_SITES
+            sites_to_use = monitoring_sites
             active_count = sum(1 for site in sites_to_use if site.get('active', False))
             historic_count = len(sites_to_use) - active_count
         
@@ -612,14 +635,17 @@ def add_parameter_colors_to_map(fig, param_type, param_name, sites=None):
         fig: Existing plotly figure with basic markers
         param_type: Type of parameter ('chem', 'bio', or 'habitat')
         param_name: Specific parameter name (e.g., 'do_percent', 'Fish_IBI')
-        sites: List of site dictionaries to use (defaults to MONITORING_SITES if None)
+        sites: List of site dictionaries to use (if None, loads from database)
     
     Returns:
         Tuple of (updated_figure, sites_with_data_count, total_sites_count)
     """
     try:        
-        # Use provided sites or default to all monitoring sites
-        sites_to_use = sites if sites is not None else MONITORING_SITES
+        # Use provided sites or load from database
+        if sites is not None:
+            sites_to_use = sites
+        else:
+            sites_to_use = load_sites_from_database()
         
         # Clear existing traces (basic blue markers)
         fig.data = []
@@ -653,12 +679,4 @@ def add_parameter_colors_to_map(fig, param_type, param_name, sites=None):
         logger.error(f"Error adding parameter colors: {e}")
         return fig, 0, len(sites_to_use)  # Return original figure if coloring fails
 
-# ============================================================================
-# MODULE INITIALIZATION
-# ============================================================================
 
-try:
-    MONITORING_SITES = load_sites_from_database()
-except Exception as e:
-    print(f"Warning: Could not load sites from database: {e}")
-    MONITORING_SITES = []  # Fallback to empty list

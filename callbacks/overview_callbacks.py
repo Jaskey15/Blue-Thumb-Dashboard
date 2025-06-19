@@ -93,7 +93,7 @@ def register_overview_callbacks(app):
         try:
             from visualizations.map_viz import (
                 create_basic_site_map, add_parameter_colors_to_map, 
-                filter_sites_by_active_status, MONITORING_SITES
+                filter_sites_by_active_status, load_sites_from_database
             )
             
             # If no parameter selected, show basic map with filtering applied
@@ -101,8 +101,8 @@ def register_overview_callbacks(app):
                 basic_map, active_count, historic_count, total_count = create_basic_site_map(active_only=active_only_toggle)
 
                 if active_only_toggle:
-                    from visualizations.map_viz import MONITORING_SITES
-                    total_sites_count = len(MONITORING_SITES)
+                    monitoring_sites = load_sites_from_database()
+                    total_sites_count = len(monitoring_sites)
                     legend_html = create_map_legend_html(total_count=total_count, active_only=active_only_toggle, total_sites_count=total_sites_count)
                 else:
                     legend_html = create_map_legend_html(total_count=total_count, active_only=active_only_toggle)
@@ -120,8 +120,9 @@ def register_overview_callbacks(app):
             param_type, param_name = parameter_value.split(':', 1)
             
             # Filter sites based on toggle state
+            monitoring_sites = load_sites_from_database()
             filtered_sites, active_count, historic_count, total_original = filter_sites_by_active_status(
-                MONITORING_SITES, active_only_toggle
+                monitoring_sites, active_only_toggle
             )
             
             # Start with current figure or create basic map
