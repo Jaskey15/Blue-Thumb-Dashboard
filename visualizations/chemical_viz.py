@@ -339,7 +339,7 @@ def create_time_series_plot(df, parameter, reference_values, title=None, y_label
                             marker=dict(size=MARKER_SIZES['individual'], color=color),
                             name=status_type,
                             hovertemplate='<b>Date</b>: %{x|%Y-%m-%d}<br>' +
-                                        '<b>' + y_label + '</b>: %{y:.2f}<br>' +
+                                        '<b>' + y_label + '</b>: %{y}<br>' +
                                         '<b>Status</b>: ' + status_type +
                                         '<extra></extra>'
                         )
@@ -375,7 +375,7 @@ def create_time_series_plot(df, parameter, reference_values, title=None, y_label
                 marker=dict(size=MARKER_SIZES['individual'], color='blue'),
                 line=dict(color='blue', width=1),
                 name=parameter,
-                hovertemplate='<b>Date</b>: %{x|%Y-%m-%d}<br><b>Value</b>: %{y:.2f}<extra></extra>'
+                hovertemplate='<b>Date</b>: %{x|%Y-%m-%d}<br><b>Value</b>: %{y}<extra></extra>'
             )
         )
     
@@ -501,7 +501,7 @@ def create_parameter_dashboard(df=None, parameters=None, reference_values=None, 
                                 legendgroup=param,
                                 showlegend=False,
                                 hovertemplate='<b>Date</b>: %{x|%Y-%m-%d}<br>' +
-                                            '<b>' + param + '</b>: %{y:.2f}<br>' +
+                                            '<b>' + param + '</b>: %{y}<br>' +
                                             '<b>Status</b>: ' + status_type +
                                             '<extra></extra>'
                             ),
@@ -537,7 +537,7 @@ def create_parameter_dashboard(df=None, parameters=None, reference_values=None, 
                         marker=dict(size=MARKER_SIZES['dashboard'], color='blue'),
                         line=dict(width=1, color='blue', dash='solid'),
                         opacity=0.7,
-                        hovertemplate='<b>Date</b>: %{x|%Y-%m-%d}<br><b>Value</b>: %{y:.2f}<extra></extra>'
+                        hovertemplate='<b>Date</b>: %{x|%Y-%m-%d}<br><b>Value</b>: %{y}<extra></extra>'
                     ),
                     row=row, col=col
                 )

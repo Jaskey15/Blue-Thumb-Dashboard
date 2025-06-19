@@ -287,7 +287,7 @@ def insert_metrics_data(cursor, macro_df, event_id_map):
                 ''', (
                     event_id,
                     int(row['total_score']),             
-                    float(row['comparison_to_reference']), 
+                    round(float(row['comparison_to_reference']), 2),
                     biological_condition
                 ))
                 summary_count += 1

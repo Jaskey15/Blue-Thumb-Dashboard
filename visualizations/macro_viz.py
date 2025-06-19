@@ -79,7 +79,7 @@ def create_macro_viz(site_name=None):
             return fig
 
         # Create a line plot for macroinvertebrate data
-        title = f"Bioassessment Scores Over Time - {site_name}" if site_name else "Bioassessment Scores Over Time"
+        title = f"Bioassessment Scores Over Time for {site_name}" if site_name else "Bioassessment Scores Over Time"
         fig_macro = px.line(
             macro_df, 
             x='year', 
@@ -102,6 +102,10 @@ def create_macro_viz(site_name=None):
         # Add reference lines for biological condition classes
         add_condition_reference_lines(fig_macro, macro_df)
 
+        # Calculate dynamic y-axis range based on data
+        max_value = macro_df['comparison_to_reference'].max()
+        y_upper_limit = max(1.1, max_value * 1.1)  # Use at least 1.1 or 110% of max value
+
         # Improve the layout
         fig_macro.update_layout(
             xaxis=dict(
@@ -110,20 +114,31 @@ def create_macro_viz(site_name=None):
                 title_font=dict(size=FONT_SIZES['axis_title']),
             ),
             yaxis=dict(
-                range=[0, 1.1],
+                range=[0, y_upper_limit],
                 tickformat='.2f',
                 title_font=dict(size=FONT_SIZES['axis_title']),
             ),
-            hovermode='x unified',
+            hovermode='closest',
             legend_title_text='Season',
             title_x=0.5,
             title_font=dict(size=FONT_SIZES['title'])
         )
 
-        # Add hover data
-        fig_macro.update_traces(
-            hovertemplate='<b>Year:</b> %{x}<br><b>Season:</b> %{fullData.name}<br><b>Score:</b> %{y:.2f}<extra></extra>'
-        )
+        # Add hover data 
+        for i, trace in enumerate(fig_macro.data):
+            season = trace.name
+            season_hover_text = []
+            season_data = macro_df[macro_df['season'] == season]
+            for _, row in season_data.iterrows():
+                condition = row.get('biological_condition', 'Unknown')
+                season_hover_text.append(f"<b>Year</b>: {row['year']}<br><b>Season</b>: {row['season']}<br><b>Score</b>: {row['comparison_to_reference']}<br><b>Condition</b>: {condition}")
+            
+            # Update this trace
+            trace.update(
+                text=season_hover_text,
+                hovertemplate='%{text}<extra></extra>',
+                hoverinfo='text'
+            )
 
         return fig_macro
     
@@ -248,7 +263,7 @@ def format_macro_metrics_table(metrics_df, summary_df, season):
                 try:
                     total_score = int(year_summary['total_score'].values[0])
                     comparison = f"{year_summary['comparison_to_reference'].values[0]:.2f}"
-                    condition = year_summary['biological_condition'].values[0]
+                    condition = year_summary['biological_condition'].values[0] if 'biological_condition' in year_summary.columns else 'Unknown'
                     summary_rows[str(year)] = [total_score, comparison, condition]
                 except (ValueError, TypeError) as e:
                     logger.warning(f"Error processing summary data for {season} year {year}: {e}")

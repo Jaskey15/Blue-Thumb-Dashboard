@@ -54,7 +54,7 @@ def create_fish_viz(site_name=None):
         Plotly figure: Line plot showing IBI scores over time.
     """
     try:
-        # Get fish data from the database - now with site filtering
+        # Get fish data from the database
         fish_df = get_fish_dataframe(site_name)
         
         if fish_df.empty:
@@ -75,7 +75,7 @@ def create_fish_viz(site_name=None):
             return fig
 
         # Create a line plot for fish data
-        title = f"IBI Scores Over Time - {site_name}" if site_name else "IBI Scores Over Time"
+        title = f"IBI Scores Over Time for {site_name}" if site_name else "IBI Scores Over Time"
         fig_fish = px.line(
             fish_df, 
             x='year', 
@@ -91,6 +91,10 @@ def create_fish_viz(site_name=None):
         # Add reference lines for integrity classes
         add_integrity_reference_lines(fig_fish, fish_df)
 
+        # Calculate dynamic y-axis range based on data
+        max_value = fish_df['comparison_to_reference'].max()
+        y_upper_limit = max(1.1, max_value * 1.1)  # Use at least 1.1 or 110% of max value
+        
         # Improve the layout
         fig_fish.update_layout(
             xaxis=dict(
@@ -99,18 +103,25 @@ def create_fish_viz(site_name=None):
                 title_font=dict(size=FONT_SIZES['axis_title'])
             ),
             yaxis=dict(
-                range=[0, 1.1],
+                range=[0, y_upper_limit],
                 tickformat='.2f',
                 title_font=dict(size=FONT_SIZES['axis_title'])
             ),
             title_x=0.5,
             title_font=dict(size=FONT_SIZES['title']),
-            hovermode='x unified'
+            hovermode='closest'
         )
 
-        # Add hover data
+        # Add hover data 
+        hover_text = []
+        for _, row in fish_df.iterrows():
+            integrity_class = row.get('integrity_class', 'Unknown')
+            hover_text.append(f"<b>Year</b>: {row['year']}<br><b>Score</b>: {row['comparison_to_reference']}<br><b>Integrity Class</b>: {integrity_class}")
+        
         fig_fish.update_traces(
-            hovertemplate='<b>Year:</b> %{x}<br><b>Score:</b> %{y:.2f}<extra></extra>'
+            text=hover_text,
+            hovertemplate='%{text}<extra></extra>',
+            hoverinfo='text'
         )
 
         return fig_fish

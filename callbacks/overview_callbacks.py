@@ -5,11 +5,10 @@ This file contains callbacks specific to the overview tab.
 
 import dash
 import plotly.graph_objects as go
-from dash import Input, Output, State  
-from config.shared_constants import PARAMETER_DISPLAY_NAMES
+from dash import Input, Output, State
 from .tab_utilities import (
     get_parameter_legend, get_site_count_message, 
-    create_basic_map_legend_html, create_map_legend_html
+    create_map_legend_html
 )
 from .helper_functions import create_error_state
 from utils import setup_logging
@@ -49,7 +48,7 @@ def register_overview_callbacks(app):
             dropdown_disabled = False
             
             # Create legend for basic map using utility function
-            legend_html = create_basic_map_legend_html(total_count)
+            legend_html = create_map_legend_html(total_count=total_count)
             
             return basic_map, dropdown_disabled, legend_html
             
@@ -99,11 +98,14 @@ def register_overview_callbacks(app):
             
             # If no parameter selected, show basic map with filtering applied
             if not parameter_value:
-                # Use the updated create_basic_site_map function with filtering
                 basic_map, active_count, historic_count, total_count = create_basic_site_map(active_only=active_only_toggle)
-                
-                # Create legend using utility function
-                legend_html = create_basic_map_legend_html(total_count)
+
+                if active_only_toggle:
+                    from visualizations.map_viz import MONITORING_SITES
+                    total_sites_count = len(MONITORING_SITES)
+                    legend_html = create_map_legend_html(total_count=total_count, active_only=active_only_toggle, total_sites_count=total_sites_count)
+                else:
+                    legend_html = create_map_legend_html(total_count=total_count, active_only=active_only_toggle)
                 
                 return basic_map, legend_html
             
@@ -137,14 +139,14 @@ def register_overview_callbacks(app):
             legend_items = get_parameter_legend(param_type, param_name)
             legend_items = [item for item in legend_items if "No data" not in item["label"]]
             
-            # Build count message based on filtering state
+            # Build count message using unified function
             if active_only_toggle:
-                count_message = f"Showing {sites_with_data} of {total_original} monitoring sites (active only) with {PARAMETER_DISPLAY_NAMES.get(param_name, param_name)} data"
+                count_message = get_site_count_message(param_type, param_name, sites_with_data, total_original, active_only=True)
             else:
                 count_message = get_site_count_message(param_type, param_name, sites_with_data, total_sites)
             
             # Create legend using utility function
-            legend_html = create_map_legend_html(legend_items, count_message)
+            legend_html = create_map_legend_html(legend_items=legend_items, count_message=count_message)
             
             return updated_map, legend_html
             

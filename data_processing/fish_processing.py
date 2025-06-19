@@ -332,7 +332,7 @@ def insert_metrics_data(cursor, fish_df, event_id_map):
                 ''', (
                     event_id,
                     row['total_score'],
-                    row['comparison_to_reference'],
+                    round(float(row['comparison_to_reference']), 2),
                     integrity_class
                 ))
                 summary_count += 1

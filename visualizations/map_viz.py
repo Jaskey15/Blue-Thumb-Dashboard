@@ -4,7 +4,7 @@ import plotly.graph_objects as go
 from database.database import get_connection, close_connection
 from utils import setup_logging
 
-logger = setup_logging("map_viz")
+logger = setup_logging("map_viz", category="visualization")
 
 # Styling constants
 COLORS = {
@@ -14,11 +14,11 @@ COLORS = {
     'above_normal': '#5e35b1', # Purple-blue (Basic/Alkaline)
     'below_normal': '#f57c00', # Dark orange-red (Acidic)
     'fish': {
-        'excellent': '#1e8449',  # Green
-        'good': '#7cb342',       # Light green
-        'fair': '#ff9800',       # Orange
-        'poor': '#e53e3e',       # Red-orange 
-        'very poor': '#e74c3c',  # Red
+        'excellent': '#2e7d32',  # Dark green
+        'good': '#66bb6a',       # Medium green
+        'fair': '#ffca28',       # Amber/yellow
+        'poor': '#f57c00',       # Dark orange
+        'very poor': '#c62828',  # Dark red
     },
     'macro': {
         'non-impaired': '#1e8449',        # Green
@@ -27,11 +27,11 @@ COLORS = {
         'severely_impaired': '#e74c3c',   # Red
     },
     'habitat': {
-        'a': '#1e8449',    # Green (A grade)
-        'b': '#7cb342',    # Light green (B grade)
-        'c': '#ff9800',    # Orange (C grade)
-        'd': '#e53e3e',    # Red-orange (D grade)
-        'f': '#e74c3c'     # Red (F grade)
+        'a': '#2e7d32',    # Dark green
+        'b': '#66bb6a',    # Medium green
+        'c': '#ffca28',    # Amber/yellow
+        'd': '#f57c00',    # Dark orange
+        'f': '#c62828'     # Dark red
     }
 }
 
@@ -176,22 +176,21 @@ def get_latest_data_by_type(data_type):
         DataFrame with latest data per site (and season for macro data)
     """
     try:
-        # Call only database query functions, not processing functions
         if data_type == 'chemical':
             from data_processing.data_queries import get_chemical_data_from_db
-            df = get_chemical_data_from_db()  # Only query, don't process
+            df = get_chemical_data_from_db() 
             
         elif data_type == 'fish':
             from data_processing.data_queries import get_fish_dataframe
-            df = get_fish_dataframe()  # This already only queries
+            df = get_fish_dataframe()  
             
         elif data_type == 'macro':
             from data_processing.data_queries import get_macroinvertebrate_dataframe
-            df = get_macroinvertebrate_dataframe()  # This already only queries
+            df = get_macroinvertebrate_dataframe()  
             
         elif data_type == 'habitat':
             from data_processing.data_queries import get_habitat_dataframe
-            df = get_habitat_dataframe()  # This already only queries
+            df = get_habitat_dataframe() 
             
         else:
             raise ValueError(f"Unknown data type: {data_type}")
@@ -202,14 +201,8 @@ def get_latest_data_by_type(data_type):
         
         # Handle different grouping logic based on data type
         if data_type == 'chemical':
-            # Chemical data uses 'Date' column and 'Site_Name'
             latest_data = df.sort_values('Date').groupby('Site_Name').last().reset_index()
-        elif data_type == 'macro':
-            # For combined macro data, get the most recent survey regardless of season
-            # Sort by year to get the most recent data
-            latest_data = df.sort_values('year').groupby('site_name').last().reset_index()
         else:
-            # Fish and habitat data use 'year' column and 'site_name'
             latest_data = df.sort_values('year').groupby('site_name').last().reset_index()
         
         logger.info(f"Retrieved latest {data_type} data for {len(latest_data)} records")
@@ -341,7 +334,7 @@ def add_site_marker(fig, lat, lon, color, site_name, hover_text=None, active=Tru
             marker_size = 10
         else:
             marker_color = '#9370DB'  # Medium slate blue for historic sites
-            marker_size = 6  # Smaller for historic sites
+            marker_size = 6  
     
     fig.add_trace(go.Scattermap(
         lat=[lat],

@@ -96,95 +96,96 @@ def get_parameter_legend(param_type, param_name):
     # Default legend if parameter not found
     return [{"color": "#666", "label": "No data available"}]
 
-def get_site_count_message(param_type, param_name, sites_with_data, total_sites):
+def get_site_count_message(param_type, param_name, sites_with_data, total_sites, active_only=False):
     """
     Create custom site count message based on parameter type.
-    Used by overview tab for map status messages.
+    Used by overview tab for parameter-specific map status messages.
     
     Args:
-        param_type: Type of parameter ('chem', 'bio', 'habitat', or None for basic map)
-        param_name: Specific parameter name (or None for basic map)
-        sites_with_data: Number of sites with data (or total for basic map)
+        param_type: Type of parameter ('chem', 'bio', 'habitat')
+        param_name: Specific parameter name
+        sites_with_data: Number of sites with data
         total_sites: Total number of sites
+        active_only: Whether to include "(active only)" in the message
         
     Returns:
         str: Formatted site count message
     """
-    # Handle basic map case (no parameter selected)
-    if not param_type or not param_name:
-        return f"Showing {total_sites} monitoring sites"
+    active_text = " (active only)" if active_only else ""
     
     if param_type == 'chem':
-        return f"Showing {sites_with_data} of {total_sites} sites with chemical data"
+        return f"Showing {sites_with_data} of {total_sites} monitoring sites{active_text} with chemical data"
     elif param_type == 'bio':
         if param_name == 'Fish_IBI':
-            return f"Showing {sites_with_data} of {total_sites} sites with fish community data"
+            return f"Showing {sites_with_data} of {total_sites} monitoring sites{active_text} with fish community data"
         elif param_name == 'Macro_Combined':
-            return f"Showing {sites_with_data} of {total_sites} sites with macroinvertebrate data"
+            return f"Showing {sites_with_data} of {total_sites} monitoring sites{active_text} with macroinvertebrate data"
     elif param_type == 'habitat':
-        return f"Showing {sites_with_data} of {total_sites} sites with habitat data"
+        return f"Showing {sites_with_data} of {total_sites} monitoring sites{active_text} with habitat data"
     
-    return f"Showing {sites_with_data} of {total_sites} sites"
+    return f"Showing {sites_with_data} of {total_sites} monitoring sites{active_text}"
 
-def create_basic_map_legend_html(total_count):
-    """
-    Create the legend HTML for the basic map showing active vs historic sites.
-    
-    Args:
-        total_count: Total number of sites being displayed
-        
-    Returns:
-        Dash HTML component for the basic map legend
-    """
-    legend_content = [
-        # Site count display
-        html.Div(
-            f"Showing {total_count} monitoring sites",
-            className="text-center mb-2",
-            style={"font-weight": "bold", "color": "#666"}
-        ),
-        # Legend items
-        html.Div([
-            html.Div([
-                html.Span("●", style={"color": "#3366CC", "font-size": "16px"}),
-                html.Span(" Active Sites", className="mr-3")
-            ], style={"display": "inline-block", "margin-right": "15px"}),
-            html.Div([
-                html.Span("●", style={"color": "#9370DB", "font-size": "12px"}),
-                html.Span(" Historic Sites", className="mr-3")
-            ], style={"display": "inline-block", "margin-right": "15px"})
-        ])
-    ]
-    
-    return html.Div(legend_content, className="text-center mt-2 mb-4")
-
-def create_map_legend_html(legend_items, count_message):
+def create_map_legend_html(legend_items=None, count_message=None, total_count=None, active_only=False, total_sites_count=None):
     """
     Create standardized HTML for map legends in the overview tab.
+    Handles both basic maps (no parameter) and parameter-specific maps.
     
     Args:
-        legend_items: List of dictionaries with 'color' and 'label' keys
-        count_message: String message about site counts to display
+        legend_items: List of dictionaries with 'color' and 'label' keys (for parameter maps)
+        count_message: String message about site counts (for parameter maps)
+        total_count: Total number of sites being displayed (for basic maps)
+        active_only: Whether showing active sites only (for basic maps)
+        total_sites_count: Total number of all sites (for showing "X of Y" format when active_only=True)
         
     Returns:
         Dash HTML component for the legend
     """
-    legend_content = [
-        # Site count display
-        html.Div(
-            count_message,
-            className="text-center mb-2",
-            style={"font-weight": "bold", "color": "#666"}
-        ),
-        # Legend items
-        html.Div([
+    # Basic map case (no parameter selected)
+    if legend_items is None and total_count is not None:
+        if active_only and total_sites_count is not None:
+            count_text = f"Showing {total_count} of {total_sites_count} monitoring sites (active only)"
+        else:
+            active_text = " (active only)" if active_only else ""
+            count_text = f"Showing {total_count} monitoring sites{active_text}"
+        
+        legend_content = [
+            # Site count display
+            html.Div(
+                count_text,
+                className="text-center mb-2",
+                style={"font-weight": "bold", "color": "#666"}
+            ),
+            # Legend items for basic map
             html.Div([
-                html.Span("● ", style={"color": item["color"], "font-size": "20px"}),
-                html.Span(item["label"], className="mr-3")
-            ], style={"display": "inline-block", "margin-right": "15px"})
-            for item in legend_items
-        ])
-    ]
+                html.Div([
+                    html.Span("●", style={"color": "#3366CC", "font-size": "16px"}),
+                    html.Span(" Active Sites", className="mr-3")
+                ], style={"display": "inline-block", "margin-right": "15px"}),
+                html.Div([
+                    html.Span("●", style={"color": "#9370DB", "font-size": "12px"}),
+                    html.Span(" Historic Sites", className="mr-3")
+                ], style={"display": "inline-block", "margin-right": "15px"})
+            ])
+        ]
+    
+    # Parameter-specific map case
+    else:
+        legend_content = [
+            # Site count display
+            html.Div(
+                count_message,
+                className="text-center mb-2",
+                style={"font-weight": "bold", "color": "#666"}
+            ),
+            # Legend items for parameter map
+            html.Div([
+                html.Div([
+                    html.Span("● ", style={"color": item["color"], "font-size": "20px"}),
+                    html.Span(item["label"], className="mr-3")
+                ], style={"display": "inline-block", "margin-right": "15px"})
+                for item in legend_items
+            ])
+        ]
     
     return html.Div(legend_content, className="text-center mt-2 mb-4")
 
@@ -300,7 +301,7 @@ def create_biological_community_display(selected_community, selected_site):
             
         elif selected_community == 'macro':
             from visualizations.macro_viz import create_macro_viz, create_macro_metrics_accordion
-            from data_processing.macro_processing import get_macroinvertebrate_dataframe
+            from data_processing.data_queries import get_macroinvertebrate_dataframe
             
             # Get all macro data first
             all_macro_data = get_macroinvertebrate_dataframe()
