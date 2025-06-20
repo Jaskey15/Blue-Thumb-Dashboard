@@ -17,21 +17,92 @@ def register_chemical_callbacks(app):
     """Register all chemical-related callbacks in logical workflow order."""
     
     # ===========================
-    # 1. DROPDOWN POPULATION
+    # 1. STATE MANAGEMENT
+    # ===========================
+    
+    @app.callback(
+        Output('chemical-tab-state', 'data'),
+        [Input('chemical-site-dropdown', 'value'),
+         Input('chemical-parameter-dropdown', 'value'),
+         Input('year-range-slider', 'value'),
+         Input('month-checklist', 'value'),
+         Input('highlight-thresholds-switch', 'value')],
+        [State('chemical-tab-state', 'data')],
+        prevent_initial_call=True
+    )
+    def save_chemical_state(selected_site, selected_parameter, year_range, selected_months, 
+                           highlight_thresholds, current_state):
+        """Save chemical tab state when selections change."""
+        # Only save valid selections, don't overwrite with None
+        if any(val is not None for val in [selected_site, selected_parameter, year_range, selected_months, highlight_thresholds]):
+            # Preserve existing values when only some change
+            new_state = current_state.copy() if current_state else {
+                'selected_site': None,
+                'selected_parameter': None,
+                'year_range': None,
+                'selected_months': None,
+                'highlight_thresholds': None
+            }
+            
+            if selected_site is not None:
+                new_state['selected_site'] = selected_site
+                logger.info(f"Saving chemical site state: {selected_site}")
+            
+            if selected_parameter is not None:
+                new_state['selected_parameter'] = selected_parameter
+                logger.info(f"Saving chemical parameter state: {selected_parameter}")
+            
+            if year_range is not None:
+                new_state['year_range'] = year_range
+                logger.info(f"Saving chemical year range state: {year_range}")
+            
+            if selected_months is not None:
+                new_state['selected_months'] = selected_months
+                logger.info(f"Saving chemical months state: {len(selected_months) if selected_months else 0} months")
+            
+            if highlight_thresholds is not None:
+                new_state['highlight_thresholds'] = highlight_thresholds
+                logger.info(f"Saving chemical highlight thresholds state: {highlight_thresholds}")
+            
+            return new_state
+        else:
+            # Keep existing state when all controls are cleared
+            return current_state or {
+                'selected_site': None,
+                'selected_parameter': None,
+                'year_range': None,
+                'selected_months': None,
+                'highlight_thresholds': None
+            }
+    
+    # ===========================
+    # 2. NAVIGATION AND DROPDOWN POPULATION
     # ===========================
     
     @app.callback(
         [Output('chemical-site-dropdown', 'options'),
          Output('chemical-site-dropdown', 'value', allow_duplicate=True),
-         Output('chemical-parameter-dropdown', 'value', allow_duplicate=True)],
+         Output('chemical-parameter-dropdown', 'value', allow_duplicate=True),
+         Output('year-range-slider', 'value', allow_duplicate=True),
+         Output('month-checklist', 'value', allow_duplicate=True),
+         Output('highlight-thresholds-switch', 'value', allow_duplicate=True)],
         [Input('main-tabs', 'active_tab'),
          Input('navigation-store', 'data')],
+        [State('chemical-tab-state', 'data')],
         prevent_initial_call=True
     )
-    def populate_chemical_sites_and_handle_navigation(active_tab, nav_data):
-        """Populate site dropdown options and handle navigation from map."""
+    def handle_chemical_navigation_and_state_restoration(active_tab, nav_data, chemical_state):
+        """Handle navigation from map, initial tab loading, and state restoration for all chemical controls."""
         if active_tab != 'chemical-tab':
-            return [], dash.no_update, dash.no_update
+            return [], dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
+        
+        # Get the trigger to understand what caused this callback
+        ctx = dash.callback_context
+        if not ctx.triggered:
+            return [], dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
+            
+        trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
+        logger.info(f"DEBUG: Chemical trigger={trigger_id}, Nav={nav_data}, State={chemical_state}")
         
         try:
             # Get all sites with chemical data
@@ -39,31 +110,83 @@ def register_chemical_callbacks(app):
             
             if not sites:
                 logger.warning("No sites with chemical data found")
-                return [], dash.no_update, dash.no_update
+                return [], dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
             
             # Create dropdown options
             options = [{'label': site, 'value': site} for site in sorted(sites)]
             logger.info(f"Populated chemical dropdown with {len(options)} sites")
             
-            # Check if we need to set a specific site and parameter from navigation
-            if nav_data and nav_data.get('target_tab') == 'chemical-tab' and active_tab == 'chemical-tab':
+            # Priority 1: Handle navigation from map (highest priority)
+            if (nav_data and nav_data.get('target_tab') == 'chemical-tab' and 
+                nav_data.get('target_site')):
+                
                 target_site = nav_data.get('target_site')
                 target_parameter = nav_data.get('target_parameter')
                 
-                if target_site and target_site in sites:
-                    logger.info(f"Setting dropdown values from navigation - site: {target_site}, parameter: {target_parameter}")
-                    return options, target_site, target_parameter or 'do_percent'
-                elif target_site:
+                if target_site in sites:
+                    logger.info(f"DEBUG: Navigation taking priority - setting site: {target_site}, parameter: {target_parameter}")
+                    
+                    # For map navigation, set site + parameter from nav, preserve other filters from state or use defaults
+                    restored_year_range = (chemical_state.get('year_range') 
+                                         if chemical_state and chemical_state.get('year_range') 
+                                         else dash.no_update)
+                    restored_months = (chemical_state.get('selected_months') 
+                                     if chemical_state and chemical_state.get('selected_months') 
+                                     else dash.no_update)
+                    restored_thresholds = (chemical_state.get('highlight_thresholds') 
+                                         if chemical_state and chemical_state.get('highlight_thresholds') is not None 
+                                         else dash.no_update)
+                    
+                    return (
+                        options,  # Site options
+                        target_site,  # Set target site
+                        target_parameter or 'do_percent',  # Set target parameter
+                        restored_year_range,  # Preserve year range from state
+                        restored_months,  # Preserve months from state
+                        restored_thresholds  # Preserve thresholds from state
+                    )
+                else:
                     logger.warning(f"Navigation target site '{target_site}' not found in available sites")
             
-            return options, dash.no_update, dash.no_update
+            # Priority 2: Restore from saved state if tab was just activated AND no active navigation
+            if (trigger_id == 'main-tabs' and chemical_state and 
+                chemical_state.get('selected_site') and
+                (not nav_data or not nav_data.get('target_tab'))):
+                
+                saved_site = chemical_state.get('selected_site')
+                saved_parameter = chemical_state.get('selected_parameter')
+                saved_year_range = chemical_state.get('year_range')
+                saved_months = chemical_state.get('selected_months')
+                saved_thresholds = chemical_state.get('highlight_thresholds')
+                
+                # Verify saved site is still available
+                if saved_site in sites:
+                    logger.info(f"DEBUG: State restoration - restoring all saved values")
+                    return (
+                        options,  # Site options
+                        saved_site,  # Restore site
+                        saved_parameter,  # Restore parameter
+                        saved_year_range,  # Restore year range
+                        saved_months,  # Restore months
+                        saved_thresholds  # Restore thresholds
+                    )
+                else:
+                    logger.warning(f"Saved site '{saved_site}' no longer available")
+            
+            # Ignore navigation-store clearing events (when nav_data is empty/None)
+            if trigger_id == 'navigation-store' and (not nav_data or not nav_data.get('target_tab')):
+                return options, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
+            
+            # Default behavior - just populate options
+            logger.info(f"DEBUG: Default behavior - populating options only")
+            return options, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
             
         except Exception as e:
-            logger.error(f"Error populating chemical sites: {e}")
-            return [], dash.no_update, dash.no_update
+            logger.error(f"Error in chemical navigation/state restoration: {e}")
+            return [], dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
     
     # ===========================
-    # 2. SITE SELECTION & CONTROLS
+    # 3. SITE SELECTION & CONTROLS
     # ===========================
     
     @app.callback(
@@ -78,7 +201,7 @@ def register_chemical_callbacks(app):
         return {'display': 'none'}
     
     # ================================
-    # 3. DATA VISUALIZATION & FILTERS
+    # 4. DATA VISUALIZATION & FILTERS
     # ================================
     
     @app.callback(
@@ -131,6 +254,23 @@ def register_chemical_callbacks(app):
         
         if not selected_parameter:
             return create_empty_state("Please select a parameter to visualize."), html.Div(), html.Div()
+        
+        # Validate year_range - if None, get default range
+        if year_range is None:
+            from data_processing.data_queries import get_chemical_date_range
+            min_year, max_year = get_chemical_date_range()
+            year_range = [min_year, max_year]
+            logger.info(f"Using default year range: {year_range}")
+        
+        # Validate selected_months - if None, use all months
+        if selected_months is None:
+            selected_months = list(range(1, 13))
+            logger.info(f"Using default months: all months")
+        
+        # Validate highlight_thresholds - if None, use default True
+        if highlight_thresholds is None:
+            highlight_thresholds = True
+            logger.info(f"Using default highlight thresholds: {highlight_thresholds}")
         
         try:
             logger.info(f"Creating chemical visualization for {selected_site}, parameter: {selected_parameter}")

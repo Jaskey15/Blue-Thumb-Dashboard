@@ -62,12 +62,20 @@ app.layout = dbc.Container([
         dbc.Tab(label="Source Data", children=create_source_data_tab(), tab_id="source-tab"),
     ], id="main-tabs", active_tab="overview-tab"),
 
-    # Navigation store for map-to-tab navigation
+   
     html.Div([
+         # Navigation store for map-to-tab navigation
         dcc.Store(id='navigation-store', storage_type='memory', data={'target_tab': None, 'target_site': None}),
         # Tab state stores for preserving user selections
         dcc.Store(id='habitat-tab-state', storage_type='session', data={'selected_site': None}),
-        dcc.Store(id='biological-tab-state', storage_type='session', data={'selected_community': None, 'selected_site': None})
+        dcc.Store(id='biological-tab-state', storage_type='session', data={'selected_community': None, 'selected_site': None}),
+        dcc.Store(id='chemical-tab-state', storage_type='session', data={
+            'selected_site': None,
+            'selected_parameter': None,
+            'year_range': None,
+            'selected_months': None,
+            'highlight_thresholds': None
+        })
     ], style={'display': 'none'}),
 
     # Footer with improved credits and logo

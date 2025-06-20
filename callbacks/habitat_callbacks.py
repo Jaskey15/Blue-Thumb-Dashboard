@@ -94,7 +94,6 @@ def register_habitat_callbacks(app):
             
             # Ignore navigation-store clearing events (when nav_data is empty/None)
             if trigger_id == 'navigation-store' and (not nav_data or not nav_data.get('target_tab')):
-                logger.info(f"DEBUG: Ignoring navigation store clearing")
                 return options, dash.no_update
             
             logger.info(f"DEBUG: Default behavior")

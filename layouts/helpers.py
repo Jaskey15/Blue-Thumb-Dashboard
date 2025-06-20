@@ -18,9 +18,9 @@ def create_species_gallery(species_type):
     """
     # Determine gallery title based on species type
     title = (
-        "Common fish species found in Tenmile Creek" 
+        "Common fish species found in Oklahoma Streams" 
         if species_type == 'fish' 
-        else "Common macroinvertebrates found in Tenmile Creek"
+        else "Common macroinvertebrates found in Oklahoma Streams"
     )
     
     # Create ID strings for components
@@ -37,7 +37,7 @@ def create_species_gallery(species_type):
         html.Div(
             id=container_id,
             className="text-center",
-            style={'min-height': '400px'}  # Fixed minimum height for whole gallery
+            style={'min-height': '400px'}  
         ),
         
         # Navigation buttons
