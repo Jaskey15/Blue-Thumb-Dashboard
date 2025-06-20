@@ -77,7 +77,7 @@ PARAMETER_LABELS = {
     'Chloride': 'Chloride',
     'Fish_IBI': 'Fish Community',
     'Macro_Combined': 'Macroinvertebrate Community',
-    'Habitat_Grade': 'Habitat'
+    'Habitat_Score': 'Habitat'
 }
 
 # Parameter display names for map hover text
@@ -280,40 +280,6 @@ def filter_sites_by_active_status(sites, active_only=False):
 # UI HELPER FUNCTIONS - Display Formatting
 # ============================================================================
 
-def format_parameter_value(parameter, value):
-    """
-    Format parameter values for display with appropriate units and precision.
-    
-    Args:
-        parameter: Parameter name
-        value: Numeric value to format
-    
-    Returns:
-        Formatted string with units
-    """
-    try:
-        if pd.isna(value):
-            return "No data"
-        
-        # Convert to float for processing
-        float_value = float(value)
-        
-        # Parameter-specific formatting
-        if parameter == 'do_percent':
-            return f"{float_value:.1f}%"
-        elif parameter == 'pH':
-            return f"{float_value:.2f}"
-        elif parameter in ['soluble_nitrogen', 'Phosphorus']:
-            return f"{float_value:.3f} mg/L"
-        elif parameter == 'Chloride':
-            return f"{float_value:.1f} mg/L"
-        else:
-            # Default formatting for unknown parameters
-            return f"{float_value:.2f}" if float_value != int(float_value) else f"{int(float_value)}"
-            
-    except (ValueError, TypeError):
-        return str(value)  # Return as-is if formatting fails
-
 def create_hover_text(df, data_type, config, parameter_name):
     """Create hover text using fast vectorized operations"""
     
@@ -322,16 +288,37 @@ def create_hover_text(df, data_type, config, parameter_name):
     
     # Add parameter-specific information
     if data_type == 'chemical' and parameter_name:
-        # Format the parameter value
-        value_series = df[config['value_column']].apply(
-            lambda x: format_parameter_value(parameter_name, x) if pd.notna(x) else "No data"
-        )
+        # Format values properly 
+        def format_chemical_value(value, param):
+            if pd.isna(value):
+                return "No data"
+            
+            # For DO and Chloride, show as integers if they're whole numbers
+            if param in ['do_percent', 'Chloride']:
+                if float(value) == int(float(value)):
+                    return str(int(float(value)))
+                else:
+                    return str(value)
+            else:
+                return str(value)
+        
+        value_series = df[config['value_column']].apply(lambda x: format_chemical_value(x, parameter_name))
+        
+        # Add units based on parameter type
+        if parameter_name == 'do_percent':
+            value_series = value_series.where(value_series == "No data", value_series + "%")
+        elif parameter_name == 'pH':
+            # pH has no units, keep as-is
+            pass
+        elif parameter_name in ['soluble_nitrogen', 'Phosphorus', 'Chloride']:
+            value_series = value_series.where(value_series == "No data", value_series + " mg/L")
+        
         param_label = PARAMETER_LABELS.get(parameter_name, parameter_name)
         hover_texts += f"{param_label}: " + value_series + "<br>"
         hover_texts += "Status: " + df['computed_status'].astype(str) + "<br>"
         
     elif data_type == 'fish':
-        hover_texts += "Fish IBI Score: " + df[config['value_column']].astype(str) + "<br>"
+        hover_texts += "IBI Score: " + df[config['value_column']].astype(str) + "<br>"
         hover_texts += "Integrity Class: " + df['computed_status'].astype(str) + "<br>"
         
     elif data_type == 'macro':
@@ -339,7 +326,10 @@ def create_hover_text(df, data_type, config, parameter_name):
         hover_texts += "Biological Condition: " + df['computed_status'].astype(str) + "<br>"
         
     elif data_type == 'habitat':
-        hover_texts += "Habitat Score: " + df[config['value_column']].astype(str) + "<br>"
+        habitat_scores = df[config['value_column']].apply(
+            lambda x: str(int(float(x))) if pd.notna(x) and float(x) == int(float(x)) else str(x)
+        )
+        hover_texts += "Habitat Score: " + habitat_scores + "<br>"
         hover_texts += "Grade: " + df['computed_status'].astype(str) + "<br>"
     
     # Add date information
@@ -347,10 +337,22 @@ def create_hover_text(df, data_type, config, parameter_name):
         if data_type == 'chemical':
             # Format date nicely
             dates = pd.to_datetime(df[config['date_column']]).dt.strftime('%Y-%m-%d')
-            hover_texts += "Date: " + dates + "<br>"
+            hover_texts += "Latest Reading: " + dates + "<br>"
+        elif data_type == 'macro':
+            # Special handling for macro data to include season
+            years = df[config['date_column']].apply(
+                lambda x: str(int(float(x))) if pd.notna(x) and float(x) == int(float(x)) else str(x)
+            )
+            if 'season' in df.columns:
+                seasons = df['season'].astype(str)
+                hover_texts += "Last Survey: " + seasons + " " + years + "<br>"
+            else:
+                hover_texts += "Last Survey: " + years + "<br>"
         else:
-            # For other types, just show year
-            hover_texts += "Year: " + df[config['date_column']].astype(str) + "<br>"
+            years = df[config['date_column']].apply(
+                lambda x: str(int(float(x))) if pd.notna(x) and float(x) == int(float(x)) else str(x)
+            )
+            hover_texts += "Last Survey: " + years + "<br>"
     
     # Add click instruction
     hover_texts += "Click to view detailed data"
@@ -582,7 +584,7 @@ def add_data_markers(fig, sites, data_type, parameter_name=None, season=None, fi
         # For sites without data, we'll use default styling
     
     sites_with_data = has_data_mask.sum()
-    total_sites = len(sites_to_plot)
+    total_sites = len(sites)  
     
     if total_sites == 0:
         return fig, sites_with_data, len(sites)

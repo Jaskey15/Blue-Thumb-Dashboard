@@ -218,29 +218,3 @@ def get_parameter_name(parameter):
         str: Human-readable name for the parameter
     """
     return PARAMETER_DISPLAY_NAMES.get(parameter, parameter)
-
-def get_site_count_message(param_type, param_name, sites_with_data, total_sites):
-    """
-    Create custom site count message based on parameter type.
-    Used by overview tab for map status messages.
-    
-    Args:
-        param_type: Type of parameter ('chem', 'bio', 'habitat')
-        param_name: Specific parameter name
-        sites_with_data: Number of sites with data
-        total_sites: Total number of sites
-        
-    Returns:
-        str: Formatted site count message
-    """
-    if param_type == 'chem':
-        return f"Showing {sites_with_data} of {total_sites} sites with chemical data"
-    elif param_type == 'bio':
-        if param_name == 'Fish_IBI':
-            return f"Showing {sites_with_data} of {total_sites} sites with fish community data"
-        elif param_name == 'Macro_Combined':
-            return f"Showing {sites_with_data} of {total_sites} sites with macroinvertebrate data"
-    elif param_type == 'habitat':
-        return f"Showing {sites_with_data} of {total_sites} sites with habitat data"
-    
-    return f"Showing {sites_with_data} of {total_sites} sites"

@@ -86,7 +86,7 @@ def get_parameter_legend(param_type, param_name):
     # Habitat parameter legends
     elif param_type == 'habitat':
         return [
-            {"color": COLORS['habitat']['a'], "label": "A (>90)"},
+            {"color": COLORS['habitat']['a'], "label": "A (>=90)"},
             {"color": COLORS['habitat']['b'], "label": "B (80-89)"},
             {"color": COLORS['habitat']['c'], "label": "C (70-79)"},
             {"color": COLORS['habitat']['d'], "label": "D (60-69)"},
@@ -114,10 +114,18 @@ def get_site_count_message(param_type, param_name, sites_with_data, total_sites,
     active_text = " (active only)" if active_only else ""
     
     if param_type == 'chem':
-        return f"Showing {sites_with_data} of {total_sites} monitoring sites{active_text} with chemical data"
+        chemical_parameter_labels = {
+            'do_percent': 'dissolved oxygen',
+            'pH': 'pH',
+            'soluble_nitrogen': 'soluble nitrogen',
+            'Phosphorus': 'phosphorus',
+            'Chloride': 'chloride'
+        }
+        parameter_label = chemical_parameter_labels.get(param_name, 'chemical')
+        return f"Showing {sites_with_data} of {total_sites} monitoring sites{active_text} with {parameter_label} data"
     elif param_type == 'bio':
         if param_name == 'Fish_IBI':
-            return f"Showing {sites_with_data} of {total_sites} monitoring sites{active_text} with fish community data"
+            return f"Showing {sites_with_data} of {total_sites} monitoring sites{active_text} with fish data"
         elif param_name == 'Macro_Combined':
             return f"Showing {sites_with_data} of {total_sites} monitoring sites{active_text} with macroinvertebrate data"
     elif param_type == 'habitat':
