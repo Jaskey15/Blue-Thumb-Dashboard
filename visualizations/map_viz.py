@@ -284,7 +284,7 @@ def create_hover_text(df, data_type, config, parameter_name):
     """Create hover text using fast vectorized operations"""
     
     # Base hover info - site name
-    hover_texts = "Site: " + df[config['site_column']].astype(str) + "<br>"
+    hover_texts = "<b>Site:</b> " + df[config['site_column']].astype(str) + "<br>"
     
     # Add parameter-specific information
     if data_type == 'chemical' and parameter_name:
@@ -314,30 +314,30 @@ def create_hover_text(df, data_type, config, parameter_name):
             value_series = value_series.where(value_series == "No data", value_series + " mg/L")
         
         param_label = PARAMETER_LABELS.get(parameter_name, parameter_name)
-        hover_texts += f"{param_label}: " + value_series + "<br>"
-        hover_texts += "Status: " + df['computed_status'].astype(str) + "<br>"
+        hover_texts += f"<b>{param_label}:</b> " + value_series + "<br>"
+        hover_texts += "<b>Status:</b> " + df['computed_status'].astype(str) + "<br>"
         
     elif data_type == 'fish':
-        hover_texts += "IBI Score: " + df[config['value_column']].astype(str) + "<br>"
-        hover_texts += "Integrity Class: " + df['computed_status'].astype(str) + "<br>"
+        hover_texts += "<b>IBI Score:</b> " + df[config['value_column']].astype(str) + "<br>"
+        hover_texts += "<b>Integrity Class:</b> " + df['computed_status'].astype(str) + "<br>"
         
     elif data_type == 'macro':
-        hover_texts += "Bioassessment Score: " + df[config['value_column']].astype(str) + "<br>"
-        hover_texts += "Biological Condition: " + df['computed_status'].astype(str) + "<br>"
+        hover_texts += "<b>Bioassessment Score:</b> " + df[config['value_column']].astype(str) + "<br>"
+        hover_texts += "<b>Biological Condition:</b> " + df['computed_status'].astype(str) + "<br>"
         
     elif data_type == 'habitat':
         habitat_scores = df[config['value_column']].apply(
             lambda x: str(int(float(x))) if pd.notna(x) and float(x) == int(float(x)) else str(x)
         )
-        hover_texts += "Habitat Score: " + habitat_scores + "<br>"
-        hover_texts += "Grade: " + df['computed_status'].astype(str) + "<br>"
+        hover_texts += "<b>Habitat Score:</b> " + habitat_scores + "<br>"
+        hover_texts += "<b>Grade:</b> " + df['computed_status'].astype(str) + "<br>"
     
     # Add date information
     if config['date_column'] in df.columns:
         if data_type == 'chemical':
             # Format date nicely
             dates = pd.to_datetime(df[config['date_column']]).dt.strftime('%Y-%m-%d')
-            hover_texts += "Latest Reading: " + dates + "<br>"
+            hover_texts += "<b>Latest Reading:</b> " + dates + "<br>"
         elif data_type == 'macro':
             # Special handling for macro data to include season
             years = df[config['date_column']].apply(
@@ -345,17 +345,17 @@ def create_hover_text(df, data_type, config, parameter_name):
             )
             if 'season' in df.columns:
                 seasons = df['season'].astype(str)
-                hover_texts += "Last Survey: " + seasons + " " + years + "<br>"
+                hover_texts += "<b>Last Survey:</b> " + seasons + " " + years + "<br>"
             else:
-                hover_texts += "Last Survey: " + years + "<br>"
+                hover_texts += "<b>Last Survey:</b> " + years + "<br>"
         else:
             years = df[config['date_column']].apply(
                 lambda x: str(int(float(x))) if pd.notna(x) and float(x) == int(float(x)) else str(x)
             )
-            hover_texts += "Last Survey: " + years + "<br>"
+            hover_texts += "<b>Last Survey:</b> " + years + "<br>"
     
     # Add click instruction
-    hover_texts += "Click to view detailed data"
+    hover_texts += "<br><b>🔍 Click to view detailed data</b>"
     
     return hover_texts.tolist()
 
@@ -678,10 +678,10 @@ def create_basic_site_map(active_only=False):
         
         # Add all sites with appropriate styling handled by add_site_marker
         for site in sites_to_use:
-            hover_text = (f"Site: {site['name']}<br>"
-                         f"County: {site['county']}<br>"
-                         f"River Basin: {site['river_basin']}<br>"
-                         f"Ecoregion: {site['ecoregion']}")
+            hover_text = (f"<b>Site:</b> {site['name']}<br>"
+                         f"<b>County:</b> {site['county']}<br>"
+                         f"<b>River Basin:</b> {site['river_basin']}<br>"
+                         f"<b>Ecoregion:</b> {site['ecoregion']}")
             
             # Add marker (styling handled internally by add_site_marker)
             fig = add_site_marker(
