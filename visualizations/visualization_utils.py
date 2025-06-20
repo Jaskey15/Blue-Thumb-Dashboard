@@ -113,7 +113,7 @@ def calculate_dynamic_y_range(df, column='comparison_to_reference'):
         logger.warning(f"Error calculating y-range: {e}")
         return 0, 1.1
 
-def update_figure_layout(fig, df, title, y_label=None, y_column='comparison_to_reference'):
+def update_figure_layout(fig, df, title, y_label=None, y_column='comparison_to_reference', tick_format='.2f'):
     """
     Apply common layout settings to figures.
     
@@ -123,6 +123,7 @@ def update_figure_layout(fig, df, title, y_label=None, y_column='comparison_to_r
         title: Plot title
         y_label: Custom y-axis label
         y_column: Column name to use for y-range calculation
+        tick_format: Format string for y-axis ticks (default: '.2f')
     
     Returns:
         Updated figure
@@ -146,7 +147,7 @@ def update_figure_layout(fig, df, title, y_label=None, y_column='comparison_to_r
             ),
             yaxis=dict(
                 range=[y_min, y_max],
-                tickformat='.2f',
+                tickformat=tick_format,
                 title_font=dict(size=FONT_SIZES['axis_title']),
                 title=y_label
             ),

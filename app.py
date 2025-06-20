@@ -64,7 +64,9 @@ app.layout = dbc.Container([
 
     # Navigation store for map-to-tab navigation
     html.Div([
-        dcc.Store(id='navigation-store', storage_type='memory', data={'target_tab': None, 'target_site': None})
+        dcc.Store(id='navigation-store', storage_type='memory', data={'target_tab': None, 'target_site': None}),
+        # Tab state stores for preserving user selections
+        dcc.Store(id='habitat-tab-state', storage_type='session', data={'selected_site': None})
     ], style={'display': 'none'}),
 
     # Footer with improved credits and logo

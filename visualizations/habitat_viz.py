@@ -99,7 +99,8 @@ def create_habitat_viz(site_name=None):
             habitat_df, 
             title,
             y_label='Habitat Assessment Score',
-            y_column='total_score'
+            y_column='total_score',
+            tick_format='d'  
         )
 
         # Add habitat grade reference lines using shared utilities
@@ -146,10 +147,6 @@ def create_habitat_metrics_table(metrics_df, summary_df):
         styles = create_table_styles(metrics_table)
         
         table = create_data_table(full_table, 'habitat-metrics-table', styles)
-        
-        # Override specific style for habitat table if needed
-        if isinstance(table, dash_table.DataTable):
-            table.style_table.update({'height': '500px'})  # Match the height of the graph
         
         return table
     

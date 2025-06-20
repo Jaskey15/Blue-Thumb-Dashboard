@@ -16,7 +16,27 @@ def register_habitat_callbacks(app):
     """Register all habitat-related callbacks in logical workflow order."""
     
     # ===========================
-    # 1. DROPDOWN POPULATION
+    # 1. STATE MANAGEMENT
+    # ===========================
+    
+    @app.callback(
+        Output('habitat-tab-state', 'data'),
+        Input('habitat-site-dropdown', 'value'),
+        [State('habitat-tab-state', 'data')],
+        prevent_initial_call=True
+    )
+    def save_habitat_state(selected_site, current_state):
+        """Save habitat tab state when selections change."""
+        # Only save valid selections, don't overwrite with None
+        if selected_site is not None:
+            logger.info(f"Saving habitat state: {selected_site}")
+            return {'selected_site': selected_site}
+        else:
+            # Keep existing state when dropdown is cleared
+            return current_state or {'selected_site': None}
+    
+    # ===========================
+    # 2. DROPDOWN POPULATION
     # ===========================
     
     @app.callback(
@@ -24,12 +44,20 @@ def register_habitat_callbacks(app):
          Output('habitat-site-dropdown', 'value', allow_duplicate=True)],
         [Input('main-tabs', 'active_tab'),
          Input('navigation-store', 'data')],
+        [State('habitat-tab-state', 'data')],
         prevent_initial_call=True
     )
-    def populate_habitat_sites_and_handle_navigation(active_tab, nav_data):
-        """Populate site dropdown options and handle navigation from map."""
+    def populate_habitat_sites_and_handle_navigation(active_tab, nav_data, habitat_state):
+        """Populate site dropdown options and handle navigation from map or restore from state."""
         if active_tab != 'habitat-tab':
             return [], dash.no_update
+        
+        # Get the trigger to understand what caused this callback
+        ctx = dash.callback_context
+        if not ctx.triggered:
+            return [], dash.no_update
+            
+        trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
         
         try:
             # Get all sites with habitat data
@@ -43,14 +71,29 @@ def register_habitat_callbacks(app):
             options = [{'label': site, 'value': site} for site in sorted(sites)]
             logger.info(f"Populated habitat dropdown with {len(options)} sites")
             
-            # Check if we need to set a specific site from navigation
-            if nav_data and nav_data.get('target_tab') == 'habitat-tab' and active_tab == 'habitat-tab':
+            # Priority 1: Check if we need to set a specific site from navigation (map clicks)
+            # Only respond to navigation-store changes that have meaningful data
+            if (trigger_id == 'navigation-store' and nav_data and 
+                nav_data.get('target_tab') == 'habitat-tab' and nav_data.get('target_site')):
                 target_site = nav_data.get('target_site')
-                if target_site and target_site in sites:
+                if target_site in sites:
                     logger.info(f"Setting dropdown value to {target_site} from navigation")
                     return options, target_site
-                elif target_site:
+                else:
                     logger.warning(f"Navigation target site '{target_site}' not found in available sites")
+            
+            # Priority 2: Restore from saved state if tab was just activated
+            if (trigger_id == 'main-tabs' and habitat_state and habitat_state.get('selected_site')):
+                saved_site = habitat_state.get('selected_site')
+                if saved_site in sites:
+                    logger.info(f"Restoring habitat site selection from state: {saved_site}")
+                    return options, saved_site
+                else:
+                    logger.warning(f"Saved site '{saved_site}' no longer available in habitat data")
+            
+            # Ignore navigation-store clearing events (when nav_data is empty/None)
+            if trigger_id == 'navigation-store':
+                return options, dash.no_update
             
             return options, dash.no_update
             
@@ -59,7 +102,7 @@ def register_habitat_callbacks(app):
             return [], dash.no_update
     
     # ===========================
-    # 2. DATA VISUALIZATION
+    # 3. DATA VISUALIZATION
     # ===========================
     
     @app.callback(
