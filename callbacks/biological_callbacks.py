@@ -15,8 +15,39 @@ logger = setup_logging("biological_callbacks", category="callbacks")
 def register_biological_callbacks(app):
     """Register all biological-related callbacks in logical workflow order."""
     
+    # ===========================
+    # 1. STATE MANAGEMENT
+    # ===========================
+    
+    @app.callback(
+        Output('biological-tab-state', 'data'),
+        [Input('biological-community-dropdown', 'value'),
+         Input('biological-site-dropdown', 'value')],
+        [State('biological-tab-state', 'data')],
+        prevent_initial_call=True
+    )
+    def save_biological_state(selected_community, selected_site, current_state):
+        """Save biological tab state when selections change."""
+        # Only save valid selections, don't overwrite with None
+        if selected_community is not None or selected_site is not None:
+            # Preserve existing values when only one changes
+            new_state = current_state.copy() if current_state else {'selected_community': None, 'selected_site': None}
+            
+            if selected_community is not None:
+                new_state['selected_community'] = selected_community
+                logger.info(f"Saving biological community state: {selected_community}")
+            
+            if selected_site is not None:
+                new_state['selected_site'] = selected_site
+                logger.info(f"Saving biological site state: {selected_site}")
+            
+            return new_state
+        else:
+            # Keep existing state when both dropdowns are cleared
+            return current_state or {'selected_community': None, 'selected_site': None}
+    
     # ==================================================
-    # 1. NAVIGATION AND DROPDOWN POPULATION  
+    # 2. NAVIGATION AND DROPDOWN POPULATION  
     # ==================================================
     
     @app.callback(
@@ -27,14 +58,23 @@ def register_biological_callbacks(app):
          Output('biological-site-dropdown', 'disabled', allow_duplicate=True)],
         [Input('main-tabs', 'active_tab'),
          Input('navigation-store', 'data')],
+        [State('biological-tab-state', 'data')],
         prevent_initial_call=True
     )
-    def handle_biological_navigation_and_initial_load(active_tab, nav_data):
-        """Handle navigation from map and initial tab loading."""
+    def handle_biological_navigation_and_initial_load(active_tab, nav_data, biological_state):
+        """Handle navigation from map, initial tab loading, and state restoration."""
         if active_tab != 'biological-tab':
             return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
         
-        # Handle navigation from map
+        # Get the trigger to understand what caused this callback
+        ctx = dash.callback_context
+        if not ctx.triggered:
+            return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
+            
+        trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
+        logger.info(f"DEBUG: Trigger={trigger_id}, Nav={nav_data}, State={biological_state}")
+        
+        # Priority 1: Handle navigation from map (highest priority)
         if (nav_data and nav_data.get('target_tab') == 'biological-tab' and 
             nav_data.get('target_community') and nav_data.get('target_site')):
             
@@ -61,7 +101,7 @@ def register_biological_callbacks(app):
                 
                 # Verify target site is available for this community
                 if target_site in available_sites:
-                    logger.info(f"Navigation: Setting community to {target_community} and site to {target_site}")
+                    logger.info(f"DEBUG: Navigation taking priority - setting {target_community} + {target_site}")
                     return (
                         target_community,  # Set community
                         options,  # Site options
@@ -89,10 +129,56 @@ def register_biological_callbacks(app):
                     True  # Disable dropdown
                 )
         
+        # Priority 2: Restore from saved state if tab was just activated AND no active navigation
+        if (trigger_id == 'main-tabs' and biological_state and 
+            biological_state.get('selected_community') and
+            (not nav_data or not nav_data.get('target_tab'))):
+            
+            saved_community = biological_state.get('selected_community')
+            saved_site = biological_state.get('selected_site')
+            
+            try:
+                # Get sites for the saved community type
+                from utils import get_sites_with_data
+                available_sites = get_sites_with_data(saved_community)
+                
+                if not available_sites:
+                    logger.warning(f"Saved community '{saved_community}' no longer has available sites")
+                    return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
+                
+                # Create dropdown options
+                options = [{'label': site, 'value': site} for site in sorted(available_sites)]
+                
+                # Check if saved site is still valid for this community
+                site_value_to_restore = None
+                if saved_site and saved_site in available_sites:
+                    site_value_to_restore = saved_site
+                    logger.info(f"DEBUG: State restoration - setting {saved_community} + {saved_site}")
+                else:
+                    logger.info(f"DEBUG: State restoration - setting {saved_community} (site no longer available)")
+                
+                return (
+                    saved_community,  # Restore community
+                    options,  # Site options
+                    site_value_to_restore,  # Restore site if available
+                    {'display': 'block', 'marginBottom': '20px'},  # Show section
+                    False  # Enable dropdown
+                )
+                
+            except Exception as e:
+                logger.error(f"Error restoring state for {saved_community}: {e}")
+                return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
+        
+        # Ignore navigation-store clearing events (when nav_data is empty/None)
+        if trigger_id == 'navigation-store' and (not nav_data or not nav_data.get('target_tab')):
+            logger.info(f"DEBUG: Ignoring navigation store clearing")
+            return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
+        
+        logger.info(f"DEBUG: Default behavior")
         return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
 
     # ==================================================
-    # 2. COMMUNITY SELECTION & SITE DROPDOWN POPULATION
+    # 3. COMMUNITY SELECTION & SITE DROPDOWN POPULATION
     # ==================================================
     
     @app.callback(
@@ -156,7 +242,7 @@ def register_biological_callbacks(app):
             )
     
     # ===========================
-    # 3. MAIN CONTENT DISPLAY
+    # 4. MAIN CONTENT DISPLAY
     # ===========================
     
     @app.callback(
@@ -181,7 +267,7 @@ def register_biological_callbacks(app):
             )
 
     # ===========================
-    # 4. GALLERY NAVIGATION
+    # 5. GALLERY NAVIGATION
     # ===========================
     
     @app.callback(

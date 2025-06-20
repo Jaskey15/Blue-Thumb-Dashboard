@@ -93,6 +93,8 @@ def create_line_plot(df, title, y_column='comparison_to_reference',
 def calculate_dynamic_y_range(df, column='comparison_to_reference'):
     """
     Calculate dynamic y-axis range based on data.
+    For biological data (comparison_to_reference): minimum range 0-1.1, expands if needed
+    For habitat data (total_score): minimum range 0-100, expands if needed
     
     Args:
         df: DataFrame containing the data
@@ -103,15 +105,31 @@ def calculate_dynamic_y_range(df, column='comparison_to_reference'):
     """
     try:
         if df.empty or column not in df.columns:
-            return 0, 1.1
+            # Return appropriate default based on column type
+            if column == 'total_score':
+                return 0, 110  # Habitat default
+            else:
+                return 0, 1.1  # Biological default
         
         max_value = df[column].max()
-        y_upper_limit = max(1.1, max_value * 1.1)
+        
+        # Use different minimum ranges based on data type
+        if column == 'total_score':
+            # Habitat data: minimum range 0-100, expand if data exceeds ~90
+            y_upper_limit = max(110, max_value * 1.1)
+        else:
+            # Biological data: minimum range 0-1.1, expand if data exceeds ~1.0
+            y_upper_limit = max(1.1, max_value * 1.1)
+        
         return 0, y_upper_limit
     
     except Exception as e:
         logger.warning(f"Error calculating y-range: {e}")
-        return 0, 1.1
+        if column == 'total_score':
+            return 0, 110
+        else:
+            return 0, 1.1
+
 
 def update_figure_layout(fig, df, title, y_label=None, y_column='comparison_to_reference', tick_format='.2f'):
     """

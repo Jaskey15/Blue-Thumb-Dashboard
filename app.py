@@ -66,7 +66,8 @@ app.layout = dbc.Container([
     html.Div([
         dcc.Store(id='navigation-store', storage_type='memory', data={'target_tab': None, 'target_site': None}),
         # Tab state stores for preserving user selections
-        dcc.Store(id='habitat-tab-state', storage_type='session', data={'selected_site': None})
+        dcc.Store(id='habitat-tab-state', storage_type='session', data={'selected_site': None}),
+        dcc.Store(id='biological-tab-state', storage_type='session', data={'selected_community': None, 'selected_site': None})
     ], style={'display': 'none'}),
 
     # Footer with improved credits and logo
