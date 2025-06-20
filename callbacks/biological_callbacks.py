@@ -72,7 +72,6 @@ def register_biological_callbacks(app):
             return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
             
         trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
-        logger.info(f"DEBUG: Trigger={trigger_id}, Nav={nav_data}, State={biological_state}")
         
         # Priority 1: Handle navigation from map (highest priority)
         if (nav_data and nav_data.get('target_tab') == 'biological-tab' and 
@@ -101,7 +100,6 @@ def register_biological_callbacks(app):
                 
                 # Verify target site is available for this community
                 if target_site in available_sites:
-                    logger.info(f"DEBUG: Navigation taking priority - setting {target_community} + {target_site}")
                     return (
                         target_community,  # Set community
                         options,  # Site options
@@ -153,9 +151,6 @@ def register_biological_callbacks(app):
                 site_value_to_restore = None
                 if saved_site and saved_site in available_sites:
                     site_value_to_restore = saved_site
-                    logger.info(f"DEBUG: State restoration - setting {saved_community} + {saved_site}")
-                else:
-                    logger.info(f"DEBUG: State restoration - setting {saved_community} (site no longer available)")
                 
                 return (
                     saved_community,  # Restore community
@@ -173,7 +168,6 @@ def register_biological_callbacks(app):
         if trigger_id == 'navigation-store' and (not nav_data or not nav_data.get('target_tab')):
             return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
         
-        logger.info(f"DEBUG: Default behavior")
         return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
 
     # ==================================================

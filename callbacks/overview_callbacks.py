@@ -20,37 +20,119 @@ def register_overview_callbacks(app):
     """Register all callbacks for the overview tab in logical workflow order."""
     
     # ===========================================================================================
-    # 1. MAP INITIALIZATION
+    # 1. STATE MANAGEMENT
+    # ===========================================================================================
+    
+    @app.callback(
+        Output('overview-tab-state', 'data'),
+        [Input('parameter-dropdown', 'value'),
+         Input('active-sites-only-toggle', 'value')],
+        [State('overview-tab-state', 'data')],
+        prevent_initial_call=True
+    )
+    def save_overview_tab_state(parameter_value, active_sites_toggle, current_state):
+        """
+        Save the current state of overview tab controls to session storage.
+        This preserves user selections when they switch tabs and return.
+        """
+        try:
+            # Update the state with current values
+            updated_state = current_state.copy() if current_state else {}
+            updated_state['selected_parameter'] = parameter_value
+            updated_state['active_sites_only'] = active_sites_toggle
+            
+            return updated_state
+            
+        except Exception as e:
+            logger.error(f"Error saving overview tab state: {e}")
+            return current_state or {'selected_parameter': None, 'active_sites_only': False}
+    
+    # ===========================================================================================
+    # 2. MAP INITIALIZATION
     # ===========================================================================================
     
     @app.callback(
         [Output('site-map-graph', 'figure'),
          Output('parameter-dropdown', 'disabled'),
+         Output('parameter-dropdown', 'value'),
+         Output('active-sites-only-toggle', 'value'),
          Output('map-legend-container', 'children')],
-        [Input('main-tabs', 'active_tab')]
+        [Input('main-tabs', 'active_tab')],
+        [State('overview-tab-state', 'data')]
     )
-    def load_basic_map_on_tab_open(active_tab):
+    def load_basic_map_on_tab_open(active_tab, overview_state):
         """
         Load the basic map when the Overview tab is opened.
         This shows different shapes and colors for active vs historic sites.
+        Enhanced with state restoration to preserve user selections.
         """
         # Only load map when Overview tab is active
         if active_tab != 'overview-tab':
-            return dash.no_update, dash.no_update, dash.no_update
+            return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
         
         try:
-            from visualizations.map_viz import create_basic_site_map
-            
-            # Create basic map with site counts (without filtering for initial load)
-            basic_map, active_count, historic_count, total_count = create_basic_site_map(active_only=False)
+            from visualizations.map_viz import (
+                create_basic_site_map, add_parameter_colors_to_map, 
+                filter_sites_by_active_status, load_sites_from_database
+            )
             
             # Enable the parameter dropdown now that map is loaded
             dropdown_disabled = False
             
-            # Create legend for basic map using utility function
-            legend_html = create_map_legend_html(total_count=total_count)
+            # Check for saved state to restore
+            saved_parameter = overview_state.get('selected_parameter') if overview_state else None
+            saved_active_only = overview_state.get('active_sites_only', False) if overview_state else False
             
-            return basic_map, dropdown_disabled, legend_html
+            # If we have a saved parameter, restore it and update map accordingly
+            if saved_parameter:
+                # Parse parameter selection
+                if ':' in saved_parameter:
+                    param_type, param_name = saved_parameter.split(':', 1)
+                    
+                    # Filter sites based on saved toggle state
+                    monitoring_sites = load_sites_from_database()
+                    filtered_sites, active_count, historic_count, total_original = filter_sites_by_active_status(
+                        monitoring_sites, saved_active_only
+                    )
+                    
+                    # Start with basic map
+                    basic_map, _, _, _ = create_basic_site_map(active_only=saved_active_only)
+                    fig = go.Figure(basic_map)
+                    
+                    # Add parameter-specific colors with filtered sites
+                    updated_map, sites_with_data, total_sites = add_parameter_colors_to_map(
+                        fig, param_type, param_name, filtered_sites
+                    )
+                    
+                    # Create parameter legend
+                    legend_items = get_parameter_legend(param_type, param_name)
+                    legend_items = [item for item in legend_items if "No data" not in item["label"]]
+                    
+                    # Build count message using unified function
+                    if saved_active_only:
+                        count_message = get_site_count_message(param_type, param_name, sites_with_data, total_original, active_only=True)
+                    else:
+                        count_message = get_site_count_message(param_type, param_name, sites_with_data, total_sites)
+                    
+                    # Create legend using utility function
+                    legend_html = create_map_legend_html(legend_items=legend_items, count_message=count_message)
+                    
+                    return updated_map, dropdown_disabled, saved_parameter, saved_active_only, legend_html
+                else:
+                    logger.warning(f"Invalid saved parameter format: {saved_parameter}")
+            
+            # Default behavior - create basic map with saved toggle state
+            basic_map, active_count, historic_count, total_count = create_basic_site_map(active_only=saved_active_only)
+            
+            # Create legend for basic map
+            if saved_active_only:
+                monitoring_sites = load_sites_from_database()
+                total_sites_count = len(monitoring_sites)
+                legend_html = create_map_legend_html(total_count=total_count, active_only=saved_active_only, total_sites_count=total_sites_count)
+            else:
+                legend_html = create_map_legend_html(total_count=total_count, active_only=saved_active_only)
+            
+            return basic_map, dropdown_disabled, saved_parameter, saved_active_only, legend_html
             
         except Exception as e:
             logger.error(f"Error loading basic map: {e}")
@@ -71,10 +153,10 @@ def register_overview_callbacks(app):
                 str(e)
             )
             
-            return empty_map, True, error_legend
+            return empty_map, True, None, False, error_legend
     
     # ===========================================================================================
-    # 2. PARAMETER SELECTION & MAP UPDATES
+    # 3. PARAMETER SELECTION & MAP UPDATES
     # ===========================================================================================
     
     @app.callback(

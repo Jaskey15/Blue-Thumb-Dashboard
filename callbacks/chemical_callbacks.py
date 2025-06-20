@@ -102,7 +102,6 @@ def register_chemical_callbacks(app):
             return [], dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
             
         trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
-        logger.info(f"DEBUG: Chemical trigger={trigger_id}, Nav={nav_data}, State={chemical_state}")
         
         try:
             # Get all sites with chemical data
@@ -124,8 +123,6 @@ def register_chemical_callbacks(app):
                 target_parameter = nav_data.get('target_parameter')
                 
                 if target_site in sites:
-                    logger.info(f"DEBUG: Navigation taking priority - setting site: {target_site}, parameter: {target_parameter}")
-                    
                     # For map navigation, set site + parameter from nav, preserve other filters from state or use defaults
                     restored_year_range = (chemical_state.get('year_range') 
                                          if chemical_state and chemical_state.get('year_range') 
@@ -161,7 +158,6 @@ def register_chemical_callbacks(app):
                 
                 # Verify saved site is still available
                 if saved_site in sites:
-                    logger.info(f"DEBUG: State restoration - restoring all saved values")
                     return (
                         options,  # Site options
                         saved_site,  # Restore site
@@ -178,7 +174,6 @@ def register_chemical_callbacks(app):
                 return options, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
             
             # Default behavior - just populate options
-            logger.info(f"DEBUG: Default behavior - populating options only")
             return options, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
             
         except Exception as e:

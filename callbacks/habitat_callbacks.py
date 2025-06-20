@@ -58,7 +58,6 @@ def register_habitat_callbacks(app):
             return [], dash.no_update
             
         trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
-        logger.info(f"DEBUG: Trigger={trigger_id}, Nav={nav_data}, State={habitat_state}")
         
         try:
             # Get all sites with habitat data
@@ -77,7 +76,6 @@ def register_habitat_callbacks(app):
             if (nav_data and nav_data.get('target_tab') == 'habitat-tab' and nav_data.get('target_site')):
                 target_site = nav_data.get('target_site')
                 if target_site in sites:
-                    logger.info(f"DEBUG: Navigation taking priority - setting {target_site}")
                     return options, target_site
                 else:
                     logger.warning(f"Navigation target site '{target_site}' not found in available sites")
@@ -87,7 +85,6 @@ def register_habitat_callbacks(app):
                 (not nav_data or not nav_data.get('target_tab'))):
                 saved_site = habitat_state.get('selected_site')
                 if saved_site in sites:
-                    logger.info(f"DEBUG: State restoration - setting {saved_site}")
                     return options, saved_site
                 else:
                     logger.warning(f"Saved site '{saved_site}' no longer available in habitat data")
@@ -96,7 +93,6 @@ def register_habitat_callbacks(app):
             if trigger_id == 'navigation-store' and (not nav_data or not nav_data.get('target_tab')):
                 return options, dash.no_update
             
-            logger.info(f"DEBUG: Default behavior")
             return options, dash.no_update
             
         except Exception as e:
