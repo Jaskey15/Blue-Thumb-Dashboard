@@ -105,14 +105,26 @@ def register_shared_callbacks(app):
             try:
                 # Extract site name from click data
                 hover_text = click_data['points'][0]['text']
-                site_name = hover_text.split('<br>')[0].replace('Site: ', '')
+                site_name = hover_text.split('<br>')[0].replace('<b>Site:</b> ', '')
                 
-                # Only handle habitat navigation for now (Phase 1)
+                # Handle habitat navigation
                 if current_parameter == 'habitat:Habitat_Score':
                     logger.info(f"Navigating from habitat map to habitat tab for site: {site_name}")
                     return "habitat-tab", {
                         'target_tab': 'habitat-tab',
                         'target_site': site_name,
+                        'source_parameter': current_parameter
+                    }
+                
+                # Handle chemical navigation  
+                elif current_parameter.startswith('chem:'):
+                    # Extract parameter name from the format 'chem:parameter_name'
+                    parameter_name = current_parameter.split(':', 1)[1]
+                    logger.info(f"Navigating from chemical map to chemical tab for site: {site_name}, parameter: {parameter_name}")
+                    return "chemical-tab", {
+                        'target_tab': 'chemical-tab',
+                        'target_site': site_name,
+                        'target_parameter': parameter_name,
                         'source_parameter': current_parameter
                     }
                 

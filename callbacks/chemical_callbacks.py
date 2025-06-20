@@ -21,13 +21,17 @@ def register_chemical_callbacks(app):
     # ===========================
     
     @app.callback(
-        Output('chemical-site-dropdown', 'options'),
-        Input('main-tabs', 'active_tab')
+        [Output('chemical-site-dropdown', 'options'),
+         Output('chemical-site-dropdown', 'value', allow_duplicate=True),
+         Output('chemical-parameter-dropdown', 'value', allow_duplicate=True)],
+        [Input('main-tabs', 'active_tab'),
+         Input('navigation-store', 'data')],
+        prevent_initial_call=True
     )
-    def populate_chemical_sites(active_tab):
-        """Populate site dropdown options when chemical tab is opened."""
+    def populate_chemical_sites_and_handle_navigation(active_tab, nav_data):
+        """Populate site dropdown options and handle navigation from map."""
         if active_tab != 'chemical-tab':
-            return []
+            return [], dash.no_update, dash.no_update
         
         try:
             # Get all sites with chemical data
@@ -35,17 +39,28 @@ def register_chemical_callbacks(app):
             
             if not sites:
                 logger.warning("No sites with chemical data found")
-                return []
+                return [], dash.no_update, dash.no_update
             
             # Create dropdown options
             options = [{'label': site, 'value': site} for site in sorted(sites)]
             logger.info(f"Populated chemical dropdown with {len(options)} sites")
             
-            return options
+            # Check if we need to set a specific site and parameter from navigation
+            if nav_data and nav_data.get('target_tab') == 'chemical-tab' and active_tab == 'chemical-tab':
+                target_site = nav_data.get('target_site')
+                target_parameter = nav_data.get('target_parameter')
+                
+                if target_site and target_site in sites:
+                    logger.info(f"Setting dropdown values from navigation - site: {target_site}, parameter: {target_parameter}")
+                    return options, target_site, target_parameter or 'do_percent'
+                elif target_site:
+                    logger.warning(f"Navigation target site '{target_site}' not found in available sites")
+            
+            return options, dash.no_update, dash.no_update
             
         except Exception as e:
             logger.error(f"Error populating chemical sites: {e}")
-            return []
+            return [], dash.no_update, dash.no_update
     
     # ===========================
     # 2. SITE SELECTION & CONTROLS

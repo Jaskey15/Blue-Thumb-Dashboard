@@ -66,7 +66,7 @@ def create_chemical_tab():
                             {'label': 'Chloride', 'value': 'Chloride'},
                             {'label': 'All Parameters', 'value': 'all_parameters'}
                         ],
-                        value='do_percent',
+                        value=None,
                         className="mb-3"
                     )
                 ], width=12)

@@ -19,12 +19,11 @@ from visualizations.map_viz import (
     # Core helper functions
     load_sites_from_database,
     get_latest_data_by_type,
-    get_status_color_from_database,
+    get_status_color,
     filter_sites_by_active_status,
     
     # UI helper functions
-    format_parameter_value,
-    _create_hover_text,
+    create_hover_text,
     
     # Map layout helper functions
     _create_base_map_layout,
@@ -170,7 +169,7 @@ class TestMapViz(unittest.TestCase):
         with self.assertRaises(Exception):
             load_sites_from_database()
 
-    @patch('data_processing.data_queries.get_chemical_data_from_db')
+    @patch('visualizations.map_viz.get_latest_chemical_data_for_maps')
     def test_get_latest_data_by_type_chemical(self, mock_get_chem):
         """Test getting latest chemical data."""
         mock_get_chem.return_value = self.sample_chemical_data
@@ -182,7 +181,7 @@ class TestMapViz(unittest.TestCase):
         self.assertFalse(result.empty)
         mock_get_chem.assert_called_once()
 
-    @patch('data_processing.data_queries.get_fish_dataframe')
+    @patch('visualizations.map_viz.get_latest_fish_data_for_maps')
     def test_get_latest_data_by_type_fish(self, mock_get_fish):
         """Test getting latest fish data."""
         mock_get_fish.return_value = self.sample_fish_data
@@ -192,7 +191,7 @@ class TestMapViz(unittest.TestCase):
         self.assertIsInstance(result, pd.DataFrame)
         mock_get_fish.assert_called_once()
 
-    @patch('data_processing.data_queries.get_macroinvertebrate_dataframe')
+    @patch('visualizations.map_viz.get_latest_macro_data_for_maps')
     def test_get_latest_data_by_type_macro(self, mock_get_macro):
         """Test getting latest macro data."""
         mock_get_macro.return_value = self.sample_macro_data
@@ -202,7 +201,7 @@ class TestMapViz(unittest.TestCase):
         self.assertIsInstance(result, pd.DataFrame)
         mock_get_macro.assert_called_once()
 
-    @patch('data_processing.data_queries.get_habitat_dataframe')
+    @patch('visualizations.map_viz.get_latest_habitat_data_for_maps')
     def test_get_latest_data_by_type_habitat(self, mock_get_habitat):
         """Test getting latest habitat data."""
         mock_get_habitat.return_value = self.sample_habitat_data
@@ -217,7 +216,7 @@ class TestMapViz(unittest.TestCase):
         with self.assertRaises(ValueError):
             get_latest_data_by_type('invalid_type')
 
-    def test_get_status_color_from_database_chemical(self):
+    def test_get_status_color_chemical(self):
         """Test color mapping for chemical data statuses."""
         test_cases = [
             ('Normal', COLORS['normal']),
@@ -229,11 +228,11 @@ class TestMapViz(unittest.TestCase):
         
         for status, expected_color in test_cases:
             with self.subTest(status=status):
-                result_status, result_color = get_status_color_from_database('chemical', status)
+                result_status, result_color = get_status_color(status, 'chemical')
                 self.assertEqual(result_status, status)
                 self.assertEqual(result_color, expected_color)
 
-    def test_get_status_color_from_database_fish(self):
+    def test_get_status_color_fish(self):
         """Test color mapping for fish data statuses."""
         test_cases = [
             ('Excellent', COLORS['fish']['excellent']),
@@ -245,30 +244,51 @@ class TestMapViz(unittest.TestCase):
         
         for status, expected_color in test_cases:
             with self.subTest(status=status):
-                result_status, result_color = get_status_color_from_database('fish', status)
+                result_status, result_color = get_status_color(status, 'fish')
                 self.assertEqual(result_status, status)
                 self.assertEqual(result_color, expected_color)
 
-    def test_get_status_color_from_database_unknown_status(self):
+    def test_get_status_color_unknown_status(self):
         """Test handling of unknown status values."""
-        status, color = get_status_color_from_database('chemical', 'Unknown Status')
+        status, color = get_status_color('Unknown Status', 'chemical')
         self.assertEqual(status, 'Unknown Status')
         self.assertEqual(color, 'gray')
 
-    def test_get_status_color_from_database_null_values(self):
+    def test_get_status_color_null_values(self):
         """Test handling of null/None status values."""
         # Test None and NaN - these should return 'Unknown'
         test_cases_unknown = [None, np.nan]
         for null_value in test_cases_unknown:
             with self.subTest(null_value=null_value):
-                status, color = get_status_color_from_database('chemical', null_value)
+                status, color = get_status_color(null_value, 'chemical')
                 self.assertEqual(status, 'Unknown')
                 self.assertEqual(color, 'gray')
         
         # Test empty string - this should return the empty string itself
-        status, color = get_status_color_from_database('chemical', '')
+        status, color = get_status_color('', 'chemical')
         self.assertEqual(status, '')
         self.assertEqual(color, 'gray')
+
+    def test_get_status_color_series(self):
+        """Test get_status_color with pandas Series (vectorized operation)."""
+        # Test with chemical statuses
+        statuses = pd.Series(['Normal', 'Caution', 'Poor', None])
+        result_statuses, result_colors = get_status_color(statuses, 'chemical')
+        
+        # Should return Series
+        self.assertIsInstance(result_statuses, pd.Series)
+        self.assertIsInstance(result_colors, pd.Series)
+        
+        # Check individual values
+        self.assertEqual(result_statuses.iloc[0], 'Normal')
+        self.assertEqual(result_statuses.iloc[1], 'Caution') 
+        self.assertEqual(result_statuses.iloc[2], 'Poor')
+        self.assertEqual(result_statuses.iloc[3], 'Unknown')  # None becomes Unknown
+        
+        self.assertEqual(result_colors.iloc[0], COLORS['normal'])
+        self.assertEqual(result_colors.iloc[1], COLORS['caution'])
+        self.assertEqual(result_colors.iloc[2], COLORS['poor'])
+        self.assertEqual(result_colors.iloc[3], 'gray')  # None becomes gray
 
     def test_filter_sites_by_active_status_all_sites(self):
         """Test filtering sites with active_only=False."""
@@ -291,105 +311,98 @@ class TestMapViz(unittest.TestCase):
         # Should return only active sites
         self.assertEqual(len(sites), 2)
         self.assertEqual(active_count, 2)
-        self.assertEqual(historic_count, 0)  # No historic sites in filtered result
+        self.assertEqual(historic_count, 1)  # Total historic sites in original list
         self.assertEqual(total_count, 3)  # Original total
 
     # =============================================================================
     # UI HELPER FUNCTION TESTS - Formatting and Text Creation
     # =============================================================================
 
-    def test_format_parameter_value_do_percent(self):
-        """Test formatting of DO percent values."""
-        result = format_parameter_value('do_percent', 95.5)
-        self.assertEqual(result, "96%")
-
-    def test_format_parameter_value_ph(self):
-        """Test formatting of pH values."""
-        result = format_parameter_value('pH', 7.25)
-        self.assertEqual(result, "7.2")
-
-    def test_format_parameter_value_nitrogen(self):
-        """Test formatting of nitrogen values."""
-        result = format_parameter_value('soluble_nitrogen', 1.234)
-        self.assertEqual(result, "1.23 mg/L")
-
-    def test_format_parameter_value_phosphorus(self):
-        """Test formatting of phosphorus values."""
-        result = format_parameter_value('Phosphorus', 0.1234)
-        self.assertEqual(result, "0.123 mg/L")
-
-    def test_format_parameter_value_chloride(self):
-        """Test formatting of chloride values."""
-        result = format_parameter_value('Chloride', 250.7)
-        self.assertEqual(result, "251 mg/L")
-
-    def test_format_parameter_value_null(self):
-        """Test formatting of null values."""
-        result = format_parameter_value('do_percent', np.nan)
-        self.assertEqual(result, "No data")
-        
-        result = format_parameter_value('pH', None)
-        self.assertEqual(result, "No data")
-
     def test_create_hover_text_chemical(self):
         """Test hover text creation for chemical data."""
-        site_data = self.sample_chemical_data.iloc[[0]]  # First row as DataFrame
+        # Prepare DataFrame with computed status
+        site_data = self.sample_chemical_data.iloc[[0]].copy()  # First row as DataFrame
+        site_data['computed_status'] = 'Normal'
         
-        hover_text = _create_hover_text(
-            'chemical', 'Blue Creek at Highway 9', 95.5, 'Normal', 
-            site_data, {
-                'value_column': 'do_percent',
-                'date_column': 'Date'
-            }, 
-            'do_percent'
+        config = {
+            'value_column': 'do_percent',
+            'date_column': 'Date',
+            'site_column': 'Site_Name'
+        }
+        
+        hover_text_list = create_hover_text(
+            site_data, 'chemical', config, 'do_percent'
         )
         
+        hover_text = hover_text_list[0]  # Get first element from returned list
         self.assertIn('Blue Creek at Highway 9', hover_text)
-        self.assertIn('Dissolved Oxygen Saturation', hover_text)
-        self.assertIn('96%', hover_text)  # Formatted value
+        self.assertIn('Dissolved Oxygen', hover_text)
+        self.assertIn('95.5%', hover_text)  # Formatted value (not rounded)
         self.assertIn('Normal', hover_text)
-        self.assertIn('January 15, 2023', hover_text)  # Formatted date
+        self.assertIn('2023-01-15', hover_text)  # Formatted date
 
     def test_create_hover_text_fish(self):
         """Test hover text creation for fish data."""
-        site_data = self.sample_fish_data.iloc[[0]]
+        # Prepare DataFrame with computed status
+        site_data = self.sample_fish_data.iloc[[0]].copy()
+        site_data['computed_status'] = 'Good'
         
-        hover_text = _create_hover_text(
-            'fish', 'Blue Creek at Highway 9', 0.85, 'Good',
-            site_data, {'date_column': 'year'}
+        config = {
+            'value_column': 'comparison_to_reference',
+            'date_column': 'year',
+            'site_column': 'site_name'
+        }
+        
+        hover_text_list = create_hover_text(
+            site_data, 'fish', config, None
         )
         
+        hover_text = hover_text_list[0]  # Get first element from returned list
         self.assertIn('Blue Creek at Highway 9', hover_text)
-        self.assertIn('IBI Score: 0.85', hover_text)
+        self.assertIn('IBI Score:</b> 0.85', hover_text)
         self.assertIn('Good', hover_text)
         self.assertIn('2023', hover_text)
 
     def test_create_hover_text_macro(self):
         """Test hover text creation for macro data."""
-        site_data = self.sample_macro_data.iloc[[0]]
+        site_data = self.sample_macro_data.iloc[[0]].copy()
+        site_data['computed_status'] = 'Slightly Impaired'
         
-        hover_text = _create_hover_text(
-            'macro', 'Blue Creek at Highway 9', 0.75, 'Slightly Impaired',
-            site_data, {'date_column': 'year'}
+        config = {
+            'value_column': 'comparison_to_reference',
+            'date_column': 'year',
+            'site_column': 'site_name'
+        }
+        
+        hover_text_list = create_hover_text(
+            site_data, 'macro', config, None
         )
         
+        hover_text = hover_text_list[0]  # Get first element from returned list
         self.assertIn('Blue Creek at Highway 9', hover_text)
-        self.assertIn('Bioassessment Score: 0.75', hover_text)
+        self.assertIn('Bioassessment Score:</b> 0.75', hover_text)
         self.assertIn('Slightly Impaired', hover_text)
         self.assertIn('Summer 2023', hover_text)  # Season and year
 
     def test_create_hover_text_habitat(self):
         """Test hover text creation for habitat data."""
-        site_data = self.sample_habitat_data.iloc[[0]]
+        site_data = self.sample_habitat_data.iloc[[0]].copy()
+        site_data['computed_status'] = 'B'
         
-        hover_text = _create_hover_text(
-            'habitat', 'Blue Creek at Highway 9', 85, 'B',
-            site_data, {'date_column': 'year'}
+        config = {
+            'value_column': 'total_score',
+            'date_column': 'year',
+            'site_column': 'site_name'
+        }
+        
+        hover_text_list = create_hover_text(
+            site_data, 'habitat', config, None
         )
         
+        hover_text = hover_text_list[0]  # Get first element from returned list
         self.assertIn('Blue Creek at Highway 9', hover_text)
-        self.assertIn('Habitat Score: 85', hover_text)
-        self.assertIn('Grade: B', hover_text)
+        self.assertIn('Habitat Score:</b> 85', hover_text)
+        self.assertIn('Grade:</b> B', hover_text)
         self.assertIn('2023', hover_text)
         self.assertIn('Click to view detailed data', hover_text)
 
@@ -583,7 +596,7 @@ class TestMapViz(unittest.TestCase):
         
         # Should have correct counts
         self.assertEqual(active_count, 2)
-        self.assertEqual(historic_count, 0)  # No historic in filtered result
+        self.assertEqual(historic_count, 1)  # Total historic in original list
         self.assertEqual(total_count, 2)     # Only active sites
         
         # Should have markers for active sites only
@@ -703,7 +716,7 @@ class TestMapViz(unittest.TestCase):
         """Test that PARAMETER_LABELS constant has expected parameters."""
         expected_params = [
             'do_percent', 'pH', 'soluble_nitrogen', 'Phosphorus', 
-            'Chloride', 'Fish_IBI', 'Macro_Combined', 'Habitat_Grade'
+            'Chloride', 'Fish_IBI', 'Macro_Combined', 'Habitat_Score'
         ]
         
         for param in expected_params:
@@ -721,16 +734,10 @@ class TestMapViz(unittest.TestCase):
     # =============================================================================
     # ERROR HANDLING AND EDGE CASES
     # =============================================================================
-
-    def test_format_parameter_value_unknown_parameter(self):
-        """Test formatting unknown parameter."""
-        result = format_parameter_value('unknown_param', 123.456)
-        self.assertEqual(result, "123.456")
-
-    def test_get_status_color_from_database_invalid_data_type(self):
+    def test_get_status_color_invalid_data_type(self):
         """Test status color mapping with invalid data type."""
-        status, color = get_status_color_from_database('invalid_type', 'Normal')
-        self.assertEqual(status, 'Unknown')
+        status, color = get_status_color('Normal', 'invalid_type')
+        self.assertEqual(status, 'Normal')
         self.assertEqual(color, 'gray')
 
     @patch('visualizations.map_viz.get_latest_data_by_type')
@@ -787,21 +794,30 @@ class TestMapViz(unittest.TestCase):
     def test_hover_text_consistency(self):
         """Test that hover text is consistent across data types."""
         test_cases = [
-            ('chemical', self.sample_chemical_data.iloc[[0]], {'date_column': 'Date'}, 'do_percent'),
-            ('fish', self.sample_fish_data.iloc[[0]], {'date_column': 'year'}, None),
-            ('macro', self.sample_macro_data.iloc[[0]], {'date_column': 'year'}, None),
-            ('habitat', self.sample_habitat_data.iloc[[0]], {'date_column': 'year'}, None)
+            ('chemical', self.sample_chemical_data.iloc[[0]], 
+             {'date_column': 'Date', 'value_column': 'do_percent', 'site_column': 'Site_Name'}, 'do_percent'),
+            ('fish', self.sample_fish_data.iloc[[0]], 
+             {'date_column': 'year', 'value_column': 'comparison_to_reference', 'site_column': 'site_name'}, None),
+            ('macro', self.sample_macro_data.iloc[[0]], 
+             {'date_column': 'year', 'value_column': 'comparison_to_reference', 'site_column': 'site_name'}, None),
+            ('habitat', self.sample_habitat_data.iloc[[0]], 
+             {'date_column': 'year', 'value_column': 'total_score', 'site_column': 'site_name'}, None)
         ]
         
         for data_type, site_data, config, param_name in test_cases:
             with self.subTest(data_type=data_type):
-                hover_text = _create_hover_text(
-                    data_type, 'Test Site', 1.0, 'Test Status',
-                    site_data, config, param_name
+                # Prepare DataFrame with computed status
+                site_data_copy = site_data.copy()
+                site_data_copy['computed_status'] = 'Test Status'
+                
+                hover_text_list = create_hover_text(
+                    site_data_copy, data_type, config, param_name
                 )
                 
+                hover_text = hover_text_list[0]  
+                
                 # All hover texts should contain site name
-                self.assertIn('Test Site', hover_text)
+                self.assertIn('Site:', hover_text)
                 # All should have HTML formatting
                 self.assertIn('<br>', hover_text)
 
