@@ -58,6 +58,7 @@ def register_habitat_callbacks(app):
             return [], dash.no_update
             
         trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
+        logger.info(f"DEBUG: Trigger={trigger_id}, Nav={nav_data}, State={habitat_state}")
         
         try:
             # Get all sites with habitat data
@@ -72,29 +73,31 @@ def register_habitat_callbacks(app):
             logger.info(f"Populated habitat dropdown with {len(options)} sites")
             
             # Priority 1: Check if we need to set a specific site from navigation (map clicks)
-            # Only respond to navigation-store changes that have meaningful data
-            if (trigger_id == 'navigation-store' and nav_data and 
-                nav_data.get('target_tab') == 'habitat-tab' and nav_data.get('target_site')):
+            # Handle navigation data regardless of trigger source
+            if (nav_data and nav_data.get('target_tab') == 'habitat-tab' and nav_data.get('target_site')):
                 target_site = nav_data.get('target_site')
                 if target_site in sites:
-                    logger.info(f"Setting dropdown value to {target_site} from navigation")
+                    logger.info(f"DEBUG: Navigation taking priority - setting {target_site}")
                     return options, target_site
                 else:
                     logger.warning(f"Navigation target site '{target_site}' not found in available sites")
             
-            # Priority 2: Restore from saved state if tab was just activated
-            if (trigger_id == 'main-tabs' and habitat_state and habitat_state.get('selected_site')):
+            # Priority 2: Restore from saved state if tab was just activated AND no active navigation
+            if (trigger_id == 'main-tabs' and habitat_state and habitat_state.get('selected_site') and
+                (not nav_data or not nav_data.get('target_tab'))):
                 saved_site = habitat_state.get('selected_site')
                 if saved_site in sites:
-                    logger.info(f"Restoring habitat site selection from state: {saved_site}")
+                    logger.info(f"DEBUG: State restoration - setting {saved_site}")
                     return options, saved_site
                 else:
                     logger.warning(f"Saved site '{saved_site}' no longer available in habitat data")
             
             # Ignore navigation-store clearing events (when nav_data is empty/None)
-            if trigger_id == 'navigation-store':
+            if trigger_id == 'navigation-store' and (not nav_data or not nav_data.get('target_tab')):
+                logger.info(f"DEBUG: Ignoring navigation store clearing")
                 return options, dash.no_update
             
+            logger.info(f"DEBUG: Default behavior")
             return options, dash.no_update
             
         except Exception as e:
