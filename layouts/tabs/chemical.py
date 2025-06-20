@@ -30,7 +30,7 @@ def create_chemical_tab():
         
         # Site selection section - simplified with searchable dropdown
         html.Div([
-            html.Label("Select Site:", className="form-label mb-2", style={'fontWeight': 'bold'}),
+            html.Label("Select Site:", className="form-label mb-2", style={'fontWeight': 'bold', 'fontSize': '1rem'}),
             
             # Helper text
             html.Small(
@@ -55,7 +55,7 @@ def create_chemical_tab():
             # Parameter selection - full row
             dbc.Row([
                 dbc.Col([
-                    html.Label("Select Chemical Parameter:", className="form-label mb-2", style={'fontWeight': 'bold'}),
+                    html.Label("Select Chemical Parameter:", className="form-label mb-2", style={'fontWeight': 'bold', 'fontSize': '1rem'}),
                     dcc.Dropdown(
                         id='chemical-parameter-dropdown',
                         options=[
@@ -75,7 +75,7 @@ def create_chemical_tab():
             # Year range 
             dbc.Row([
                 dbc.Col([
-                    html.Label("Select Year Range:", className="form-label mb-2", style={'fontWeight': 'bold'}),
+                    html.Label("Select Year Range:", className="form-label mb-2", style={'fontWeight': 'bold', 'fontSize': '1rem'}),
                     dcc.RangeSlider(
                         id='year-range-slider',
                         min=min_year,
@@ -93,7 +93,8 @@ def create_chemical_tab():
                 dbc.Col([
                     html.Label(
                         "Select Season:", 
-                        style={"display": "inline-block", "vertical-align": "middle", "margin-right": "10px", "fontWeight": "bold"}
+                        className="form-label mb-2",
+                        style={"display": "inline-block", "vertical-align": "middle", "margin-right": "10px", "fontWeight": "bold", "fontSize": "1rem"}
                     ),
                     dbc.ButtonGroup(
                         [
@@ -111,7 +112,8 @@ def create_chemical_tab():
                 dbc.Col([
                     html.Label(
                         "Select Months:", 
-                        style={"display": "inline-block", "vertical-align": "middle", "margin-right": "10px", "fontWeight": "bold"}
+                        className="form-label mb-2",
+                        style={"display": "inline-block", "vertical-align": "middle", "margin-right": "10px", "fontWeight": "bold", "fontSize": "1rem"}
                     ),
                     dcc.Checklist(
                         id='month-checklist',
@@ -135,7 +137,8 @@ def create_chemical_tab():
                 dbc.Col([
                     html.Label(
                         "Highlight Threshold Violations:", 
-                        style={"display": "inline-block", "vertical-align": "middle", "margin-right": "10px", "fontWeight": "bold"}
+                        className="form-label mb-2",
+                        style={"display": "inline-block", "vertical-align": "middle", "margin-right": "10px", "fontWeight": "bold", "fontSize": "1rem"}
                     ),
                     dbc.Switch(
                         id="highlight-thresholds-switch",

@@ -35,7 +35,7 @@ def create_habitat_tab():
         # Site selection section - simplified with searchable dropdown
         dbc.Row([
             dbc.Col([
-                html.Label("Select Site:", className="form-label mb-2", style={'fontWeight': 'bold'}),
+                html.Label("Select Site:", className="form-label mb-2", style={'fontWeight': 'bold', 'fontSize': '1rem'}),
                 
                 # Helper text
                 html.Small(

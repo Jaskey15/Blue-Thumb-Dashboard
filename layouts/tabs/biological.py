@@ -24,7 +24,7 @@ def create_biological_tab():
         
         # Community selection - always visible
         html.Div([
-            html.Label("Select Biological Community:", className="form-label mb-2", style={'fontWeight': 'bold'}),
+            html.Label("Select Biological Community:", className="form-label mb-2", style={'fontWeight': 'bold', 'fontSize': '1rem'}),
             dcc.Dropdown(
                 id='biological-community-dropdown',
                 options=[
@@ -40,7 +40,7 @@ def create_biological_tab():
         
         # Site selection section - simplified with searchable dropdown
         html.Div([
-            html.Label("Select Site:", className="form-label mb-2", style={'fontWeight': 'bold'}),
+            html.Label("Select Site:", className="form-label mb-2", style={'fontWeight': 'bold', 'fontSize': '1rem'}),
             
             # Helper text
             html.Small(
@@ -59,7 +59,7 @@ def create_biological_tab():
                 className="mb-3"
             )
             
-        ], id='biological-site-search-section', style={'display': 'none', 'marginBottom': '20px'}),
+        ], id='biological-site-search-section', className="mb-4", style={'display': 'none'}),
         
         # Content container - shows biological data after both selections are made
         html.Div(id='biological-content-container', className="mt-4"),

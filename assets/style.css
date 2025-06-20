@@ -1,8 +1,10 @@
 /***************************************
- * TENMILE CREEK DASHBOARD STYLESHEET
+ * BLUE THUMB DASHBOARD STYLESHEET
  ***************************************/
 
-/* --- CSS Variables for consistency --- */
+/* =================================
+   CSS VARIABLES
+   ================================= */
 :root {
   --font-primary: 'Arial', sans-serif;
   --font-heading: 'Montserrat', sans-serif;
@@ -16,114 +18,76 @@
   --color-bg-active: #EBE6DD;
 }
 
-/* 
-  MAIN TYPOGRAPHY SETTINGS
-  These rules set the default font family, line height, and text color for the entire dashboard
-*/
+/* =================================
+   BASE TYPOGRAPHY
+   ================================= */
 body {
-  font-family: var(--font-primary); /* Sets the main font for all text */
-  line-height: 1.6; /* Controls the vertical spacing between lines of text */
-  color: var(--color-text); /* Sets the default text color to dark gray (almost black) */
+  font-family: var(--font-primary);
+  line-height: 1.6;
+  color: var(--color-text);
 }
 
-/* 
-  HEADINGS STYLING
-  These rules apply to all heading levels (h1-h6) for consistent appearance
-*/
 h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-heading); /* Different font for headings to distinguish them */
-  color: var(--color-text); /* Sets all headings to dark gray by default */
-  margin-top: 1rem; /* Space above headings */
-  margin-bottom: 1rem; /* Space below headings */
+  font-family: var(--font-heading);
+  color: var(--color-text);
+  margin-top: 1rem;
+  margin-bottom: 1rem;
 }
 
-/* 
-  TAB SECTION HEADERS
-  This specifically targets h3 elements which are used as main section headers in markdown content
-*/
+/* Main section headers used in markdown content */
 h3, .tab-header {
-  font-size: 1.5rem; /* Size of the heading */
-  font-weight: 600; /* Makes the font semi-bold */
-  color: var(--color-text); /* Dark gray/black color */
-  border-bottom: 1px solid var(--color-border-light); /* Adds a light gray line under the heading */
-  padding-bottom: 0.5rem; /* Space between text and the bottom border */
-  margin-top: 1rem; /* Space above the heading */
-  margin-bottom: 1.5rem; /* Space below the heading */
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--color-text);
+  border-bottom: 1px solid var(--color-border-light);
+  padding-bottom: 0.5rem;
+  margin-top: 1rem;
+  margin-bottom: 1.5rem;
 }
 
-.markdown-content {
-  margin-top: 0; /* Changed from 1.5rem to prevent inconsistent spacing */
-}
-
-/* Add this class for non-markdown tab headers that need the same styling */
-.tab-header {
-  display: block; /* Ensures it works like a block element */
-}
-
-/* 
-  SUBSECTION HEADINGS
-  Styling for h4 elements which are typically used for subsections
-*/
 h4 {
-  font-size: 1.3rem; /* Slightly smaller than h3 */
-  font-weight: 600; /* Semi-bold text */
-  margin-top: 1.5rem; /* More space above to separate from previous content */
-  margin-bottom: 1rem; /* Space below */
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
 }
 
-/* 
-  MINOR HEADING LEVEL
-  Styling for h5 elements, used for smaller subsections or component titles
-*/
 h5 {
-  font-size: 1.1rem; /* Even smaller size */
-  font-weight: 600; /* Semi-bold text */
-  margin-top: 1rem; /* Space above */
-  margin-bottom: 0.75rem; /* Space below */
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-top: 1rem;
+  margin-bottom: 0.75rem;
 }
 
-/* 
-  PARAGRAPH STYLING
-  Controls the spacing and appearance of paragraph text
-*/
 p {
-  margin-bottom: 1rem; /* Space between paragraphs */
+  margin-bottom: 1rem;
 }
 
-/* 
-  LIST STYLING
-  Controls the appearance and spacing of unordered lists
-*/
 ul {
-  margin-left: 1.5rem; /* Indentation for list items */
-  margin-bottom: 1.5rem; /* Space after the entire list */
+  margin-left: 1.5rem;
+  margin-bottom: 1.5rem;
 }
 
 li {
-  margin-bottom: 0.5rem; /* Space between list items */
+  margin-bottom: 0.5rem;
 }
 
-/* 
-  TAB CONTENT CONTAINER
-  Styling for the container that holds the content of each tab
-*/
+/* =================================
+   LAYOUT & CONTAINERS
+   ================================= */
 .dash-tab-content {
-  padding: 15px; /* Space inside the tab content area */
-  border-left: 1px solid var(--color-border-medium); /* Light gray border on left */
-  border-right: 1px solid var(--color-border-medium); /* Light gray border on right */
-  border-bottom: 1px solid var(--color-border-medium); /* Light gray border on bottom */
+  padding: 15px;
+  border-left: 1px solid var(--color-border-medium);
+  border-right: 1px solid var(--color-border-medium);
+  border-bottom: 1px solid var(--color-border-medium);
 }
 
-/* 
-  CONSISTENT TAB CONTENT SPACING
-  Wrapper class for consistent spacing across all tabs
-*/
+/* Consistent spacing across all tabs */
 .tab-content-wrapper {
   margin-top: 0;
-  padding-top: 0; /* Consistent top spacing for all tabs */
+  padding-top: 0;
 }
 
-/* Override any conflicting margins in tab content */
 .tab-content-wrapper > .markdown-content {
   margin-top: 0;
 }
@@ -132,49 +96,56 @@ li {
   margin-top: 0;
 }
 
-/* 
-  MARKDOWN CONTENT
-  Ensures consistency in font for markdown-rendered content
-*/
+.markdown-content {
+  margin-top: 0;
+}
+
 .dash-markdown {
-  font-family: var(--font-primary); /* Matches the body font */
+  font-family: var(--font-primary);
 }
 
-/* Add consistent top margin to first h3 in markdown */
 .dash-markdown h3:first-child {
-  margin-top: 0; /* Changed from 1.5rem to prevent inconsistent spacing */
+  margin-top: 0;
 }
 
-/* 
-  BUTTON STYLING
-  Controls the appearance of primary action buttons
-*/
+/* Non-markdown tab headers that need the same styling as h3 */
+.tab-header {
+  display: block;
+}
+
+/* Graph container spacing */
+#chemical-graph-container, 
+#biological-content-container {
+  margin-bottom: 1rem;
+}
+
+/* =================================
+   COMPONENTS
+   ================================= */
+
+/* BUTTONS */
 .btn-primary {
-  background-color: var(--color-primary); /* Green background for buttons */
-  border-color: var(--color-primary); /* Matching border color */
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
 }
 
-/* Button hover effect - darkens the button when hovered */
 .btn-primary:hover {
-  background-color: var(--color-primary-dark); /* Darker green on hover */
-  border-color: var(--color-primary-dark); /* Matching border color */
+  background-color: var(--color-primary-dark);
+  border-color: var(--color-primary-dark);
 }
 
-/* 
-  CARD STYLING
-  Controls the appearance of cards in the Protect Our Streams tab
-*/
+/* CARDS - Protect Our Streams tab styling */
 .action-card .card-header {
   background-color: rgba(46, 139, 87, 0.1);
   height: 60px;
   display: flex;
-  align-items: center; /* Keep this - it's essential for vertical centering */
+  align-items: center;
   padding: 0.75rem 1.25rem;
 }
 
 .action-header-content {
   display: flex;
-  align-items: center; /* Keep this - it aligns icon and text */
+  align-items: center;
   width: 100%;
 }
 
@@ -189,33 +160,21 @@ li {
   margin: 0;
   padding: 0;
   line-height: 1.2;
-  padding-top: 6px; /* Add this to fix the subtle vertical alignment */
+  padding-top: 6px; /* Fixes subtle vertical alignment */
   display: flex;
-  align-items: center; /* Keep this - it helps with text alignment */
+  align-items: center;
   height: 40px;
   font-size: 1.1rem;
   font-weight: 600;
 }
 
-/* 
-  DROPDOWN STYLING
-  Controls the appearance of dropdown menus
-*/
+/* DROPDOWNS */
 .Select-control {
-  border-radius: 4px; /* Rounded corners */
-  border-color: var(--color-border-medium); /* Light gray border */
+  border-radius: 4px;
+  border-color: var(--color-border-medium);
 }
 
-/* 
-  GRAPH CONTAINER SPACING
-  Adds space below graph containers to separate them from other content
-*/
-#chemical-graph-container, 
-#biological-content-container {
-  margin-bottom: 1rem; /* Reduced from 2rem to 1rem for tighter spacing */
-}
-
-/* Accordion styling - Updated to match Protect Our Streams cards */
+/* ACCORDIONS */
 .accordion-item {
   margin-top: 0;
   padding-top: 0;
@@ -228,7 +187,7 @@ li {
 
 .accordion-button {
   font-weight: 600;
-  background-color: var(--color-bg-light); /* Base Sandstone color */
+  background-color: var(--color-bg-light);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -240,33 +199,33 @@ li {
 }
 
 .accordion-button:not(.collapsed) {
-  background-color: var(--color-bg-active); /* Slightly darker Sandstone color when expanded */
+  background-color: var(--color-bg-active);
   color: var(--color-text);
 }
 
 .accordion-button:focus {
-  box-shadow: none; /* Remove the default focus outline */
+  box-shadow: none;
   border-color: var(--color-border-medium);
 }
 
-/* Fix text alignment within the button */
+/* Position expand/collapse icon */
 .accordion-button::after {
   position: absolute;
-  right: 1.25rem; /* Move the expand/collapse icon to the right */
+  right: 1.25rem;
 }
 
-/* Fix for any nested elements that might add spacing */
 .accordion-button > * {
   margin-top: 0;
   padding-top: 0;
 }
 
-/* Add some space between accordions */
 .accordion + .accordion {
   margin-top: 1rem;
 }
 
-/* Caption styling for images */
+/* =================================
+   UTILITIES
+   ================================= */
 figcaption {
   font-style: italic;
   color: var(--color-muted);
