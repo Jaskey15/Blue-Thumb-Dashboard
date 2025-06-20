@@ -9,7 +9,13 @@ Key Functions:
 - create_basic_site_map(): Basic site map with active/historic site differentiation
 - add_parameter_colors_to_map(): Add parameter-specific status color coding
 - add_data_markers(): Add markers for chemical, biological, or habitat data
-- Helper functions for data loading, status mapping, and hover text generation
+- get_status_color(): Unified vectorized status/color mapping for single values or Series
+- Helper functions for data loading and efficient hover text generation
+
+Performance Features:
+- Vectorized pandas operations for color mapping and hover text creation
+- Optimized database queries with efficient SQL and indexes
+- Batch marker processing for improved rendering speed
 
 Supported Data Types:
 - Chemical parameters (DO, pH, nutrients) with Normal/Caution/Poor status
@@ -23,12 +29,12 @@ import plotly.graph_objects as go
 
 from database.database import get_connection, close_connection
 from utils import setup_logging
-from visualizations.cached_map_queries import (
-    get_latest_chemical_data_for_maps_cached as get_latest_chemical_data_for_maps,
-    get_latest_fish_data_for_maps_cached as get_latest_fish_data_for_maps,
-    get_latest_macro_data_for_maps_cached as get_latest_macro_data_for_maps,
-    get_latest_habitat_data_for_maps_cached as get_latest_habitat_data_for_maps,
-    load_sites_from_database_cached
+
+from visualizations.map_queries import (
+    get_latest_chemical_data_for_maps,
+    get_latest_fish_data_for_maps,
+    get_latest_macro_data_for_maps,
+    get_latest_habitat_data_for_maps
 )
 
 logger = setup_logging("map_viz", category="visualization")
@@ -69,9 +75,9 @@ PARAMETER_LABELS = {
     'soluble_nitrogen': 'Soluble Nitrogen',
     'Phosphorus': 'Phosphorus',
     'Chloride': 'Chloride',
-    'Fish_IBI': 'Fish Community Health',
-    'Macro_Combined': 'Biological: Macroinvertebrate Community',
-    'Habitat_Grade': 'Habitat Assessment Grade'
+    'Fish_IBI': 'Fish Community',
+    'Macro_Combined': 'Macroinvertebrate Community',
+    'Habitat_Grade': 'Habitat'
 }
 
 # Parameter display names for map hover text
@@ -171,158 +177,185 @@ def get_latest_data_by_type(data_type):
     logger.info(f"Retrieved latest {data_type} data for {len(df)} sites")
     return df
 
-def get_status_color_from_database(data_type, status_value):
+def get_status_color(data, data_type):
     """
     Map database status values to display colors for different data types.
+    Handles both single values and pandas Series efficiently.
     
     Args:
+        data: Single status value OR pandas Series of status values
         data_type: Type of data ('chemical', 'fish', 'macro', 'habitat')
-        status_value: Status value from database
     
     Returns:
-        Tuple of (status_text, color_code)
+        - For single values: Tuple of (status_text, color_code)
+        - For Series: Tuple of (status_series, color_series) as pandas Series
     """
-    # Handle NaN or None values
-    if pd.isna(status_value) or status_value is None:
-        return "Unknown", 'gray'
-    
-    # Convert to string and handle case variations
-    status_str = str(status_value).strip()
-    
-    if data_type == 'chemical':
-        chemical_color_map = {
+    # Define color mappings for each data type 
+    color_maps = {
+        'chemical': {
             'Normal': COLORS['normal'],
             'Caution': COLORS['caution'], 
             'Poor': COLORS['poor'],
             'Above Normal (Basic/Alkaline)': COLORS['above_normal'],
             'Below Normal (Acidic)': COLORS['below_normal']
-        }
-        return status_str, chemical_color_map.get(status_str, 'gray')
-        
-    elif data_type == 'fish':
-        fish_color_map = {
+        },
+        'fish': {
             'Excellent': COLORS['fish']['excellent'],
-            'Good': COLORS['fish']['good'], 
+            'Good': COLORS['fish']['good'],
             'Fair': COLORS['fish']['fair'],
             'Poor': COLORS['fish']['poor'],
             'Very Poor': COLORS['fish']['very poor']
-        }
-        return status_str, fish_color_map.get(status_str, 'gray')
-        
-    elif data_type == 'macro':
-        macro_color_map = {
+        },
+        'macro': {
             'Non-impaired': COLORS['macro']['non-impaired'],
             'Slightly Impaired': COLORS['macro']['slightly_impaired'],
             'Moderately Impaired': COLORS['macro']['moderately_impaired'],
             'Severely Impaired': COLORS['macro']['severely_impaired']
-        }
-        return status_str, macro_color_map.get(status_str, 'gray')
-        
-    elif data_type == 'habitat':
-        habitat_color_map = {
+        },
+        'habitat': {
             'A': COLORS['habitat']['a'],
             'B': COLORS['habitat']['b'],
             'C': COLORS['habitat']['c'],
             'D': COLORS['habitat']['d'],
             'F': COLORS['habitat']['f']
         }
-        return status_str, habitat_color_map.get(status_str, 'gray')
+    }
     
-    return "Unknown", 'gray'
+    # Handle single values
+    if not isinstance(data, pd.Series):
+        if pd.isna(data) or data is None:
+            return "Unknown", 'gray'
+        
+        # Convert single value to series for consistent processing
+        data_series = pd.Series([data])
+        is_single = True
+    else:
+        data_series = data
+        is_single = False
+    
+    clean_series = data_series.astype(str).str.strip()
+    
+    is_null = data_series.isna()
+    
+    # Map colors using pandas map
+    color_map = color_maps.get(data_type, {})
+    colors = clean_series.map(color_map).fillna('gray')
+    
+    # Map statuses (use clean series, with "Unknown" for nulls)
+    statuses = clean_series.where(~is_null, "Unknown")
+    
+    # Return appropriate format based on input type
+    if is_single:
+        return statuses.iloc[0], colors.iloc[0]
+    else:
+        return statuses, colors
 
 def filter_sites_by_active_status(sites, active_only=False):
     """
-    Filter monitoring sites based on active status.
+    Filter sites based on active status and return counts.
     
     Args:
-        sites: List of site dictionaries with 'active' property
-        active_only: Boolean - if True, return only active sites; if False, return all sites
+        sites: List of site dictionaries
+        active_only: Boolean - if True, only return active sites
     
     Returns:
         Tuple of (filtered_sites, active_count, historic_count, total_count)
     """
-    if not active_only:
-        # Return all sites with counts
-        active_count = sum(1 for site in sites if site.get('active', False))
-        historic_count = len(sites) - active_count
-        return sites, active_count, historic_count, len(sites)
+    if not sites:
+        return [], 0, 0, 0
     
-    # Filter to only active sites
-    filtered_sites = [site for site in sites if site.get('active', False)]
-    active_count = len(filtered_sites)
-    historic_count = 0  # No historic sites when filtering
-    total_original = len(sites)
+    total_count = len(sites)
+    active_sites = [site for site in sites if site.get('active', False)]
+    historic_sites = [site for site in sites if not site.get('active', False)]
     
-    return filtered_sites, active_count, historic_count, total_original
+    active_count = len(active_sites)
+    historic_count = len(historic_sites)
+    
+    if active_only:
+        return active_sites, active_count, historic_count, total_count
+    else:
+        return sites, active_count, historic_count, total_count
 
 # ============================================================================
-# UI HELPER FUNCTIONS - Formatting and Text Creation
+# UI HELPER FUNCTIONS - Display Formatting
 # ============================================================================
 
 def format_parameter_value(parameter, value):
     """
-    Format parameter values for display in hover text.
+    Format parameter values for display with appropriate units and precision.
     
     Args:
         parameter: Parameter name
-        value: Parameter value to format
+        value: Numeric value to format
     
     Returns:
-        Formatted string representation of the value
+        Formatted string with units
     """
-    if pd.isna(value):
-        return "No data"
+    try:
+        if pd.isna(value):
+            return "No data"
         
-    if parameter == 'do_percent':
-        return f"{value:.0f}%"  
-    elif parameter == 'pH':
-        return f"{value:.1f}"  
-    elif parameter == 'soluble_nitrogen':
-        return f"{value:.2f} mg/L"  
-    elif parameter == 'Phosphorus':
-        return f"{value:.3f} mg/L"  
-    elif parameter == 'Chloride':
-        return f"{value:.0f} mg/L"  
-    else:
-        return f"{value}"
+        # Convert to float for processing
+        float_value = float(value)
+        
+        # Parameter-specific formatting
+        if parameter == 'do_percent':
+            return f"{float_value:.1f}%"
+        elif parameter == 'pH':
+            return f"{float_value:.2f}"
+        elif parameter in ['soluble_nitrogen', 'Phosphorus']:
+            return f"{float_value:.3f} mg/L"
+        elif parameter == 'Chloride':
+            return f"{float_value:.1f} mg/L"
+        else:
+            # Default formatting for unknown parameters
+            return f"{float_value:.2f}" if float_value != int(float_value) else f"{int(float_value)}"
+            
+    except (ValueError, TypeError):
+        return str(value)  # Return as-is if formatting fails
 
-def _create_hover_text(data_type, site_name, value, status, site_data, config, parameter_name=None):
-    """
-    Helper function to create hover text for different data types.
+def create_hover_text(df, data_type, config, parameter_name):
+    """Create hover text using fast vectorized operations"""
     
-    Args:
-        data_type: Type of data ('chemical', 'fish', 'macro', 'habitat')
-        site_name: Name of the site
-        value: Parameter value
-        status: Status text
-        site_data: Site data row
-        config: Data configuration dict
-        parameter_name: Parameter name (for chemical data)
+    # Base hover info - site name
+    hover_texts = "Site: " + df[config['site_column']].astype(str) + "<br>"
     
-    Returns:
-        Formatted hover text string
-    """
-    if data_type == 'chemical':
-        formatted_value = format_parameter_value(parameter_name, value)
-        friendly_name = MAP_PARAMETER_LABELS.get(parameter_name, parameter_name)
-        date_str = pd.to_datetime(site_data[config['date_column']].iloc[0]).strftime('%B %d, %Y')
-        return f"Site: {site_name}<br>{friendly_name}: {formatted_value}<br>Status: {status}<br>Last reading: {date_str}"
-    
+    # Add parameter-specific information
+    if data_type == 'chemical' and parameter_name:
+        # Format the parameter value
+        value_series = df[config['value_column']].apply(
+            lambda x: format_parameter_value(parameter_name, x) if pd.notna(x) else "No data"
+        )
+        param_label = PARAMETER_LABELS.get(parameter_name, parameter_name)
+        hover_texts += f"{param_label}: " + value_series + "<br>"
+        hover_texts += "Status: " + df['computed_status'].astype(str) + "<br>"
+        
     elif data_type == 'fish':
-        year = site_data[config['date_column']].iloc[0]
-        return f"Site: {site_name}<br>IBI Score: {value:.2f}<br>Status: {status}<br>Last survey: {year}"
-    
+        hover_texts += "Fish IBI Score: " + df[config['value_column']].astype(str) + "<br>"
+        hover_texts += "Integrity Class: " + df['computed_status'].astype(str) + "<br>"
+        
     elif data_type == 'macro':
-        year = site_data[config['date_column']].iloc[0]
-        season_from_data = site_data['season'].iloc[0]
-        date_str = f"{season_from_data} {year}"
-        return f"Site: {site_name}<br>Bioassessment Score: {value:.2f}<br>Status: {status}<br>Last survey: {date_str}"
-    
+        hover_texts += "Bioassessment Score: " + df[config['value_column']].astype(str) + "<br>"
+        hover_texts += "Biological Condition: " + df['computed_status'].astype(str) + "<br>"
+        
     elif data_type == 'habitat':
-        year = site_data[config['date_column']].iloc[0]  
-        return f"Site: {site_name}<br>Habitat Score: {value:.0f}<br>Grade: {status}<br>Last assessment: {year}<br><br><b>🔍 Click to view detailed data</b>"
+        hover_texts += "Habitat Score: " + df[config['value_column']].astype(str) + "<br>"
+        hover_texts += "Grade: " + df['computed_status'].astype(str) + "<br>"
     
-    return f"Site: {site_name}<br>Status: {status}"
+    # Add date information
+    if config['date_column'] in df.columns:
+        if data_type == 'chemical':
+            # Format date nicely
+            dates = pd.to_datetime(df[config['date_column']]).dt.strftime('%Y-%m-%d')
+            hover_texts += "Date: " + dates + "<br>"
+        else:
+            # For other types, just show year
+            hover_texts += "Year: " + df[config['date_column']].astype(str) + "<br>"
+    
+    # Add click instruction
+    hover_texts += "Click to view detailed data"
+    
+    return hover_texts.tolist()
 
 # ============================================================================
 # MAP LAYOUT HELPER FUNCTIONS
@@ -461,7 +494,13 @@ def create_error_map(error_message):
 
 def add_data_markers(fig, sites, data_type, parameter_name=None, season=None, filter_no_data=True):
     """
-    Add markers to the map for any data type.
+    Add markers to the map for any data type using optimized batch processing.
+    
+    This function uses vectorized operations for maximum performance:
+    - Single pandas merge instead of individual site filtering
+    - Vectorized status/color computation
+    - Fast string-based hover text generation
+    - Single Plotly trace addition
     
     Args:
         fig: The plotly figure to add markers to
@@ -474,6 +513,9 @@ def add_data_markers(fig, sites, data_type, parameter_name=None, season=None, fi
     Returns:
         Tuple of (updated_figure, sites_with_data_count, total_sites_count)
     """
+    import pandas as pd
+    import plotly.graph_objects as go
+    
     # Get the latest data for this data type
     latest_data = get_latest_data_by_type(data_type)
 
@@ -512,54 +554,92 @@ def add_data_markers(fig, sites, data_type, parameter_name=None, season=None, fi
     
     config = data_config[data_type]
     
-    # Track sites with data for counting
-    sites_with_data = 0
-    total_sites = len(sites)
+    # Convert sites to DataFrame for efficient merging
+    sites_df = pd.DataFrame(sites)
+    sites_df = sites_df.rename(columns={'name': config['site_column']})
     
-    for site in sites:
-        site_name = site["name"]
+    data_to_merge = latest_data.copy()
+    if data_type == 'macro' and season:
+        data_to_merge = data_to_merge[data_to_merge['season'] == season]
+    
+    merged_data = sites_df.merge(
+        data_to_merge, 
+        on=config['site_column'], 
+        how='left'  # Keep all sites, even those without data
+    )
+    
+    # Vectorized data validation
+    has_data_mask = (
+        merged_data[config['value_column']].notna() & 
+        (config['value_column'] in merged_data.columns)
+    )
+    
+    # Apply filtering if requested
+    if filter_no_data:
+        sites_to_plot = merged_data[has_data_mask].copy()
+    else:
+        sites_to_plot = merged_data.copy()
+        # For sites without data, we'll use default styling
+    
+    sites_with_data = has_data_mask.sum()
+    total_sites = len(sites_to_plot)
+    
+    if total_sites == 0:
+        return fig, sites_with_data, len(sites)
+    
+    # Compute all statuses and colors 
+    if config['status_column'] in sites_to_plot.columns:
+        statuses, colors = get_status_color(sites_to_plot[config['status_column']], data_type)
+        sites_to_plot = sites_to_plot.copy()
+        sites_to_plot['computed_status'] = statuses
+        sites_to_plot['computed_color'] = colors
+    else:
+        # No status data available
+        sites_to_plot = sites_to_plot.copy()
+        sites_to_plot['computed_status'] = "Unknown"
+        sites_to_plot['computed_color'] = 'gray'
+
+    hover_texts = create_hover_text(sites_to_plot, data_type, config, parameter_name)
+    
+    # Batch add all markers at once u
+    if len(sites_to_plot) > 0:
+        lats = sites_to_plot['lat'].tolist()
+        lons = sites_to_plot['lon'].tolist()
+        colors_list = sites_to_plot['computed_color'].tolist()
+        active_status = sites_to_plot['active'].tolist()
         
-        # Find data for this site
-        site_data = latest_data[latest_data[config['site_column']] == site_name]
+        # Vectorized marker size and color computation
+        marker_sizes = []
+        final_colors = []
         
-        # Handle season filtering for macro data (only when season is specified)
-        if data_type == 'macro' and season:
-            site_data = site_data[site_data['season'] == season]
+        for color, active in zip(colors_list, active_status):
+            if color and color != 'gray':  # Has parameter data
+                marker_sizes.append(10)
+                final_colors.append(color)
+            else:  # No data - use active/historic styling
+                if active:
+                    marker_sizes.append(10)
+                    final_colors.append('#3366CC')  # Blue for active
+                else:
+                    marker_sizes.append(6)
+                    final_colors.append('#9370DB')  # Purple for historic
         
-        has_data = not site_data.empty and config['value_column'] in site_data.columns
-        
-        # If filtering is enabled and site has no data, skip it
-        if filter_no_data and not has_data:
-            continue
-            
-        if has_data:
-            sites_with_data += 1
-            
-            # Get the value and status from database
-            value = site_data[config['value_column']].iloc[0]
-            
-            # Get status from database 
-            if config['status_column'] in site_data.columns and not pd.isna(site_data[config['status_column']].iloc[0]):
-                database_status = site_data[config['status_column']].iloc[0]
-                status, color = get_status_color_from_database(data_type, database_status)
-            else:
-                # If database status not available, use unknown status
-                logger.warning(f"No database status found for {data_type} data at site {site_name}")
-                status, color = "Unknown", 'gray'
-            
-            # Create hover text using helper function
-            hover_text = _create_hover_text(data_type, site_name, value, status, site_data, config, parameter_name)
-            
-            # Add marker with determined color
-            fig = add_site_marker(
-                fig=fig,
-                lat=site["lat"],
-                lon=site["lon"],
-                color=color,
-                site_name=site_name,
-                hover_text=hover_text,
-                active=site["active"] 
-            )
+        # Add all markers in a single trace 
+        fig.add_trace(go.Scattermap(
+            lat=lats,
+            lon=lons,
+            mode='markers',
+            marker=dict(
+                size=marker_sizes,
+                color=final_colors,
+                opacity=1.0,
+                symbol='circle'
+            ),
+            text=hover_texts,
+            name=f"{data_type}_markers",
+            hoverinfo='text',
+            showlegend=False
+        ))
     
     return fig, sites_with_data, total_sites
 
@@ -578,7 +658,7 @@ def create_basic_site_map(active_only=False):
         fig = go.Figure()
         
         # Load sites from database
-        monitoring_sites = load_sites_from_database_cached()
+        monitoring_sites = load_sites_from_database()
         
         # Check if we have sites loaded
         if not monitoring_sites:
@@ -642,7 +722,7 @@ def add_parameter_colors_to_map(fig, param_type, param_name, sites=None):
         if sites is not None:
             sites_to_use = sites
         else:
-            sites_to_use = load_sites_from_database_cached()
+            sites_to_use = load_sites_from_database()
         
         # Clear existing traces (basic blue markers)
         fig.data = []
@@ -651,7 +731,7 @@ def add_parameter_colors_to_map(fig, param_type, param_name, sites=None):
         if param_type == 'chem':
             fig, sites_with_data, total_sites = add_data_markers(
                 fig, sites_to_use, 'chemical', parameter_name=param_name, filter_no_data=True
-            )
+           )
         elif param_type == 'bio':
             if param_name == 'Fish_IBI':
                 fig, sites_with_data, total_sites = add_data_markers(

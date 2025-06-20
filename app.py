@@ -62,13 +62,8 @@ app.layout = dbc.Container([
         dbc.Tab(label="Source Data", children=create_source_data_tab(), tab_id="source-tab"),
     ], id="main-tabs", active_tab="overview-tab"),
 
-    # Cache storage components 
+    # Navigation store for map-to-tab navigation
     html.Div([
-        dcc.Store(id='chemical-data-cache', storage_type='memory', data={}),
-        dcc.Store(id='biological-data-cache', storage_type='memory', data={}),
-        dcc.Store(id='habitat-data-cache', storage_type='memory', data={}),
-        dcc.Store(id='cache-metadata', storage_type='memory', data={}),
-        # Navigation store for map-to-tab navigation
         dcc.Store(id='navigation-store', storage_type='memory', data={'target_tab': None, 'target_site': None})
     ], style={'display': 'none'}),
 
