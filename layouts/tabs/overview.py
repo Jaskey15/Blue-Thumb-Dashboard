@@ -102,7 +102,7 @@ def create_overview_tab():
                     html.Div(id='map-legend-container', className="text-center mt-2 mb-4")
                 ], width=12)
             ])
-        ], className=TAB_STYLES["standard_margin"])
+        ], className="tab-content-wrapper")
         
         return tab_content
         

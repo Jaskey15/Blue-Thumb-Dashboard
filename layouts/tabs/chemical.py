@@ -150,7 +150,7 @@ def create_chemical_tab():
                 dbc.Col([
                     html.Div(id='chemical-graph-container')
                 ], width=12)
-            ], className="mb-4"),
+            ], className="mb-2"),
             
             # Description and diagram 
             dbc.Row([
@@ -161,5 +161,5 @@ def create_chemical_tab():
                     html.Div(id='chemical-diagram-container')
                 ], width=6, className="d-flex align-items-center")  
             ], className="h-100 align-items-stretch", style={'minHeight': '400px'})
-        ], id="chemical-controls-content", style={'display': 'none'})
-    ]) 
+        ], id="chemical-controls-content", style={'display': 'none'}),
+    ], className="tab-content-wrapper") 

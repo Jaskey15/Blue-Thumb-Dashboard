@@ -23,7 +23,7 @@ def create_source_data_tab():
                     create_source_data_links()
                 ], width=12)
             ])
-        ], className=TAB_STYLES["standard_margin"])
+        ], className="tab-content-wrapper")
         
         return tab_content
         

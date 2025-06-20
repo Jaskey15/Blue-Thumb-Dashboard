@@ -52,7 +52,7 @@ h3, .tab-header {
 }
 
 .markdown-content {
-  margin-top: 1.5rem;
+  margin-top: 0; /* Changed from 1.5rem to prevent inconsistent spacing */
 }
 
 /* Add this class for non-markdown tab headers that need the same styling */
@@ -115,6 +115,24 @@ li {
 }
 
 /* 
+  CONSISTENT TAB CONTENT SPACING
+  Wrapper class for consistent spacing across all tabs
+*/
+.tab-content-wrapper {
+  margin-top: 0;
+  padding-top: 0; /* Consistent top spacing for all tabs */
+}
+
+/* Override any conflicting margins in tab content */
+.tab-content-wrapper > .markdown-content {
+  margin-top: 0;
+}
+
+.tab-content-wrapper > .markdown-content h3:first-child {
+  margin-top: 0;
+}
+
+/* 
   MARKDOWN CONTENT
   Ensures consistency in font for markdown-rendered content
 */
@@ -124,7 +142,7 @@ li {
 
 /* Add consistent top margin to first h3 in markdown */
 .dash-markdown h3:first-child {
-  margin-top: 1.5rem;  
+  margin-top: 0; /* Changed from 1.5rem to prevent inconsistent spacing */
 }
 
 /* 
@@ -194,7 +212,7 @@ li {
 */
 #chemical-graph-container, 
 #biological-content-container {
-  margin-bottom: 2rem; /* Space below containers */
+  margin-bottom: 1rem; /* Reduced from 2rem to 1rem for tighter spacing */
 }
 
 /* Accordion styling - Updated to match Protect Our Streams cards */

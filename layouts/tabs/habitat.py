@@ -59,5 +59,5 @@ def create_habitat_tab():
         html.Div(id="habitat-content-container", children=[
             html.P("Select a site above to view habitat assessment data.", 
                    className="text-center text-muted mt-5")
-        ])
-    ]) 
+        ]),
+    ], className="tab-content-wrapper") 

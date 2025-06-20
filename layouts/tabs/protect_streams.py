@@ -73,7 +73,7 @@ def create_protect_our_streams_tab():
                     main_tabs
                 ], width=12)
             ])
-        ], className=TAB_STYLES["standard_margin"])
+        ], className="tab-content-wrapper")
         
         return tab_content
         

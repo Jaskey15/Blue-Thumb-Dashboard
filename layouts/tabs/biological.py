@@ -66,4 +66,4 @@ def create_biological_tab():
         
         # Legacy controls content section - keeping for compatibility with existing callbacks
         html.Div(id="biological-controls-content", style={'display': 'none'})
-    ]) 
+    ], className="tab-content-wrapper") 
