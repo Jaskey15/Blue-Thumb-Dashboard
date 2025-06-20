@@ -128,6 +128,25 @@ def register_shared_callbacks(app):
                         'source_parameter': current_parameter
                     }
                 
+                # Handle biological navigation  
+                elif current_parameter.startswith('bio:'):
+                    # Map parameter to community type
+                    if current_parameter == 'bio:Fish_IBI':
+                        community_type = 'fish'
+                    elif current_parameter == 'bio:Macro_Combined':
+                        community_type = 'macro'
+                    else:
+                        logger.warning(f"Unknown biological parameter: {current_parameter}")
+                        return dash.no_update, dash.no_update
+                    
+                    logger.info(f"Navigating from biological map to biological tab for site: {site_name}, community: {community_type}")
+                    return "biological-tab", {
+                        'target_tab': 'biological-tab',
+                        'target_site': site_name,
+                        'target_community': community_type,
+                        'source_parameter': current_parameter
+                    }
+                
                 # For other parameters, don't navigate yet
                 return dash.no_update, dash.no_update
                 
