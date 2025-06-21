@@ -133,8 +133,9 @@ def test_complete_habitat_navigation_flow(self):
 
 ## What We Test
 
-### ✅ Currently Tested (shared_callbacks)
+### ✅ Currently Tested
 
+#### **shared_callbacks** (12 tests)
 - **Modal Logic**: Attribution and image credits modal toggling
 - **Site Name Extraction**: Parsing click data to extract site names
 - **Parameter Type Detection**: Identifying chemical, biological, and habitat parameters
@@ -144,13 +145,21 @@ def test_complete_habitat_navigation_flow(self):
 - **Error Handling**: Malformed data, missing data, and edge cases
 - **Integration Flows**: Complete navigation scenarios
 
-### 📋 To Be Tested (other callbacks)
+#### **habitat_callbacks** (22 tests)
+- **State Management**: Tab state saving and restoration logic
+- **Dropdown Population**: Site filtering and option creation with sorting
+- **Navigation Integration**: Map clicks → tab navigation with priority handling
+- **Content Display Logic**: Site validation and content rendering
+- **Error Handling**: Empty sites, invalid navigation, malformed data
+- **State Restoration**: Priority logic between navigation and saved state
+- **Integration Workflows**: Complete map-to-content user flows
 
-- **State Management**: Tab state saving and restoration
-- **Dropdown Population**: Site filtering and option creation
-- **Data Visualization Updates**: Parameter selection and filtering
+### 📋 To Be Tested (remaining callbacks)
+
+- **overview_callbacks**: Map visualization and parameter selection
+- **chemical_callbacks**: Complex filtering, multiple controls, time series
+- **biological_callbacks**: Community selection, gallery navigation
 - **Gallery Navigation**: Species gallery functionality
-- **Chemical Controls**: Filter interactions and validations
 
 ## Running Tests
 

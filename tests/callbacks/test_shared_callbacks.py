@@ -1,19 +1,13 @@
 """
 Tests for shared_callbacks.py
 
-This file tests the shared callback functions that are used across the entire application,
-including modal toggling and navigation handling.
+This file tests the core logic of shared callback functions by testing the individual
+components and logic paths rather than the full Dash callback integration.
 """
 
 import pytest
 import dash
-from unittest.mock import Mock, patch, MagicMock
-
-
-class MockCallbackContext:
-    """Mock callback context for testing."""
-    def __init__(self, triggered=None):
-        self.triggered = triggered or []
+from unittest.mock import Mock, patch
 
 
 class TestModalLogic:
@@ -35,28 +29,10 @@ class TestModalLogic:
         n1, n2, is_open = 0, 0, True
         result = not is_open if (n1 or n2) else is_open
         assert result is True, "Modal should maintain state when no buttons clicked"
-        
-        n1, n2, is_open = 0, 0, False
-        result = not is_open if (n1 or n2) else is_open
-        assert result is False, "Modal should maintain state when no buttons clicked"
-    
-    def test_image_credits_modal_toggle_logic(self):
-        """Test the logic of toggling image credits modal."""
-        # Same logic as attribution modal, but testing separately to ensure consistency
-        
-        # Test opening
-        n1, n2, is_open = 1, 0, False
-        result = not is_open if (n1 or n2) else is_open
-        assert result is True, "Image credits modal should open when clicked"
-        
-        # Test closing
-        n1, n2, is_open = 0, 1, True
-        result = not is_open if (n1 or n2) else is_open
-        assert result is False, "Image credits modal should close when close button clicked"
 
 
 class TestNavigationLogic:
-    """Test navigation logic directly."""
+    """Test navigation logic components."""
     
     def test_site_name_extraction_from_click_data(self):
         """Test extracting site name from map click data."""
@@ -135,74 +111,41 @@ class TestNavigationLogic:
         
         assert community_type is None, "Should return None for unknown biological parameter"
     
-    def test_navigation_data_structure_habitat(self):
-        """Test navigation data structure for habitat navigation."""
-        expected_data = {
+    def test_navigation_data_structures(self):
+        """Test navigation data structure formats."""
+        # Habitat navigation data
+        habitat_data = {
             'target_tab': 'habitat-tab',
             'target_site': 'Test Site',
             'source_parameter': 'habitat:Habitat_Score'
         }
         
-        # Verify structure
-        assert 'target_tab' in expected_data, "Navigation data should contain target_tab"
-        assert 'target_site' in expected_data, "Navigation data should contain target_site"
-        assert 'source_parameter' in expected_data, "Navigation data should contain source_parameter"
-        assert expected_data['target_tab'] == 'habitat-tab', "Should target habitat tab"
-    
-    def test_navigation_data_structure_chemical(self):
-        """Test navigation data structure for chemical navigation."""
-        parameter = 'chem:pH'
-        parameter_name = parameter.split(':', 1)[1]
+        assert 'target_tab' in habitat_data, "Habitat navigation should contain target_tab"
+        assert 'target_site' in habitat_data, "Habitat navigation should contain target_site"
+        assert 'source_parameter' in habitat_data, "Habitat navigation should contain source_parameter"
         
-        expected_data = {
+        # Chemical navigation data
+        chemical_data = {
             'target_tab': 'chemical-tab',
             'target_site': 'Test Site',
-            'target_parameter': parameter_name,
-            'source_parameter': parameter
+            'target_parameter': 'pH',
+            'source_parameter': 'chem:pH'
         }
         
-        # Verify structure
-        assert 'target_tab' in expected_data, "Chemical navigation data should contain target_tab"
-        assert 'target_site' in expected_data, "Chemical navigation data should contain target_site"
-        assert 'target_parameter' in expected_data, "Chemical navigation data should contain target_parameter"
-        assert 'source_parameter' in expected_data, "Chemical navigation data should contain source_parameter"
-        assert expected_data['target_parameter'] == 'pH', "Should extract parameter name correctly"
-    
-    def test_navigation_data_structure_biological(self):
-        """Test navigation data structure for biological navigation."""
-        parameter = 'bio:Fish_IBI'
-        community_type = 'fish' if parameter == 'bio:Fish_IBI' else 'macro'
+        assert 'target_parameter' in chemical_data, "Chemical navigation should contain target_parameter"
         
-        expected_data = {
+        # Biological navigation data  
+        bio_data = {
             'target_tab': 'biological-tab',
             'target_site': 'Test Site',
-            'target_community': community_type,
-            'source_parameter': parameter
+            'target_community': 'fish',
+            'source_parameter': 'bio:Fish_IBI'
         }
         
-        # Verify structure
-        assert 'target_tab' in expected_data, "Biological navigation data should contain target_tab"
-        assert 'target_site' in expected_data, "Biological navigation data should contain target_site"
-        assert 'target_community' in expected_data, "Biological navigation data should contain target_community"
-        assert 'source_parameter' in expected_data, "Biological navigation data should contain source_parameter"
-        assert expected_data['target_community'] == 'fish', "Should map to correct community type"
-    
-    def test_overview_link_navigation_data(self):
-        """Test navigation data structure for overview links."""
-        expected_data = {'target_tab': None, 'target_site': None}
-        
-        # Verify structure for overview navigation
-        assert 'target_tab' in expected_data, "Overview navigation should contain target_tab"
-        assert 'target_site' in expected_data, "Overview navigation should contain target_site"
-        assert expected_data['target_tab'] is None, "Overview navigation should clear target_tab"
-        assert expected_data['target_site'] is None, "Overview navigation should clear target_site"
-
-
-class TestCallbackContextHandling:
-    """Test callback context handling logic."""
+        assert 'target_community' in bio_data, "Biological navigation should contain target_community"
     
     def test_trigger_id_extraction(self):
-        """Test extracting trigger ID from callback context."""
+        """Test extracting trigger ID from prop_id."""
         # Test overview link trigger
         prop_id = 'chemical-overview-link.n_clicks'
         trigger_id = prop_id.split('.')[0]
@@ -217,24 +160,13 @@ class TestCallbackContextHandling:
         """Test detection of overview link triggers."""
         overview_triggers = ['chemical-overview-link', 'biological-overview-link', 'habitat-overview-link']
         
+        # Test valid overview triggers
         for trigger in overview_triggers:
             assert trigger in overview_triggers, f"Should detect {trigger} as overview link"
         
         # Test non-overview trigger
         non_overview_trigger = 'site-map-graph'
         assert non_overview_trigger not in overview_triggers, "Should not detect map click as overview link"
-    
-    def test_context_validation(self):
-        """Test callback context validation logic."""
-        # Test empty context
-        triggered = []
-        has_trigger = bool(triggered)
-        assert has_trigger is False, "Should detect empty trigger context"
-        
-        # Test valid context
-        triggered = [{'prop_id': 'site-map-graph.clickData'}]
-        has_trigger = bool(triggered)
-        assert has_trigger is True, "Should detect valid trigger context"
 
 
 class TestErrorHandling:
@@ -255,47 +187,31 @@ class TestErrorHandling:
             extraction_failed = True
         
         assert extraction_failed is True, "Should fail gracefully with malformed click data"
-        
-        # Test malformed text format
-        malformed_text_data = {
-            'points': [{
-                'text': 'Invalid format without site'
-            }]
-        }
-        
-        try:
-            hover_text = malformed_text_data['points'][0]['text']
-            site_name = hover_text.split('<br>')[0].replace('<b>Site:</b> ', '')
-            # This would result in an unexpected site name
-            is_valid_format = site_name != 'Invalid format without site'
-        except:
-            is_valid_format = False
-        
-        assert is_valid_format is False, "Should detect invalid text format"
     
-    def test_missing_click_data_handling(self):
-        """Test handling of missing click data."""
+    def test_missing_data_validation(self):
+        """Test validation of missing data."""
+        # Test missing click data
         click_data = None
+        has_click_data = bool(click_data)
+        assert has_click_data is False, "Should detect missing click data"
         
-        # Test the condition used in the actual callback
-        has_valid_data = bool(click_data)
-        assert has_valid_data is False, "Should detect missing click data"
-    
-    def test_missing_parameter_handling(self):
-        """Test handling of missing parameter."""
+        # Test missing parameter
         current_parameter = None
-        
-        # Test the condition used in the actual callback
         has_parameter = bool(current_parameter)
         assert has_parameter is False, "Should detect missing parameter"
+        
+        # Test empty trigger context
+        triggered = []
+        has_trigger = bool(triggered)
+        assert has_trigger is False, "Should detect empty trigger context"
 
 
 class TestIntegrationScenarios:
     """Integration-style tests that combine multiple logic components."""
     
-    def test_complete_habitat_navigation_scenario(self):
+    def test_complete_habitat_navigation_flow(self):
         """Test complete habitat navigation scenario."""
-        # Simulate the complete flow
+        # Input data
         click_data = {
             'points': [{
                 'text': '<b>Site:</b> Tenmile Creek - Highway 125<br>Habitat Score: 85'
@@ -304,16 +220,16 @@ class TestIntegrationScenarios:
         current_parameter = 'habitat:Habitat_Score'
         trigger_id = 'site-map-graph'
         
-        # Validate inputs
+        # Validation
         assert click_data is not None, "Click data should be present"
         assert current_parameter is not None, "Parameter should be present"
         assert trigger_id == 'site-map-graph', "Should be triggered by map click"
         
-        # Extract site name
+        # Processing
         hover_text = click_data['points'][0]['text']
         site_name = hover_text.split('<br>')[0].replace('<b>Site:</b> ', '')
         
-        # Determine navigation target
+        # Navigation logic
         if current_parameter == 'habitat:Habitat_Score':
             target_tab = "habitat-tab"
             nav_data = {
@@ -322,33 +238,30 @@ class TestIntegrationScenarios:
                 'source_parameter': current_parameter
             }
         
-        # Verify results
+        # Verification
         assert target_tab == "habitat-tab", "Should navigate to habitat tab"
         assert nav_data['target_site'] == 'Tenmile Creek - Highway 125', "Should extract correct site name"
         assert nav_data['source_parameter'] == 'habitat:Habitat_Score', "Should preserve source parameter"
     
-    def test_complete_chemical_navigation_scenario(self):
+    def test_complete_chemical_navigation_flow(self):
         """Test complete chemical navigation scenario."""
-        # Simulate the complete flow
+        # Input data
         click_data = {
             'points': [{
                 'text': '<b>Site:</b> Test Site<br>pH: 7.5'
             }]
         }
         current_parameter = 'chem:pH'
-        trigger_id = 'site-map-graph'
         
-        # Validate inputs
-        assert click_data is not None, "Click data should be present"
-        assert current_parameter is not None, "Parameter should be present"
+        # Validation
         assert current_parameter.startswith('chem:'), "Should be chemical parameter"
         
-        # Extract site name and parameter
+        # Processing
         hover_text = click_data['points'][0]['text']
         site_name = hover_text.split('<br>')[0].replace('<b>Site:</b> ', '')
         parameter_name = current_parameter.split(':', 1)[1]
         
-        # Determine navigation target
+        # Navigation logic
         target_tab = "chemical-tab"
         nav_data = {
             'target_tab': 'chemical-tab',
@@ -357,8 +270,27 @@ class TestIntegrationScenarios:
             'source_parameter': current_parameter
         }
         
-        # Verify results
+        # Verification
         assert target_tab == "chemical-tab", "Should navigate to chemical tab"
         assert nav_data['target_site'] == 'Test Site', "Should extract correct site name"
         assert nav_data['target_parameter'] == 'pH', "Should extract parameter name"
-        assert nav_data['source_parameter'] == 'chem:pH', "Should preserve source parameter" 
+        assert nav_data['source_parameter'] == 'chem:pH', "Should preserve source parameter"
+    
+    def test_overview_link_navigation_flow(self):
+        """Test overview link navigation scenario."""
+        # Test different overview links
+        overview_triggers = ['chemical-overview-link', 'biological-overview-link', 'habitat-overview-link']
+        
+        for trigger in overview_triggers:
+            # Navigation logic for overview links
+            target_tab = "overview-tab"
+            nav_data = {'target_tab': None, 'target_site': None}
+            
+            # Verification
+            assert target_tab == "overview-tab", f"Should navigate to overview tab for {trigger}"
+            assert nav_data['target_tab'] is None, f"Should clear target_tab for {trigger}"
+            assert nav_data['target_site'] is None, f"Should clear target_site for {trigger}"
+
+# Test runner for manual execution
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"]) 

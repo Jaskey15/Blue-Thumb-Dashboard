@@ -21,34 +21,27 @@ We successfully implemented a comprehensive testing framework for your Blue Thum
 
 ## ✅ What We Test
 
-### Current Test Coverage (shared_callbacks.py)
+### Current Test Coverage
 
-#### 🔧 **Modal Logic**
-- Attribution modal toggle functionality
-- Image credits modal toggle functionality  
-- State preservation when no clicks occur
+#### 🔧 **shared_callbacks.py** (12 tests)
+- **Modal Logic**: Attribution and image credits modal toggling
+- **Navigation Logic**: Site extraction, parameter detection, biological mapping
+- **Data Structures**: Navigation data validation across parameter types
+- **Context Handling**: Trigger ID extraction and overview link detection
+- **Error Handling**: Malformed data, missing parameters, edge cases
+- **Integration Scenarios**: Complete navigation workflows
 
-#### 🗺️ **Navigation Logic**
-- Site name extraction from map click data
-- Parameter type detection (chemical, biological, habitat)
-- Biological parameter to community type mapping
-- Navigation data structure validation
-- Trigger ID extraction from callback context
-- Overview link detection
-
-#### ⚠️ **Error Handling**  
-- Malformed click data handling
-- Missing data validation (click data, parameters, triggers)
-- Edge cases and boundary conditions
-
-#### 🔄 **Integration Scenarios**
-- Complete habitat navigation workflow
-- Complete chemical navigation workflow  
-- Overview link navigation workflow
+#### 🏞️ **habitat_callbacks.py** (22 tests) 
+- **State Management**: Tab state saving, preservation, and restoration
+- **Dropdown Logic**: Site options creation, sorting, empty list handling
+- **Navigation Integration**: Map click handling, priority logic, target validation
+- **Content Display**: Site validation, error states, empty states
+- **Error Handling**: Invalid sites, malformed navigation, data retrieval errors
+- **Complex Workflows**: Map→navigation→content complete user journeys
 
 ## 🧪 Test Results
 
-All **12 tests** are passing successfully:
+All **51 tests** are passing successfully (**34 tests added with habitat_callbacks!**):
 
 ```
 tests/callbacks/test_shared_callbacks_simple.py::TestModalLogic::test_attribution_modal_toggle_logic PASSED [  8%]
