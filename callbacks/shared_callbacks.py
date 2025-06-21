@@ -155,12 +155,3 @@ def register_shared_callbacks(app):
                 return dash.no_update, dash.no_update
         
         return dash.no_update, dash.no_update
-
-    @app.callback(
-        Output("navigation-store", "data", allow_duplicate=True),
-        Input("main-tabs", "active_tab"),
-        prevent_initial_call=True
-    )
-    def clear_navigation_store_on_tab_change(active_tab):
-        """Clear navigation store when user manually changes tabs to prevent interference."""
-        return {'target_tab': None, 'target_site': None}
