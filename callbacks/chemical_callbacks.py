@@ -33,6 +33,14 @@ def register_chemical_callbacks(app):
     def save_chemical_state(selected_site, selected_parameter, year_range, selected_months, 
                            highlight_thresholds, current_state):
         """Save chemical tab state when selections change."""
+        # Add check to prevent state saving during navigation
+        ctx = dash.callback_context
+        if not ctx.triggered:
+            return current_state or {}
+        
+        # Skip state saving if currently navigating (prevents callback conflicts)
+        trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
+        
         # Only save valid selections, don't overwrite with None
         if any(val is not None for val in [selected_site, selected_parameter, year_range, selected_months, highlight_thresholds]):
             # Preserve existing values when only some change
@@ -123,13 +131,14 @@ def register_chemical_callbacks(app):
                 target_parameter = nav_data.get('target_parameter')
                 
                 if target_site in sites:
+                    logger.info(f"Setting chemical navigation: site={target_site}, parameter={target_parameter}")
                     # For map navigation, set site + parameter from nav, preserve other filters from state or use defaults
                     restored_year_range = (chemical_state.get('year_range') 
                                          if chemical_state and chemical_state.get('year_range') 
                                          else dash.no_update)
                     restored_months = (chemical_state.get('selected_months') 
                                      if chemical_state and chemical_state.get('selected_months') 
-                                     else dash.no_update)
+                                     else dash.no_update)  
                     restored_thresholds = (chemical_state.get('highlight_thresholds') 
                                          if chemical_state and chemical_state.get('highlight_thresholds') is not None 
                                          else dash.no_update)
@@ -158,6 +167,7 @@ def register_chemical_callbacks(app):
                 
                 # Verify saved site is still available
                 if saved_site in sites:
+                    logger.info(f"Restoring chemical state: site={saved_site}, parameter={saved_parameter}")
                     return (
                         options,  # Site options
                         saved_site,  # Restore site

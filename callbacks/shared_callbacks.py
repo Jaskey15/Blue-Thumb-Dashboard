@@ -155,3 +155,22 @@ def register_shared_callbacks(app):
                 return dash.no_update, dash.no_update
         
         return dash.no_update, dash.no_update
+
+    @app.callback(
+        Output("navigation-store", "data", allow_duplicate=True),
+        Input("main-tabs", "active_tab"),
+        [State("navigation-store", "data")],
+        prevent_initial_call=True
+    )
+    def clear_navigation_store_on_tab_change(active_tab, nav_data):
+        """Clear navigation store when user manually changes tabs to prevent interference."""
+        # Don't clear if we're currently in the middle of navigation
+        # This prevents race conditions where map navigation triggers tab change
+        # but then immediately clears the navigation data before child tabs can read it
+        if nav_data and nav_data.get('target_tab') == active_tab:
+            # We're in the middle of map navigation - don't clear yet
+            # Let the target tab handle the navigation first
+            return dash.no_update
+        
+        # Clear navigation store for manual tab changes
+        return {'target_tab': None, 'target_site': None}
