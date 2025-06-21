@@ -28,3 +28,7 @@ tzdata==2025.2
 urllib3==2.4.0
 Werkzeug==3.0.6
 zipp==3.21.0
+
+# Testing dependencies
+pytest==7.4.0
+pytest-mock==3.11.1
