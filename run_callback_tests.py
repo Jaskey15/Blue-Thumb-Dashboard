@@ -90,7 +90,7 @@ Examples:
     
     # Determine test path
     if args.shared_only:
-        test_path = 'tests/callbacks/test_shared_callbacks_simple.py'
+        test_path = 'tests/callbacks/test_shared_callbacks.py'
         description = "Running shared callback tests"
     else:
         test_path = 'tests/callbacks/'
