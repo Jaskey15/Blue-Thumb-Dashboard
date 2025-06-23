@@ -85,7 +85,7 @@ def create_habitat_viz(site_name=None):
             return create_empty_figure(site_name, "habitat")
 
         # Create the line plot using shared utilities
-        title = f'Habitat Assessment Scores Over Time for {site_name}' if site_name else 'Habitat Assessment Scores Over Time'
+        title = f'Habitat Grades Over Time for {site_name}' if site_name else 'Habitat Assessment Scores Over Time'
         fig = create_line_plot(
             habitat_df, 
             title, 
@@ -98,7 +98,7 @@ def create_habitat_viz(site_name=None):
             fig, 
             habitat_df, 
             title,
-            y_label='Habitat Assessment Score',
+            y_label='Habitat Grade',
             y_column='total_score',
             tick_format='d'  
         )

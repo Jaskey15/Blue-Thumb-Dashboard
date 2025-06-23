@@ -52,16 +52,20 @@ class TestMacroViz(unittest.TestCase):
         
         # Sample metrics data for both seasons
         self.sample_metrics_data = pd.DataFrame({
+            'event_id': [1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4],
             'year': [2020, 2020, 2020, 2020, 2020, 2020, 2021, 2021, 2021, 2021, 2021, 2021],
-            'season': ['Summer', 'Summer', 'Summer', 'Winter', 'Winter', 'Winter'] * 2,
-            'metric_name': ['Taxa Richness', 'EPT Taxa Richness', 'HBI Score'] * 4,
-            'metric_score': [15, 8, 3.2, 12, 6, 3.8, 18, 10, 2.9, 14, 7, 3.5]
+            'season': ['Summer', 'Summer', 'Summer', 'Winter', 'Winter', 'Winter', 'Summer', 'Summer', 'Summer', 'Winter', 'Winter', 'Winter'],
+            'habitat': ['Riffle', 'Riffle', 'Riffle', 'Vegetation', 'Vegetation', 'Vegetation', 'Riffle', 'Riffle', 'Riffle', 'Vegetation', 'Vegetation', 'Vegetation'],
+            'metric_name': ['Taxa Richness', 'EPT Taxa Richness', 'HBI Score', 'Taxa Richness', 'EPT Taxa Richness', 'HBI Score', 'Taxa Richness', 'EPT Taxa Richness', 'HBI Score', 'Taxa Richness', 'EPT Taxa Richness', 'HBI Score'],
+            'metric_score': [15, 8, 3, 12, 6, 4, 18, 10, 3, 14, 7, 4]
         })
         
         # Sample summary data for both seasons
         self.sample_summary_data = pd.DataFrame({
+            'event_id': [1, 2, 3, 4],
             'year': [2020, 2020, 2021, 2021],
             'season': ['Summer', 'Winter', 'Summer', 'Winter'],
+            'habitat': ['Riffle', 'Vegetation', 'Riffle', 'Vegetation'],
             'total_score': [42, 38, 48, 41],
             'comparison_to_reference': [0.75, 0.68, 0.82, 0.71],
             'biological_condition': ['Slightly Impaired', 'Moderately Impaired', 
