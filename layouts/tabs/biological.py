@@ -28,12 +28,11 @@ def create_biological_tab():
             dcc.Dropdown(
                 id='biological-community-dropdown',
                 options=[
-                    {'label': 'Select a community type...', 'value': '', 'disabled': True},
                     {'label': 'Fish Community', 'value': 'fish'},
                     {'label': 'Macroinvertebrate Community', 'value': 'macro'}
                 ],
                 value='',  # Start with no selection
-                placeholder="Choose a biological community",
+                placeholder="Select a community type...",
                 className="mb-3"
             )
         ], className="mb-4"),

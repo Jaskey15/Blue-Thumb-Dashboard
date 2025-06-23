@@ -16,6 +16,7 @@ Biological Conditions:
 """
 
 import plotly.graph_objects as go
+import plotly.express as px
 import pandas as pd
 
 from dash import dash_table, html
@@ -32,7 +33,9 @@ from .visualization_utils import (
     create_hover_text,
     update_hover_data,
     create_empty_figure,
-    create_error_figure
+    create_error_figure,
+    calculate_dynamic_y_range,
+    FONT_SIZES
 )
 
 logger = setup_logging("macro_viz", category="visualization")
@@ -63,56 +66,125 @@ MACRO_SUMMARY_LABELS = ['Total Score', 'Comparison to Reference', 'Biological Co
 
 def create_macro_viz(site_name=None):
     """
-    Create macroinvertebrate visualization for the app.
+    Create macroinvertebrate visualization with date-based plotting and seasonal grouping.
     
     Args:
         site_name: Optional site name to filter data for
     
     Returns:
-        Plotly figure: Line plot showing bioassessment scores over time for both seasons.
+        Plotly figure: Line plot showing bioassessment scores over time by season.
     """
     try:
         # Get macroinvertebrate data from the database
-        macro_df = get_macroinvertebrate_dataframe()
-        
-        # Filter by site if specified
-        if site_name:
-            macro_df = macro_df[macro_df['site_name'] == site_name]
+        macro_df = get_macroinvertebrate_dataframe(site_name)
         
         if macro_df.empty:
             return create_empty_figure(site_name, "macroinvertebrate")
 
-        # Create the line plot using shared utilities
+        # Handle missing habitat types
+        macro_df['habitat'] = macro_df['habitat'].fillna('Unknown')
+        
+        # Create figure
+        fig = go.Figure()
+        
+        # Get unique seasons and sort them
+        seasons = sorted(macro_df['season'].unique())
+        
+        # Plot each season as separate trace
+        for season in seasons:
+            season_data = macro_df[macro_df['season'] == season].copy()
+            season_data = season_data.sort_values('collection_date')
+            
+            # Get color for this season using shared constants
+            color = DEFAULT_COLORS.get(season, DEFAULT_COLORS.get('default', 'blue'))
+            
+            # Create hover text for this season
+            hover_text = []
+            for _, row in season_data.iterrows():
+                text = (f"<b>Collection Date</b>: {row['collection_date'].strftime('%Y-%m-%d')}<br>"
+                       f"<b>Season</b>: {row['season']}<br>"
+                       f"<b>Habitat Type</b>: {row['habitat']}<br>"
+                       f"<b>Bioassessment Score</b>: {row['comparison_to_reference']:.2f}<br>"
+                       f"<b>Biological Condition</b>: {row['biological_condition']}")
+                hover_text.append(text)
+            
+            # Add trace for this season
+            fig.add_trace(go.Scatter(
+                x=season_data['collection_date'],
+                y=season_data['comparison_to_reference'],
+                mode='lines+markers',
+                name=season,
+                line=dict(color=color),
+                marker=dict(
+                    color=color,
+                    symbol='circle',
+                    size=8
+                ),
+                text=hover_text,
+                hovertemplate='%{text}<extra></extra>',
+                hoverinfo='text'
+            ))
+        
+        # Set up title
         title = f"Bioassessment Scores Over Time for {site_name}" if site_name else "Bioassessment Scores Over Time"
-        fig_macro = create_line_plot(
-            macro_df,
-            title,
-            y_column='comparison_to_reference',
-            has_seasons=True,
-            color_map=DEFAULT_COLORS
+        
+        # Calculate y-range using shared utility
+        y_min, y_max = calculate_dynamic_y_range(macro_df, column='comparison_to_reference')
+        
+        # Get year range for x-axis ticks
+        years = sorted(macro_df['year'].unique()) if 'year' in macro_df.columns else []
+        
+        # Update layout using shared styling constants
+        fig.update_layout(
+            title=title,
+            title_x=0.5,
+            title_font=dict(size=FONT_SIZES['title']),
+            xaxis=dict(
+                title='Year',
+                title_font=dict(size=FONT_SIZES['axis_title']),
+                tickmode='array',
+                tickvals=[pd.Timestamp(f'{year}-01-01') for year in years],
+                ticktext=[str(year) for year in years]
+            ),
+            yaxis=dict(
+                title='Bioassessment Score<br>(Compared to Reference)',
+                title_font=dict(size=FONT_SIZES['axis_title']),
+                range=[y_min, y_max],
+                tickformat='.2f'
+            ),
+            hovermode='closest',
+            legend_title_text='Season'
         )
+        
+        # Add condition reference lines (date-aware version for macro plots)
+        if years:
+            x_min = pd.Timestamp(f'{min(years)}-01-01')
+            x_max = pd.Timestamp(f'{max(years)}-12-31')
+            
+            for label, threshold in CONDITION_THRESHOLDS.items():
+                color = CONDITION_COLORS.get(label, 'gray')
+                
+                # Add line
+                fig.add_shape(
+                    type="line",
+                    x0=x_min,
+                    y0=threshold,
+                    x1=x_max,
+                    y1=threshold,
+                    line=dict(color=color, width=1, dash="dash"),
+                )
+                
+                # Add annotation
+                fig.add_annotation(
+                    x=x_min,
+                    y=threshold,
+                    text=label,
+                    showarrow=False,
+                    yshift=10,
+                    xshift=-20
+                )
 
-        # Update layout using shared utilities
-        fig_macro = update_figure_layout(
-            fig_macro,
-            macro_df,
-            title,
-            y_label='Bioassessment Score<br>(Compared to Reference)'
-        )
-
-        # Add condition reference lines
-        fig_macro = add_reference_lines(fig_macro, macro_df, CONDITION_THRESHOLDS, CONDITION_COLORS)
-
-        # Add hover data using shared utilities - need to handle multiple seasons
-        hover_text_dict = {}
-        for season in macro_df['season'].unique():
-            season_data = macro_df[macro_df['season'] == season]
-            season_hover = create_hover_text(season_data, has_seasons=True, condition_column='biological_condition')
-            hover_text_dict[season] = season_hover
-
-        fig_macro = update_hover_data(fig_macro, hover_text_dict)
-
-        return fig_macro
+        return fig
     
     except Exception as e:
         logger.error(f"Error creating macroinvertebrate visualization for {site_name}: {e}")
