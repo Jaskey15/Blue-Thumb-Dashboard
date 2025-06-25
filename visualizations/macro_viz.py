@@ -16,10 +16,9 @@ Biological Conditions:
 """
 
 import plotly.graph_objects as go
-import plotly.express as px
 import pandas as pd
 
-from dash import dash_table, html
+from dash import html
 from data_processing.data_queries import get_macroinvertebrate_dataframe, get_macro_metrics_data_for_table
 from utils import create_metrics_accordion, setup_logging
 from .visualization_utils import (
@@ -27,10 +26,9 @@ from .visualization_utils import (
     create_data_table,
     create_empty_figure,
     create_error_figure,
-    add_date_aware_reference_lines,
-    update_date_aware_layout,
-    generate_hover_text,
-    FONT_SIZES
+    add_reference_lines,
+    update_layout,
+    generate_hover_text
 )
 
 logger = setup_logging("macro_viz", category="visualization")
@@ -129,7 +127,7 @@ def create_macro_viz(site_name=None):
         title = f"Bioassessment Scores Over Time for {site_name}" if site_name else "Bioassessment Scores Over Time"
         
         # Update layout using shared utility (with legend for seasons)
-        fig = update_date_aware_layout(
+        fig = update_layout(
             fig,
             macro_df,
             title,
@@ -140,7 +138,7 @@ def create_macro_viz(site_name=None):
         )
         
         # Add condition reference lines using shared utility
-        fig = add_date_aware_reference_lines(fig, macro_df, CONDITION_THRESHOLDS, CONDITION_COLORS)
+        fig = add_reference_lines(fig, macro_df, CONDITION_THRESHOLDS, CONDITION_COLORS)
 
         return fig
     

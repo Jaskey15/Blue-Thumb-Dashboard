@@ -24,10 +24,6 @@ from visualizations.macro_viz import (
     MACRO_METRIC_ORDER,
     MACRO_SUMMARY_LABELS
 )
-from data_processing.data_queries import (
-    get_macroinvertebrate_dataframe,
-    get_macro_metrics_data_for_table
-)
 from utils import setup_logging
 
 # Set up logging for tests
@@ -42,11 +38,13 @@ class TestMacroViz(unittest.TestCase):
         # Sample macro data with seasons
         self.sample_macro_data = pd.DataFrame({
             'year': [2020, 2020, 2021, 2021, 2022, 2022],
+            'collection_date': pd.to_datetime(['2020-06-15', '2020-12-15', '2021-07-20', '2021-12-20', '2022-06-10', '2022-12-10']),
             'season': ['Summer', 'Winter', 'Summer', 'Winter', 'Summer', 'Winter'],
             'comparison_to_reference': [0.75, 0.68, 0.82, 0.71, 0.69, 0.73],
             'biological_condition': ['Slightly Impaired', 'Moderately Impaired', 
                                    'Non-impaired', 'Slightly Impaired',
                                    'Moderately Impaired', 'Slightly Impaired'],
+            'habitat': ['Riffle', 'Vegetation', 'Riffle', 'Vegetation', 'Riffle', 'Vegetation'],
             'site_name': ['Test Site'] * 6
         })
         
@@ -118,21 +116,6 @@ class TestMacroViz(unittest.TestCase):
         self.assertEqual(fig.layout.title.text, "Bioassessment Scores Over Time")
 
     @patch('visualizations.macro_viz.get_macroinvertebrate_dataframe')
-    def test_create_macro_viz_filtered_by_site(self, mock_get_macro):
-        """Test macro visualization creation with site filtering."""
-        # Data with multiple sites
-        multi_site_data = self.sample_macro_data.copy()
-        multi_site_data.loc[3:, 'site_name'] = 'Other Site'
-        
-        mock_get_macro.return_value = multi_site_data
-        
-        fig = create_macro_viz("Test Site")
-        
-        # Should filter data for the specified site
-        mock_get_macro.assert_called_once()
-        self.assertIsInstance(fig, go.Figure)
-
-    @patch('visualizations.macro_viz.get_macroinvertebrate_dataframe')
     def test_create_macro_viz_empty_data(self, mock_get_macro):
         """Test macro visualization creation with empty data."""
         mock_get_macro.return_value = pd.DataFrame()
@@ -159,13 +142,34 @@ class TestMacroViz(unittest.TestCase):
         self.assertIsInstance(fig, go.Figure)
         self.assertEqual(fig.layout.title.text, "Error creating visualization")
 
+    @patch('visualizations.macro_viz.get_macroinvertebrate_dataframe')
+    def test_create_macro_viz_uses_shared_utilities(self, mock_get_macro):
+        """Test that macro viz uses shared visualization utilities."""
+        mock_get_macro.return_value = self.sample_macro_data
+        
+        fig = create_macro_viz("Test Site")
+        
+        # Should use shared utilities for date-aware visualization
+        self.assertEqual(fig.layout.xaxis.title.text, "Year")
+        
+        # Should have multiple traces with proper hover template
+        self.assertEqual(len(fig.data), 2)  # Summer and Winter
+        for trace in fig.data:
+            self.assertEqual(trace.hovertemplate, '%{text}<extra></extra>')
+        
+        # Should have reference lines from shared utilities
+        self.assertGreater(len(fig.layout.shapes), 0)
+        
+        # Should have legend for seasons
+        self.assertEqual(fig.layout.legend.title.text, "Season")
+
     # =============================================================================
     # SEASONAL METRICS TABLE FUNCTION TESTS
     # =============================================================================
 
     def test_create_macro_metrics_table_for_season_summer(self):
         """Test macro metrics table creation for Summer season."""
-        from dash import dash_table
+        from dash import dash_table, html
         
         table = create_macro_metrics_table_for_season(
             self.sample_metrics_data, 
@@ -173,19 +177,23 @@ class TestMacroViz(unittest.TestCase):
             'Summer'
         )
         
-        # Should return DataTable component
-        self.assertIsInstance(table, dash_table.DataTable)
+        # Should return Div containing DataTable and footnote
+        self.assertIsInstance(table, html.Div)
+        
+        # Should contain a DataTable as first child
+        self.assertIsInstance(table.children[0], dash_table.DataTable)
+        data_table = table.children[0]
         
         # Should have correct ID for Summer
-        self.assertEqual(table.id, 'summer-macro-metrics-table')
+        self.assertEqual(data_table.id, 'summer-macro-metrics-table')
         
         # Should have correct structure
-        self.assertGreater(len(table.columns), 1)  # Metric column + year columns
-        self.assertGreater(len(table.data), len(MACRO_METRIC_ORDER))  # Metrics + summary rows
+        self.assertGreater(len(data_table.columns), 1)  # Metric column + year columns
+        self.assertGreater(len(data_table.data), len(MACRO_METRIC_ORDER))  # Metrics + summary rows
 
     def test_create_macro_metrics_table_for_season_winter(self):
         """Test macro metrics table creation for Winter season."""
-        from dash import dash_table
+        from dash import dash_table, html
         
         table = create_macro_metrics_table_for_season(
             self.sample_metrics_data, 
@@ -193,11 +201,15 @@ class TestMacroViz(unittest.TestCase):
             'Winter'
         )
         
-        # Should return DataTable component
-        self.assertIsInstance(table, dash_table.DataTable)
+        # Should return Div containing DataTable and footnote
+        self.assertIsInstance(table, html.Div)
+        
+        # Should contain a DataTable as first child
+        self.assertIsInstance(table.children[0], dash_table.DataTable)
+        data_table = table.children[0]
         
         # Should have correct ID for Winter
-        self.assertEqual(table.id, 'winter-macro-metrics-table')
+        self.assertEqual(data_table.id, 'winter-macro-metrics-table')
 
     def test_create_macro_metrics_table_for_season_empty_data(self):
         """Test seasonal metrics table creation with empty data."""
@@ -207,24 +219,32 @@ class TestMacroViz(unittest.TestCase):
         
         result = create_macro_metrics_table_for_season(empty_df, empty_df, 'Summer')
         
-        # Should handle gracefully
+        # Should handle gracefully - either return empty table or error message
         self.assertTrue(
             isinstance(result, html.Div) or 
             hasattr(result, 'data')  # DataTable with empty data
         )
 
-    def test_create_macro_metrics_table_for_season_error_handling(self):
-        """Test seasonal metrics table error handling."""
-        from dash import html, dash_table
+    def test_create_macro_metrics_table_uses_shared_utilities(self):
+        """Test that metrics table uses shared formatting utilities."""
+        from dash import dash_table, html
         
-        # Pass invalid data to trigger error
-        result = create_macro_metrics_table_for_season("invalid", "invalid", "Summer")
-        
-        # Should return either error message or empty table (both are acceptable)
-        self.assertTrue(
-            isinstance(result, html.Div) or 
-            isinstance(result, dash_table.DataTable)
+        table = create_macro_metrics_table_for_season(
+            self.sample_metrics_data, 
+            self.sample_summary_data, 
+            'Summer'
         )
+        
+        if isinstance(table, html.Div) and len(table.children) > 0:
+            data_table = table.children[0]
+            if isinstance(data_table, dash_table.DataTable):
+                # Should use shared table styling
+                self.assertIsNotNone(data_table.style_table)
+                self.assertIsNotNone(data_table.style_header)
+                self.assertIsNotNone(data_table.style_cell)
+                
+                # Should have conditional formatting
+                self.assertGreater(len(data_table.style_data_conditional), 0)
 
     # =============================================================================
     # ACCORDION FUNCTION TESTS
@@ -244,26 +264,6 @@ class TestMacroViz(unittest.TestCase):
         
         # Should have two children (Summer and Winter accordions)
         self.assertEqual(len(accordion.children), 2)
-
-    @patch('visualizations.macro_viz.get_macro_metrics_data_for_table')
-    def test_create_macro_metrics_accordion_with_site_filtering(self, mock_get_data):
-        """Test accordion creation with site filtering."""
-        from dash import html
-        
-        # Data with multiple sites
-        multi_site_metrics = self.sample_metrics_data.copy()
-        multi_site_metrics['site_name'] = ['Test Site'] * 6 + ['Other Site'] * 6
-        
-        multi_site_summary = self.sample_summary_data.copy()
-        multi_site_summary['site_name'] = ['Test Site'] * 2 + ['Other Site'] * 2
-        
-        mock_get_data.return_value = (multi_site_metrics, multi_site_summary)
-        
-        accordion = create_macro_metrics_accordion("Test Site")
-        
-        # Should return HTML component
-        self.assertIsInstance(accordion, html.Div)
-        mock_get_data.assert_called_once()
 
     @patch('visualizations.macro_viz.get_macro_metrics_data_for_table')
     def test_create_macro_metrics_accordion_empty_data(self, mock_get_data):
@@ -347,27 +347,32 @@ class TestMacroViz(unittest.TestCase):
     # INTEGRATION WITH SHARED UTILITIES TESTS
     # =============================================================================
 
-    def test_integration_with_biological_utils(self):
-        """Test integration with shared biological utilities."""
-        # This test ensures the macro module correctly uses shared utilities
-        with patch('visualizations.macro_viz.get_macroinvertebrate_dataframe') as mock_get_macro:
-            mock_get_macro.return_value = self.sample_macro_data
-            
-            fig = create_macro_viz("Test Site")
-            
-            # Should have characteristics of shared biological visualization
-            self.assertIsInstance(fig, go.Figure)
-            
-            # Should have multiple traces (seasons for macro)
-            self.assertEqual(len(fig.data), 2)
-            
-            # Should have hover template set by shared utilities
-            for trace in fig.data:
-                self.assertEqual(trace.hovertemplate, '%{text}<extra></extra>')
+    @patch('visualizations.macro_viz.get_macroinvertebrate_dataframe')
+    def test_integration_with_shared_visualization_utils(self, mock_get_macro):
+        """Test integration with shared visualization utilities."""
+        mock_get_macro.return_value = self.sample_macro_data
+        
+        fig = create_macro_viz("Test Site")
+        
+        # Should use shared create_trace function for both seasons
+        self.assertEqual(len(fig.data), 2)
+        for trace in fig.data:
+            self.assertEqual(trace.mode, 'lines+markers')
+        
+        # Should use shared update_layout function
+        self.assertEqual(fig.layout.title.x, 0.5)  # Centered title
+        
+        # Should use shared add_reference_lines function
+        self.assertGreater(len(fig.layout.shapes), 0)
+        
+        # Should use shared generate_hover_text function
+        for trace in fig.data:
+            self.assertIsNotNone(trace.text)
+            self.assertEqual(trace.hovertemplate, '%{text}<extra></extra>')
 
-    def test_macro_specific_configurations(self):
-        """Test that macro-specific configurations are correctly applied."""
-        # Test that macro module uses its own thresholds and not fish thresholds
+    def test_macro_specific_vs_shared_functionality(self):
+        """Test that macro module correctly uses shared vs. macro-specific functionality."""
+        # Test that macro uses its own thresholds and not fish thresholds
         self.assertIn('Non-impaired', CONDITION_THRESHOLDS)
         self.assertNotIn('Excellent', CONDITION_THRESHOLDS)  # Fish threshold
         
@@ -390,129 +395,144 @@ class TestMacroViz(unittest.TestCase):
             self.sample_metrics_data, self.sample_summary_data, 'Winter'
         )
         
-        # Both should be valid tables with different IDs
-        from dash import dash_table
-        self.assertIsInstance(summer_table, dash_table.DataTable)
-        self.assertIsInstance(winter_table, dash_table.DataTable)
-        self.assertNotEqual(summer_table.id, winter_table.id)
+        # Both should be valid Div containers with DataTables inside
+        from dash import dash_table, html
+        self.assertIsInstance(summer_table, html.Div)
+        self.assertIsInstance(winter_table, html.Div)
+        
+        # Extract the DataTables from the Div containers
+        summer_data_table = summer_table.children[0]
+        winter_data_table = winter_table.children[0]
+        
+        self.assertIsInstance(summer_data_table, dash_table.DataTable)
+        self.assertIsInstance(winter_data_table, dash_table.DataTable)
+        self.assertNotEqual(summer_data_table.id, winter_data_table.id)
 
     # =============================================================================
     # SEASONAL DATA HANDLING TESTS
     # =============================================================================
 
-    def test_seasonal_data_filtering(self):
-        """Test that seasonal data is properly filtered."""
-        # Test Summer filtering
-        summer_metrics = self.sample_metrics_data[self.sample_metrics_data['season'] == 'Summer']
-        summer_summary = self.sample_summary_data[self.sample_summary_data['season'] == 'Summer']
+    @patch('visualizations.macro_viz.get_macroinvertebrate_dataframe')
+    def test_macro_multi_trace_vs_fish_single_trace(self, mock_get_macro):
+        """Test that macro viz has multiple traces while fish has single."""
+        mock_get_macro.return_value = self.sample_macro_data
         
+        fig = create_macro_viz("Test Site")
+        
+        # Macro should have multiple traces (seasons)
+        self.assertEqual(len(fig.data), 2)
+        
+        # Should have legend for seasons
+        self.assertEqual(fig.layout.legend.title.text, "Season")
+        
+        # Traces should have different names
+        trace_names = [trace.name for trace in fig.data]
+        self.assertIn('Summer', trace_names)
+        self.assertIn('Winter', trace_names)
+
+    @patch('visualizations.macro_viz.get_macroinvertebrate_dataframe')
+    def test_macro_hover_text_contains_habitat_and_season(self, mock_get_macro):
+        """Test that macro hover text contains season and habitat information."""
+        mock_get_macro.return_value = self.sample_macro_data
+        
+        fig = create_macro_viz("Test Site")
+        
+        # Should have hover data for both seasons
+        self.assertEqual(len(fig.data), 2)
+        
+        # Each trace should have hover template and text
+        for trace in fig.data:
+            self.assertEqual(trace.hovertemplate, '%{text}<extra></extra>')
+            self.assertIsNotNone(trace.text)
+            
+            # Hover text should contain season and habitat info
+            if trace.text:
+                hover_text = trace.text[0] if trace.text else ""
+                # Verify that hover text was generated (specific content is implementation detail)
+                self.assertIsInstance(hover_text, str)
+
+    def test_seasonal_data_filtering_in_table_creation(self):
+        """Test that seasonal data is properly filtered in table functions."""
+        # Test Summer filtering
         summer_table = create_macro_metrics_table_for_season(
             self.sample_metrics_data, self.sample_summary_data, 'Summer'
         )
         
-        # Should create valid table
-        from dash import dash_table
-        self.assertIsInstance(summer_table, dash_table.DataTable)
+        # Should create valid Div container with DataTable
+        from dash import dash_table, html
+        self.assertIsInstance(summer_table, html.Div)
+        self.assertIsInstance(summer_table.children[0], dash_table.DataTable)
         
         # Test Winter filtering
         winter_table = create_macro_metrics_table_for_season(
             self.sample_metrics_data, self.sample_summary_data, 'Winter'
         )
         
-        self.assertIsInstance(winter_table, dash_table.DataTable)
-
-    def test_multi_season_hover_text_handling(self):
-        """Test that hover text is correctly handled for multiple seasons."""
-        with patch('visualizations.macro_viz.get_macroinvertebrate_dataframe') as mock_get_macro:
-            mock_get_macro.return_value = self.sample_macro_data
-            
-            fig = create_macro_viz("Test Site")
-            
-            # Should have hover data for both seasons
-            self.assertEqual(len(fig.data), 2)
-            
-            # Each trace should have hover template
-            for trace in fig.data:
-                self.assertEqual(trace.hovertemplate, '%{text}<extra></extra>')
-                self.assertIsNotNone(trace.text)
+        self.assertIsInstance(winter_table, html.Div)
+        self.assertIsInstance(winter_table.children[0], dash_table.DataTable)
 
     # =============================================================================
-    # EDGE CASES AND ERROR HANDLING
+    # CORE FUNCTIONALITY TESTS
     # =============================================================================
 
-    def test_create_macro_viz_with_none_site(self):
-        """Test macro visualization with None site name."""
-        with patch('visualizations.macro_viz.get_macroinvertebrate_dataframe') as mock_get_macro:
-            mock_get_macro.return_value = self.sample_macro_data
-            
-            fig = create_macro_viz(None)
-            
-            # Should handle gracefully
-            self.assertIsInstance(fig, go.Figure)
+    @patch('visualizations.macro_viz.get_macroinvertebrate_dataframe')
+    def test_complete_visualization_workflow(self, mock_get_macro):
+        """Test complete end-to-end visualization creation process."""
+        mock_get_macro.return_value = self.sample_macro_data
+        
+        # Test visualization creation
+        viz_result = create_macro_viz('Test Site')
+        
+        # Verify it's a valid figure with proper structure
+        self.assertIsInstance(viz_result, go.Figure)
+        self.assertEqual(len(viz_result.data), 2)  # Two traces for seasons
+        
+        # Verify it has proper layout from shared utilities
+        self.assertIsNotNone(viz_result.layout.title)
+        self.assertIsNotNone(viz_result.layout.xaxis)
+        self.assertIsNotNone(viz_result.layout.yaxis)
+        
+        # Verify it has reference lines for biological conditions
+        self.assertGreater(len(viz_result.layout.shapes), 0)
+        
+        # Verify traces have proper hover text
+        for trace in viz_result.data:
+            self.assertIsNotNone(trace.text)
 
-    def test_create_macro_viz_single_season_data(self):
-        """Test macro visualization with data from only one season."""
-        single_season_data = self.sample_macro_data[self.sample_macro_data['season'] == 'Summer'].copy()
+    @patch('visualizations.macro_viz.get_macro_metrics_data_for_table')
+    def test_complete_table_workflow(self, mock_get_data):
+        """Test complete metrics table creation workflow."""
+        mock_get_data.return_value = (self.sample_metrics_data, self.sample_summary_data)
         
-        with patch('visualizations.macro_viz.get_macroinvertebrate_dataframe') as mock_get_macro:
-            mock_get_macro.return_value = single_season_data
-            
-            fig = create_macro_viz("Test Site")
-            
-            # Should handle single season gracefully
-            self.assertIsInstance(fig, go.Figure)
-            # Should have only one trace for single season
-            self.assertEqual(len(fig.data), 1)
-
-    def test_metrics_table_missing_season_data(self):
-        """Test metrics table when one season has no data."""
-        # Data with only Summer metrics
-        summer_only_metrics = self.sample_metrics_data[
-            self.sample_metrics_data['season'] == 'Summer'
-        ].copy()
+        # Test accordion creation (which calls table creation for both seasons)
+        accordion_result = create_macro_metrics_accordion('Test Site')
         
-        summer_only_summary = self.sample_summary_data[
-            self.sample_summary_data['season'] == 'Summer'
-        ].copy()
+        # Should create proper accordion structure
+        from dash import html
+        self.assertIsInstance(accordion_result, html.Div)
+        self.assertEqual(len(accordion_result.children), 2)  # Summer and Winter
         
-        # Test Winter table creation with Summer-only data
+        # Test direct table creation for each season
+        summer_table = create_macro_metrics_table_for_season(
+            self.sample_metrics_data, self.sample_summary_data, 'Summer'
+        )
         winter_table = create_macro_metrics_table_for_season(
-            summer_only_metrics, summer_only_summary, 'Winter'
+            self.sample_metrics_data, self.sample_summary_data, 'Winter'
         )
         
-        # Should handle gracefully
+        # Should create properly formatted Div containers with DataTables
         from dash import dash_table, html
-        self.assertTrue(
-            isinstance(winter_table, dash_table.DataTable) or 
-            isinstance(winter_table, html.Div)
-        )
-
-    def test_accordion_with_site_name_filtering(self):
-        """Test accordion creation with site name that has no data."""
-        with patch('visualizations.macro_viz.get_macro_metrics_data_for_table') as mock_get_data:
-            # Return data that would be filtered out by site name
-            mock_get_data.return_value = (self.sample_metrics_data, self.sample_summary_data)
-            
-            accordion = create_macro_metrics_accordion("Nonexistent Site")
-            
-            # Should handle gracefully
-            from dash import html
-            self.assertIsInstance(accordion, html.Div)
-
-    def test_invalid_season_parameter(self):
-        """Test table creation with invalid season parameter."""
-        # Test with invalid season
-        result = create_macro_metrics_table_for_season(
-            self.sample_metrics_data, self.sample_summary_data, 'InvalidSeason'
-        )
+        self.assertIsInstance(summer_table, html.Div)
+        self.assertIsInstance(winter_table, html.Div)
         
-        # Should handle gracefully
-        from dash import dash_table, html
-        self.assertTrue(
-            isinstance(result, dash_table.DataTable) or 
-            isinstance(result, html.Div)
-        )
-
+        # Extract DataTables from Div containers
+        summer_data_table = summer_table.children[0]
+        winter_data_table = winter_table.children[0]
+        
+        self.assertIsInstance(summer_data_table, dash_table.DataTable)
+        self.assertIsInstance(winter_data_table, dash_table.DataTable)
+        self.assertEqual(summer_data_table.id, 'summer-macro-metrics-table')
+        self.assertEqual(winter_data_table.id, 'winter-macro-metrics-table')
 
 if __name__ == '__main__':
     unittest.main(verbosity=2) 

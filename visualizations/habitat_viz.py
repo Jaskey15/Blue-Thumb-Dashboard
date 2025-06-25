@@ -14,11 +14,10 @@ Usage:
 - Habitat grades: A (90+), B (80-89), C (70-79), D (60-69), F (<60)
 """
 
-import os
 import pandas as pd
 import plotly.graph_objects as go
 
-from dash import html, dash_table
+from dash import html
 from data_processing.data_queries import get_habitat_dataframe, get_habitat_metrics_data_for_table
 from utils import create_metrics_accordion, setup_logging
 from .visualization_utils import (
@@ -28,10 +27,9 @@ from .visualization_utils import (
     create_data_table,
     create_empty_figure,
     create_error_figure,
-    add_date_aware_reference_lines,
-    update_date_aware_layout,
-    create_date_based_trace,
-    FONT_SIZES
+    add_reference_lines,
+    update_layout,
+    create_trace
 )
 
 logger = setup_logging("habitat_viz", category="visualization")
@@ -96,8 +94,8 @@ def create_habitat_viz(site_name=None):
             'Grade': 'habitat_grade'
         }
         
-        # Create date-based trace using shared utility
-        trace = create_date_based_trace(
+        # Create trace using shared utility
+        trace = create_trace(
             habitat_df,
             date_column='assessment_date',
             y_column='total_score',
@@ -113,7 +111,7 @@ def create_habitat_viz(site_name=None):
         title = f"Habitat Scores Over Time for {site_name}" if site_name else "Habitat Scores Over Time"
         
         # Update layout using shared utility
-        fig = update_date_aware_layout(
+        fig = update_layout(
             fig,
             habitat_df,
             title,
@@ -124,7 +122,7 @@ def create_habitat_viz(site_name=None):
         )
         
         # Add habitat grade reference lines using shared utility
-        fig = add_date_aware_reference_lines(fig, habitat_df, HABITAT_GRADE_THRESHOLDS, HABITAT_GRADE_COLORS)
+        fig = add_reference_lines(fig, habitat_df, HABITAT_GRADE_THRESHOLDS, HABITAT_GRADE_COLORS)
 
         return fig
         

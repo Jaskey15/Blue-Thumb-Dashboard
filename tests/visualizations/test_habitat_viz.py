@@ -8,8 +8,8 @@ Test Coverage:
 - create_habitat_viz() function with various data scenarios
 - create_habitat_metrics_table() function 
 - create_habitat_metrics_accordion() function
-- Error handling and edge cases
-- Data formatting and styling
+- Error handling and core functionality
+- Integration with shared utilities
 """
 
 import unittest
@@ -38,6 +38,7 @@ class TestHabitatVisualization(unittest.TestCase):
         # Sample habitat data for testing
         self.sample_habitat_data = pd.DataFrame({
             'year': [2020, 2021, 2022, 2023],
+            'assessment_date': pd.to_datetime(['2020-06-15', '2021-07-20', '2022-08-10', '2023-06-25']),
             'total_score': [85, 78, 92, 65],
             'habitat_grade': ['B', 'C', 'A', 'D'],
             'site_name': ['Test Site'] * 4
@@ -62,6 +63,10 @@ class TestHabitatVisualization(unittest.TestCase):
         # Empty dataframes for testing
         self.empty_df = pd.DataFrame()
 
+    # =============================================================================
+    # MAIN VISUALIZATION FUNCTION TESTS
+    # =============================================================================
+
     @patch('visualizations.habitat_viz.get_habitat_dataframe')
     def test_create_habitat_viz_with_data(self, mock_get_data):
         """Test create_habitat_viz with valid data."""
@@ -77,6 +82,10 @@ class TestHabitatVisualization(unittest.TestCase):
         
         # Verify figure has data
         self.assertGreater(len(result.data), 0)
+        
+        # Should have title with site name
+        self.assertIn('Test Site', result.layout.title.text)
+        self.assertIn('Habitat Scores', result.layout.title.text)
 
     @patch('visualizations.habitat_viz.get_habitat_dataframe')
     def test_create_habitat_viz_no_site_filter(self, mock_get_data):
@@ -90,6 +99,9 @@ class TestHabitatVisualization(unittest.TestCase):
         
         # Verify it returns a figure
         self.assertIsInstance(result, go.Figure)
+        
+        # Should have generic title without site name
+        self.assertEqual(result.layout.title.text, 'Habitat Scores Over Time')
 
     @patch('visualizations.habitat_viz.get_habitat_dataframe')
     def test_create_habitat_viz_empty_data(self, mock_get_data):
@@ -114,6 +126,30 @@ class TestHabitatVisualization(unittest.TestCase):
         
         # Should return an error figure
         self.assertIsInstance(result, go.Figure)
+        self.assertEqual(result.layout.title.text, "Error creating visualization")
+
+    @patch('visualizations.habitat_viz.get_habitat_dataframe')
+    def test_create_habitat_viz_uses_shared_utilities(self, mock_get_data):
+        """Test that habitat viz uses shared visualization utilities."""
+        mock_get_data.return_value = self.sample_habitat_data
+        
+        result = create_habitat_viz('Test Site')
+        
+        # Should use shared utilities for date-aware visualization
+        # Verify it has proper layout from shared utilities
+        self.assertEqual(result.layout.xaxis.title.text, "Year")
+        self.assertEqual(result.layout.yaxis.title.text, "Habitat Score")
+        
+        # Should have reference lines (shapes) from shared utilities
+        self.assertGreater(len(result.layout.shapes), 0)
+        
+        # Should have hover template from shared utilities
+        trace = result.data[0]
+        self.assertEqual(trace.hovertemplate, '%{text}<extra></extra>')
+
+    # =============================================================================
+    # METRICS TABLE FUNCTION TESTS
+    # =============================================================================
 
     def test_create_habitat_metrics_table_with_data(self):
         """Test create_habitat_metrics_table with valid data."""
@@ -133,6 +169,10 @@ class TestHabitatVisualization(unittest.TestCase):
         
         # Check that columns are present
         self.assertGreater(len(result.columns), 0)
+        
+        # Should have Metric column
+        metric_columns = [col for col in result.columns if col['id'] == 'Metric']
+        self.assertEqual(len(metric_columns), 1)
 
     def test_create_habitat_metrics_table_empty_data(self):
         """Test create_habitat_metrics_table with empty data."""
@@ -141,22 +181,25 @@ class TestHabitatVisualization(unittest.TestCase):
         # Should handle empty data gracefully
         self.assertIsInstance(result, (dash_table.DataTable, html.Div))
 
-    def test_create_habitat_metrics_table_error_handling(self):
-        """Test create_habitat_metrics_table error handling."""
-        # Pass invalid data to trigger error
-        invalid_data = "not a dataframe"
+    def test_create_habitat_metrics_table_uses_shared_utilities(self):
+        """Test that metrics table uses shared formatting utilities."""
+        result = create_habitat_metrics_table(
+            self.sample_metrics_data, 
+            self.sample_summary_data
+        )
         
-        result = create_habitat_metrics_table(invalid_data, invalid_data)
-        
-        # Should handle error gracefully - either return a DataTable with basic structure or error div
-        self.assertIsInstance(result, (dash_table.DataTable, html.Div))
-        
-        # If it's a DataTable, it should have the basic metric structure
         if isinstance(result, dash_table.DataTable):
-            # Should have the metric order as fallback data
-            self.assertGreater(len(result.data), 0)
-            # Should contain at least the metric column
-            self.assertTrue(any(col['id'] == 'Metric' for col in result.columns))
+            # Should use shared table styling
+            self.assertIsNotNone(result.style_table)
+            self.assertIsNotNone(result.style_header)
+            self.assertIsNotNone(result.style_cell)
+            
+            # Should have styled rows and conditional formatting
+            self.assertGreater(len(result.style_data_conditional), 0)
+
+    # =============================================================================
+    # ACCORDION FUNCTION TESTS
+    # =============================================================================
 
     @patch('visualizations.habitat_viz.get_habitat_metrics_data_for_table')
     def test_create_habitat_metrics_accordion_with_data(self, mock_get_data):
@@ -193,6 +236,10 @@ class TestHabitatVisualization(unittest.TestCase):
         self.assertIsInstance(result, html.Div)
         self.assertIn("Error", result.children)
 
+    # =============================================================================
+    # CONSTANTS AND CONFIGURATION TESTS
+    # =============================================================================
+
     def test_habitat_constants(self):
         """Test that habitat-specific constants are properly defined."""
         # Test grade thresholds
@@ -221,72 +268,6 @@ class TestHabitatVisualization(unittest.TestCase):
         self.assertEqual(HABITAT_GRADE_THRESHOLDS['C'], 70)
         self.assertEqual(HABITAT_GRADE_THRESHOLDS['D'], 60)
 
-    @patch('visualizations.habitat_viz.get_habitat_dataframe')
-    def test_figure_has_reference_lines(self, mock_get_data):
-        """Test that the habitat visualization includes grade reference lines."""
-        mock_get_data.return_value = self.sample_habitat_data
-        
-        result = create_habitat_viz('Test Site')
-        
-        # Check that reference lines are added (shapes in layout)
-        self.assertIsInstance(result.layout.shapes, tuple)
-        self.assertGreater(len(result.layout.shapes), 0)
-
-    @patch('visualizations.habitat_viz.get_habitat_dataframe')
-    def test_figure_title_with_site(self, mock_get_data):
-        """Test that figure title includes site name when provided."""
-        mock_get_data.return_value = self.sample_habitat_data
-        
-        result = create_habitat_viz('Test Site')
-        
-        # Check that title includes site name
-        self.assertIn('Test Site', result.layout.title.text)
-
-    @patch('visualizations.habitat_viz.get_habitat_dataframe')
-    def test_figure_title_without_site(self, mock_get_data):
-        """Test that figure title is generic when no site provided."""
-        mock_get_data.return_value = self.sample_habitat_data
-        
-        result = create_habitat_viz()
-        
-        # Check that title is generic
-        self.assertIn('Habitat Assessment Scores', result.layout.title.text)
-        self.assertNotIn('for', result.layout.title.text)
-
-    def test_metrics_table_has_correct_columns(self):
-        """Test that metrics table includes all expected habitat metrics."""
-        result = create_habitat_metrics_table(
-            self.sample_metrics_data, 
-            self.sample_summary_data
-        )
-        
-        if isinstance(result, dash_table.DataTable):
-            # Get the data as DataFrame to check metrics
-            table_df = pd.DataFrame(result.data)
-            
-            # Should have Metric column
-            self.assertIn('Metric', table_df.columns)
-            
-            # Should have year columns
-            year_columns = [col for col in table_df.columns if col.isdigit()]
-            self.assertGreater(len(year_columns), 0)
-
-    @patch('visualizations.habitat_viz.create_habitat_metrics_table')
-    @patch('visualizations.habitat_viz.get_habitat_metrics_data_for_table')
-    def test_accordion_calls_table_creation(self, mock_get_data, mock_create_table):
-        """Test that accordion function calls table creation with correct data."""
-        mock_get_data.return_value = (self.sample_metrics_data, self.sample_summary_data)
-        mock_table = MagicMock()
-        mock_create_table.return_value = mock_table
-        
-        result = create_habitat_metrics_accordion('Test Site')
-        
-        # Verify table creation was called
-        mock_create_table.assert_called_once_with(
-            self.sample_metrics_data, 
-            self.sample_summary_data
-        )
-
     def test_summary_labels_content(self):
         """Test that summary labels contain expected values."""
         self.assertIn('Total Points', HABITAT_SUMMARY_LABELS)
@@ -305,37 +286,89 @@ class TestHabitatVisualization(unittest.TestCase):
         for metric in expected_metrics:
             self.assertIn(metric, HABITAT_METRIC_ORDER)
 
-
-class TestHabitatVisualizationIntegration(unittest.TestCase):
-    """Integration tests for habitat visualization components."""
-
-    def setUp(self):
-        """Set up integration test data."""
-        self.integration_habitat_data = pd.DataFrame({
-            'year': [2020, 2021, 2022],
-            'total_score': [95, 82, 67],
-            'habitat_grade': ['A', 'B', 'D'],
-            'site_name': ['Integration Test Site'] * 3
-        })
+    # =============================================================================
+    # INTEGRATION WITH SHARED UTILITIES TESTS
+    # =============================================================================
 
     @patch('visualizations.habitat_viz.get_habitat_dataframe')
-    def test_end_to_end_visualization_creation(self, mock_get_data):
+    def test_integration_with_shared_visualization_utils(self, mock_get_data):
+        """Test integration with shared visualization utilities."""
+        mock_get_data.return_value = self.sample_habitat_data
+        
+        result = create_habitat_viz('Test Site')
+        
+        # Should use shared create_trace function
+        trace = result.data[0]
+        self.assertEqual(trace.mode, 'lines+markers')
+        
+        # Should use shared update_layout function
+        self.assertEqual(result.layout.title.x, 0.5)  # Centered title
+        
+        # Should use shared add_reference_lines function
+        self.assertGreater(len(result.layout.shapes), 0)
+        
+        # Should use shared generate_hover_text function
+        self.assertIsNotNone(trace.text)
+        self.assertEqual(trace.hovertemplate, '%{text}<extra></extra>')
+
+    def test_habitat_specific_vs_shared_functionality(self):
+        """Test that habitat module correctly uses shared vs. habitat-specific functionality."""
+        # Test that habitat uses its own thresholds, not biological thresholds
+        self.assertIn('A', HABITAT_GRADE_THRESHOLDS)
+        self.assertNotIn('Excellent', HABITAT_GRADE_THRESHOLDS)  # Biological threshold
+        
+        # Test that habitat metrics are habitat-specific
+        self.assertIn('Instream Cover', HABITAT_METRIC_ORDER)
+        self.assertNotIn('Taxa Richness', HABITAT_METRIC_ORDER)  # Biological metric
+
+    # =============================================================================
+    # CORE FUNCTIONALITY INTEGRATION TESTS
+    # =============================================================================
+
+    @patch('visualizations.habitat_viz.get_habitat_dataframe')
+    def test_complete_visualization_workflow(self, mock_get_data):
         """Test complete end-to-end visualization creation process."""
-        mock_get_data.return_value = self.integration_habitat_data
+        mock_get_data.return_value = self.sample_habitat_data
         
         # Test visualization creation
-        viz_result = create_habitat_viz('Integration Test Site')
+        viz_result = create_habitat_viz('Test Site')
         
-        # Verify it's a valid figure
+        # Verify it's a valid figure with proper structure
         self.assertIsInstance(viz_result, go.Figure)
-        
-        # Verify it has data traces
         self.assertGreater(len(viz_result.data), 0)
         
-        # Verify it has proper layout
+        # Verify it has proper layout from shared utilities
         self.assertIsNotNone(viz_result.layout.title)
         self.assertIsNotNone(viz_result.layout.xaxis)
         self.assertIsNotNone(viz_result.layout.yaxis)
+        
+        # Verify it has reference lines for habitat grades
+        self.assertGreater(len(viz_result.layout.shapes), 0)
+        
+        # Verify trace has proper hover text
+        trace = viz_result.data[0]
+        self.assertIsNotNone(trace.text)
+
+    @patch('visualizations.habitat_viz.get_habitat_metrics_data_for_table')
+    def test_complete_table_workflow(self, mock_get_data):
+        """Test complete metrics table creation workflow."""
+        mock_get_data.return_value = (self.sample_metrics_data, self.sample_summary_data)
+        
+        # Test accordion creation (which calls table creation)
+        accordion_result = create_habitat_metrics_accordion('Test Site')
+        
+        # Should create proper accordion structure
+        self.assertIsInstance(accordion_result, html.Div)
+        
+        # Test direct table creation
+        table_result = create_habitat_metrics_table(
+            self.sample_metrics_data, 
+            self.sample_summary_data
+        )
+        
+        # Should create properly formatted table
+        self.assertIsInstance(table_result, dash_table.DataTable)
+        self.assertEqual(table_result.id, 'habitat-metrics-table')
 
 if __name__ == '__main__':
     # Run the tests

@@ -5,18 +5,14 @@ This module contains helper functions and constants shared between different
 visualization modules (fish, macroinvertebrate, habitat) to ensure consistent 
 styling and reduce code duplication.
 
-Key Functions:
-- create_line_plot(): Generic line plot creation
-- add_reference_lines(): Add threshold reference lines to plots
-- add_date_aware_reference_lines(): Date-aware reference lines (NEW)
-- update_date_aware_layout(): Date-aware layout configuration (NEW)
-- create_date_based_trace(): Date-based trace creation (NEW)
-- format_metrics_table(): Format metrics data into table structure
-- create_table_styles(): Consistent table styling
-- Helper functions for error handling and data processing
+Functions organized by purpose:
+- Core Visualization Functions: Primary chart creation utilities
+- Data Processing & Formatting: Data manipulation for visualization
+- Table & UI Components: Metrics table creation and styling
+- Error Handling & Fallbacks: Graceful error handling
+- Constants & Configuration: Shared styling and configuration
 """
 
-import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
 from dash import dash_table, html
@@ -24,7 +20,10 @@ from utils import setup_logging
 
 logger = setup_logging("visualization_utils", category="visualization")
 
-# Shared styling constants
+# =============================================================================
+# Constants & Configuration
+# =============================================================================
+
 DEFAULT_COLORS = {
     'Winter': 'blue',
     'Summer': 'red',
@@ -43,13 +42,12 @@ FONT_SIZES = {
 }
 
 # =============================================================================
-# NEW: Date-Aware Visualization Functions (Phase 1 Extractions)
+# Core Visualization Functions
 # =============================================================================
 
-def add_date_aware_reference_lines(fig, df, thresholds, colors=None):
+def add_reference_lines(fig, df, thresholds, colors=None):
     """
-    Add date-aware reference lines for threshold values to biological visualizations.
-    This replaces the old add_reference_lines function with improved date-based positioning.
+    Add reference lines for threshold values to visualizations.
     
     Args:
         fig: Plotly figure to add reference lines to
@@ -58,20 +56,20 @@ def add_date_aware_reference_lines(fig, df, thresholds, colors=None):
         colors: Dictionary of {label: color} for line colors
     
     Returns:
-        Updated figure with date-aware reference lines
+        Updated figure with reference lines
     """
     try:
         if df.empty or not thresholds:
             return fig
         
-        # Get min and max year for date-aware reference lines
+        # Get min and max year for reference lines
         years = sorted(df['year'].unique()) if 'year' in df.columns else []
         
         if not years:
             logger.warning("No year data found for reference lines")
             return fig
         
-        # Create date-aware bounds
+        # Create date bounds
         x_min = pd.Timestamp(f'{min(years)}-01-01')
         x_max = pd.Timestamp(f'{max(years)}-12-31')
         
@@ -106,13 +104,13 @@ def add_date_aware_reference_lines(fig, df, thresholds, colors=None):
         return fig
     
     except Exception as e:
-        logger.error(f"Error adding date-aware reference lines: {e}")
+        logger.error(f"Error adding reference lines: {e}")
         return fig
 
-def update_date_aware_layout(fig, df, title, y_label, y_column='comparison_to_reference', tick_format='.2f', has_legend=False):
+def update_layout(fig, df, title, y_label, y_column='comparison_to_reference', tick_format='.2f', has_legend=False):
     """
-    Apply date-aware layout settings to biological visualization figures.
-    
+    Apply standardized layout settings to visualization figures.
+
     Args:
         fig: Plotly figure to update
         df: DataFrame containing the data
@@ -135,7 +133,7 @@ def update_date_aware_layout(fig, df, title, y_label, y_column='comparison_to_re
         # Get unique years for x-axis
         years = sorted(df['year'].unique()) if 'year' in df.columns else []
         
-        # Update layout with date-aware x-axis
+        # Update layout with x-axis
         layout_updates = {
             'title': title,
             'title_x': 0.5,
@@ -165,12 +163,12 @@ def update_date_aware_layout(fig, df, title, y_label, y_column='comparison_to_re
         return fig
     
     except Exception as e:
-        logger.error(f"Error updating date-aware layout: {e}")
+        logger.error(f"Error updating layout: {e}")
         return fig
 
-def create_date_based_trace(df, date_column, y_column, name, color=None, hover_fields=None):
+def create_trace(df, date_column, y_column, name, color=None, hover_fields=None):
     """
-    Create a date-based scatter trace for biological visualizations.
+    Create a standardized scatter trace for visualizations.
     
     Args:
         df: DataFrame containing the data
@@ -221,12 +219,12 @@ def create_date_based_trace(df, date_column, y_column, name, color=None, hover_f
         return trace
     
     except Exception as e:
-        logger.error(f"Error creating date-based trace: {e}")
+        logger.error(f"Error creating trace: {e}")
         return go.Scatter()
 
 def generate_hover_text(df, hover_fields):
     """
-    Generate hover text for biological visualizations with flexible field mapping.
+    Generate hover text for visualizations with flexible field mapping.
     
     Args:
         df: DataFrame containing the data
@@ -283,65 +281,12 @@ def generate_hover_text(df, hover_fields):
         return []
 
 # =============================================================================
-# Existing Functions (Preserved)
+# Data Processing & Formatting
 # =============================================================================
-
-def create_line_plot(df, title, y_column='comparison_to_reference', 
-                    has_seasons=False, color_map=None):
-    """
-    Create a generic line plot for data visualizations.
-    
-    Args:
-        df: DataFrame containing the data
-        title: Plot title
-        y_column: Column name for y-axis data
-        has_seasons: Whether to differentiate by season
-        color_map: Dictionary mapping colors to categories
-    
-    Returns:
-        Plotly figure object
-    """
-    try:
-        if has_seasons:
-            # Create multi-line plot with seasons
-            fig = px.line(
-                df,
-                x='year',
-                y=y_column,
-                color='season',
-                markers=True,
-                title=title,
-                labels={
-                    'year': 'Year',
-                    'season': 'Season'
-                },
-                color_discrete_map=color_map or DEFAULT_COLORS
-            )
-        else:
-            # Create single line plot
-            fig = px.line(
-                df,
-                x='year',
-                y=y_column,
-                markers=True,
-                title=title,
-                labels={
-                    'year': 'Year',
-                    y_column: 'IBI Score (Compared to Reference)' if 'comparison' in y_column else y_column
-                }
-            )
-        
-        return fig
-    
-    except Exception as e:
-        logger.error(f"Error creating line plot: {e}")
-        return create_error_figure(str(e))
 
 def calculate_dynamic_y_range(df, column='comparison_to_reference'):
     """
-    Calculate dynamic y-axis range based on data.
-    For biological data (comparison_to_reference): minimum range 0-1.1, expands if needed
-    For habitat data (total_score): minimum range 0-100, expands if needed
+    Calculate dynamic y-axis range based on data type and values.
     
     Args:
         df: DataFrame containing the data
@@ -349,6 +294,8 @@ def calculate_dynamic_y_range(df, column='comparison_to_reference'):
     
     Returns:
         Tuple of (y_min, y_max)
+        - For biological data (comparison_to_reference): minimum range 0-1.1, expands if needed
+        - For habitat data (total_score): minimum range 0-110, expands if needed
     """
     try:
         if df.empty or column not in df.columns:
@@ -377,118 +324,10 @@ def calculate_dynamic_y_range(df, column='comparison_to_reference'):
         else:
             return 0, 1.1
 
-
-def update_figure_layout(fig, df, title, y_label=None, y_column='comparison_to_reference', tick_format='.2f'):
-    """
-    Apply common layout settings to figures.
-    
-    Args:
-        fig: Plotly figure to update
-        df: DataFrame containing the data
-        title: Plot title
-        y_label: Custom y-axis label
-        y_column: Column name to use for y-range calculation
-        tick_format: Format string for y-axis ticks (default: '.2f')
-    
-    Returns:
-        Updated figure
-    """
-    try:
-        if df.empty:
-            return fig
-        
-        # Calculate y-range using the specified column
-        y_min, y_max = calculate_dynamic_y_range(df, column=y_column)
-        
-        # Get unique years for x-axis
-        years = sorted(df['year'].unique()) if 'year' in df.columns else []
-        
-        # Update layout
-        fig.update_layout(
-            xaxis=dict(
-                tickmode='array',
-                tickvals=years,
-                title_font=dict(size=FONT_SIZES['axis_title'])
-            ),
-            yaxis=dict(
-                range=[y_min, y_max],
-                tickformat=tick_format,
-                title_font=dict(size=FONT_SIZES['axis_title']),
-                title=y_label
-            ),
-            title_x=0.5,
-            title_font=dict(size=FONT_SIZES['title']),
-            hovermode='closest'
-        )
-        
-        # Add legend title if seasons exist
-        if any('season' in trace.name.lower() for trace in fig.data if hasattr(trace, 'name') and trace.name):
-            fig.update_layout(legend_title_text='Season')
-        
-        return fig
-    
-    except Exception as e:
-        logger.error(f"Error updating figure layout: {e}")
-        return fig
-
-def add_reference_lines(fig, df, thresholds, line_colors=None):
-    """
-    Add reference lines for threshold values to the figure.
-    
-    Args:
-        fig: Plotly figure to add reference lines to
-        df: DataFrame containing the data with year values
-        thresholds: Dictionary of {label: threshold_value}
-        line_colors: Dictionary of {label: color} for line colors
-    
-    Returns:
-        Updated figure with reference lines
-    """
-    try:
-        if df.empty or not thresholds:
-            return fig
-        
-        # Get min and max year for reference lines
-        x_min = df['year'].min() - 1 if 'year' in df.columns else 0
-        x_max = df['year'].max() + 1 if 'year' in df.columns else 10
-        
-        # Add reference lines for each threshold
-        for label, threshold in thresholds.items():
-            color = 'gray'
-            if line_colors and label in line_colors:
-                color = line_colors[label]
-            elif label.lower() in DEFAULT_COLORS:
-                color = DEFAULT_COLORS[label.lower()]
-            
-            # Add line
-            fig.add_shape(
-                type="line",
-                x0=x_min,
-                y0=threshold,
-                x1=x_max,
-                y1=threshold,
-                line=dict(color=color, width=1, dash="dash"),
-            )
-            
-            # Add annotation
-            fig.add_annotation(
-                x=x_min - 0.5,
-                y=threshold,
-                text=label,
-                showarrow=False,
-                yshift=10
-            )
-        
-        return fig
-    
-    except Exception as e:
-        logger.error(f"Error adding reference lines: {e}")
-        return fig
-
 def format_metrics_table(metrics_df, summary_df, metric_order, 
                         summary_labels=None, season=None):
     """
-    Format metrics data into a table structure.
+    Format metrics data into a standardized table structure.
     
     Args:
         metrics_df: DataFrame containing metrics data
@@ -603,6 +442,10 @@ def format_metrics_table(metrics_df, summary_df, metric_order,
         logger.error(f"Error formatting metrics table: {e}")
         return pd.DataFrame({'Metric': metric_order}), pd.DataFrame({'Metric': ['Error']})
 
+# =============================================================================
+# Table & UI Components
+# =============================================================================
+
 def create_table_styles(metrics_table):
     """
     Create consistent styling for metrics tables.
@@ -679,78 +522,17 @@ def create_data_table(full_table, table_id, styles):
         logger.error(f"Error creating data table: {e}")
         return html.Div(f"Error creating table: {str(e)}")
 
-def create_hover_text(df, has_seasons=False, condition_column='biological_condition'):
-    """
-    Generate hover text for plots.
-    
-    Args:
-        df: DataFrame containing the data
-        has_seasons: Whether data includes seasons
-        condition_column: Column name containing condition/integrity class
-    
-    Returns:
-        List of hover text strings
-    """
-    try:
-        hover_text = []
-        for _, row in df.iterrows():
-            condition = row.get(condition_column, 'Unknown')
-            
-            if has_seasons:
-                text = f"<b>Year</b>: {row['year']}<br><b>Season</b>: {row['season']}<br><b>Score</b>: {row['comparison_to_reference']}<br><b>Condition</b>: {condition}"
-            else:
-                text = f"<b>Year</b>: {row['year']}<br><b>Score</b>: {row['comparison_to_reference']}<br><b>Condition</b>: {condition}"
-            
-            hover_text.append(text)
-        
-        return hover_text
-    
-    except Exception as e:
-        logger.error(f"Error creating hover text: {e}")
-        return []
-
-def update_hover_data(fig, hover_text):
-    """
-    Update figure traces with hover data.
-    
-    Args:
-        fig: Plotly figure to update
-        hover_text: List of hover text strings or dict for multi-trace
-    
-    Returns:
-        Updated figure
-    """
-    try:
-        if isinstance(hover_text, list):
-            # Single trace
-            fig.update_traces(
-                text=hover_text,
-                hovertemplate='%{text}<extra></extra>',
-                hoverinfo='text'
-            )
-        elif isinstance(hover_text, dict):
-            # Multiple traces (seasons)
-            for i, trace in enumerate(fig.data):
-                if trace.name in hover_text:
-                    trace.update(
-                        text=hover_text[trace.name],
-                        hovertemplate='%{text}<extra></extra>',
-                        hoverinfo='text'
-                    )
-        
-        return fig
-    
-    except Exception as e:
-        logger.error(f"Error updating hover data: {e}")
-        return fig
+# =============================================================================
+# Error Handling & Fallbacks
+# =============================================================================
 
 def create_empty_figure(site_name=None, data_type="data"):
     """
-    Create an empty figure with appropriate message.
+    Create an empty figure with appropriate "no data" message.
     
     Args:
         site_name: Optional site name
-        data_type: Type of data
+        data_type: Type of data (e.g., "habitat", "fish", "macroinvertebrate")
     
     Returns:
         Empty Plotly figure with message

@@ -17,7 +17,7 @@ Integrity Classes:
 import plotly.graph_objects as go
 import pandas as pd
 
-from dash import dash_table, html
+from dash import html
 from data_processing.data_queries import get_fish_dataframe, get_fish_metrics_data_for_table
 from utils import create_metrics_accordion, setup_logging
 from .visualization_utils import (
@@ -26,10 +26,9 @@ from .visualization_utils import (
     create_data_table,
     create_empty_figure,
     create_error_figure,
-    add_date_aware_reference_lines,
-    update_date_aware_layout,
-    create_date_based_trace,
-    FONT_SIZES
+    add_reference_lines,
+    update_layout,
+    create_trace
 )
 
 logger = setup_logging("fish_viz", category="visualization")
@@ -201,8 +200,8 @@ def create_fish_viz(site_name=None):
             'Integrity Class': 'integrity_class'
         }
         
-        # Create date-based trace using shared utility
-        trace = create_date_based_trace(
+        # Create trace using shared utility
+        trace = create_trace(
             fish_df,
             date_column='collection_date',
             y_column='comparison_to_reference',
@@ -218,7 +217,7 @@ def create_fish_viz(site_name=None):
         title = f"IBI Scores Over Time for {site_name}" if site_name else "IBI Scores Over Time"
         
         # Update layout using shared utility
-        fig = update_date_aware_layout(
+        fig = update_layout(
             fig,
             fish_df,
             title,
@@ -229,7 +228,7 @@ def create_fish_viz(site_name=None):
         )
         
         # Add integrity reference lines using shared utility
-        fig = add_date_aware_reference_lines(fig, fish_df, INTEGRITY_THRESHOLDS, INTEGRITY_COLORS)
+        fig = add_reference_lines(fig, fish_df, INTEGRITY_THRESHOLDS, INTEGRITY_COLORS)
 
         return fig
     
