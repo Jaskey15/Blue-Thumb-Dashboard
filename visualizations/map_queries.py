@@ -10,6 +10,7 @@ Functions:
 - get_latest_fish_data_for_maps(): Latest fish data per site  
 - get_latest_macro_data_for_maps(): Latest macroinvertebrate data per site
 - get_latest_habitat_data_for_maps(): Latest habitat data per site
+- get_sites_for_maps(): Optimized site information for map visualization
 """
 
 import pandas as pd
@@ -20,6 +21,68 @@ from utils import setup_logging
 # Set up logging
 logger = setup_logging("map_queries", category="visualization")
 
+def get_sites_for_maps(active_only=False):
+    """
+    Optimized query to get site information for map visualization.
+    Returns data in a format optimized for map rendering with minimal database overhead.
+    
+    Args:
+        active_only: Boolean - if True, only return active sites
+        
+    Returns:
+        DataFrame with site information optimized for map visualization
+    """
+    conn = None
+    try:
+        conn = get_connection()
+        
+        # Optimized query with optional active filter
+        query = """
+        SELECT 
+            site_name,
+            latitude,
+            longitude,
+            county,
+            river_basin,
+            ecoregion,
+            active
+        FROM sites
+        WHERE latitude IS NOT NULL 
+        AND longitude IS NOT NULL
+        """
+        
+        params = []
+        if active_only:
+            query += " AND active = 1"
+            
+        query += " ORDER BY site_name"
+        
+        # Execute query and return as DataFrame (more efficient for map processing)
+        sites_df = pd.read_sql_query(query, conn, params=params)
+        
+        if sites_df.empty:
+            logger.warning("No sites found in database")
+            return pd.DataFrame()
+        
+        # Handle missing metadata efficiently with pandas vectorized operations
+        sites_df['county'] = sites_df['county'].fillna('Unknown')
+        sites_df['river_basin'] = sites_df['river_basin'].fillna('Unknown')
+        sites_df['ecoregion'] = sites_df['ecoregion'].fillna('Unknown')
+        sites_df['active'] = sites_df['active'].astype(bool)
+        
+        logger.info(f"Retrieved {len(sites_df)} sites for map visualization")
+        return sites_df
+        
+    except sqlite3.Error as e:
+        logger.error(f"SQLite error in get_sites_for_maps: {e}")
+        return pd.DataFrame({'error': ['Database error occurred']})
+    except Exception as e:
+        logger.error(f"Error retrieving sites for maps: {e}")
+        return pd.DataFrame({'error': ['Error retrieving sites data']})
+    finally:
+        if conn:
+            close_connection(conn)
+            
 def get_latest_chemical_data_for_maps(site_name=None):
     """
     Optimized query to get only the latest chemical data per site for map visualization.
@@ -349,3 +412,5 @@ def get_latest_habitat_data_for_maps(site_name=None):
     finally:
         if conn:
             close_connection(conn)
+
+

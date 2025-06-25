@@ -99,9 +99,9 @@ def register_overview_callbacks(app):
                     basic_map, _, _, _ = create_basic_site_map(active_only=saved_active_only)
                     fig = go.Figure(basic_map)
                     
-                    # Add parameter-specific colors with filtered sites
+                    # Add parameter-specific colors with filtering
                     updated_map, sites_with_data, total_sites = add_parameter_colors_to_map(
-                        fig, param_type, param_name, filtered_sites
+                        fig, param_type, param_name, sites_df=None, active_only=saved_active_only
                     )
                     
                     # Create parameter legend
@@ -213,9 +213,9 @@ def register_overview_callbacks(app):
             else:
                 fig = go.Figure()
             
-            # Add parameter-specific colors with filtered sites (using optimized batch processing)
+            # Add parameter-specific colors with filtering 
             updated_map, sites_with_data, total_sites = add_parameter_colors_to_map(
-                fig, param_type, param_name, filtered_sites
+                fig, param_type, param_name, sites_df=None, active_only=active_only_toggle
             )
             
             # Create parameter legend
