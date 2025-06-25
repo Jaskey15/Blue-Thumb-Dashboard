@@ -71,10 +71,7 @@ def register_overview_callbacks(app):
             return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
         
         try:
-            from visualizations.map_viz import (
-                create_basic_site_map, add_parameter_colors_to_map, 
-                filter_sites_by_active_status, load_sites_from_database
-            )
+            from visualizations.map_viz import create_basic_site_map, add_parameter_colors_to_map, get_total_site_count
             
             # Enable the parameter dropdown now that map is loaded
             dropdown_disabled = False
@@ -89,11 +86,8 @@ def register_overview_callbacks(app):
                 if ':' in saved_parameter:
                     param_type, param_name = saved_parameter.split(':', 1)
                     
-                    # Filter sites based on saved toggle state
-                    monitoring_sites = load_sites_from_database()
-                    filtered_sites, active_count, historic_count, total_original = filter_sites_by_active_status(
-                        monitoring_sites, saved_active_only
-                    )
+                    # Get total count efficiently for legend
+                    total_original = get_total_site_count(active_only=False)
                     
                     # Start with basic map
                     basic_map, _, _, _ = create_basic_site_map(active_only=saved_active_only)
@@ -126,8 +120,7 @@ def register_overview_callbacks(app):
             
             # Create legend for basic map
             if saved_active_only:
-                monitoring_sites = load_sites_from_database()
-                total_sites_count = len(monitoring_sites)
+                total_sites_count = get_total_site_count(active_only=False)
                 legend_html = create_map_legend_html(total_count=total_count, active_only=saved_active_only, total_sites_count=total_sites_count)
             else:
                 legend_html = create_map_legend_html(total_count=total_count, active_only=saved_active_only)
@@ -173,18 +166,14 @@ def register_overview_callbacks(app):
         or toggles the active sites filter.
         """
         try:
-            from visualizations.map_viz import (
-                create_basic_site_map, add_parameter_colors_to_map, 
-                filter_sites_by_active_status, load_sites_from_database
-            )
+            from visualizations.map_viz import create_basic_site_map, add_parameter_colors_to_map, get_total_site_count
             
             # If no parameter selected, show basic map with filtering applied
             if not parameter_value:
                 basic_map, active_count, historic_count, total_count = create_basic_site_map(active_only=active_only_toggle)
 
                 if active_only_toggle:
-                    monitoring_sites = load_sites_from_database()
-                    total_sites_count = len(monitoring_sites)
+                    total_sites_count = get_total_site_count(active_only=False)
                     legend_html = create_map_legend_html(total_count=total_count, active_only=active_only_toggle, total_sites_count=total_sites_count)
                 else:
                     legend_html = create_map_legend_html(total_count=total_count, active_only=active_only_toggle)
@@ -201,11 +190,8 @@ def register_overview_callbacks(app):
             
             param_type, param_name = parameter_value.split(':', 1)
             
-            # Filter sites based on toggle state
-            monitoring_sites = load_sites_from_database()
-            filtered_sites, active_count, historic_count, total_original = filter_sites_by_active_status(
-                monitoring_sites, active_only_toggle
-            )
+            # Get total count efficiently for legend
+            total_original = get_total_site_count(active_only=False)
             
             # Start with current figure or create basic map
             if current_figure and current_figure.get('data'):

@@ -39,6 +39,10 @@ from visualizations.map_queries import (
 
 logger = setup_logging("map_viz", category="visualization")
 
+# ============================================================================
+# CONSTANTS AND CONFIGURATION
+# ============================================================================
+
 # Styling constants
 COLORS = {
     'normal': '#1e8449',      # Green
@@ -90,60 +94,153 @@ MAP_PARAMETER_LABELS = {
 }
 
 # ============================================================================
-# CORE HELPER FUNCTIONS - Database and Data Processing
+# CORE MAP FUNCTIONS
 # ============================================================================
 
-def load_sites_from_database():
+def create_basic_site_map(active_only=False):
     """
-    Load all monitoring sites from the database with coordinates and metadata.
+    Create a basic interactive map with all monitoring sites shown with different shapes/colors for active vs historic.
+    Uses vectorized operations and single trace for all markers for optimal performance.
     
+    Args:
+        active_only: Boolean - if True, show only active sites
+        
     Returns:
-        List of site dictionaries with name, lat, lon, county, river_basin, ecoregion, active
+        Tuple of (figure, active_count, historic_count, total_count)
     """
-    conn = None
     try:
-        conn = get_connection()
+        from visualizations.map_queries import get_sites_for_maps
         
-        query = """
-        SELECT site_name, latitude, longitude, county, river_basin, ecoregion, active
-        FROM sites
-        WHERE latitude IS NOT NULL AND longitude IS NOT NULL
-        ORDER BY site_name
-        """
+        # Load sites data efficiently
+        sites_df = get_sites_for_maps(active_only=active_only)
         
-        cursor = conn.cursor()
-        cursor.execute(query)
-        rows = cursor.fetchall()
+        if sites_df.empty:
+            return create_error_map("Error: No monitoring sites available"), 0, 0, 0
         
-        sites = []
-        for row in rows:
-            site_name, lat, lon, county, river_basin, ecoregion, active = row
-            
-            # Handle missing metadata
-            county = county if county is not None else "Unknown"
-            river_basin = river_basin if river_basin is not None else "Unknown"
-            ecoregion = ecoregion if ecoregion is not None else "Unknown"
-            
-            sites.append({
-                "name": site_name,
-                "lat": lat,
-                "lon": lon,
-                "county": county,
-                "river_basin": river_basin,
-                "ecoregion": ecoregion,
-                "active": bool(active)  # Convert to boolean for clarity
-            })
+        # Calculate counts efficiently
+        if active_only:
+            active_count = len(sites_df)
+            historic_count = 0  # Not included in filtered results
+            total_count = active_count
+        else:
+            active_count = (sites_df['active'] == True).sum()
+            historic_count = (sites_df['active'] == False).sum()
+            total_count = len(sites_df)
         
-        logger.info(f"Successfully loaded {len(sites)} monitoring sites from database")
-        return sites
+        # Create hover text using vectorized string operations
+        hover_texts = (
+            "<b>Site:</b> " + sites_df['site_name'].astype(str) + "<br>" +
+            "<b>County:</b> " + sites_df['county'].astype(str) + "<br>" +
+            "<b>River Basin:</b> " + sites_df['river_basin'].astype(str) + "<br>" +
+            "<b>Ecoregion:</b> " + sites_df['ecoregion'].astype(str)
+        ).tolist()
+        
+        # Vectorized marker styling based on active status
+        marker_colors = sites_df['active'].map({True: '#3366CC', False: '#9370DB'}).tolist()
+        marker_sizes = sites_df['active'].map({True: 10, False: 6}).tolist()
+        
+        # Create figure and add all markers in single batch operation
+        fig = go.Figure()
+        
+        if len(sites_df) > 0:
+            fig.add_trace(go.Scattermap(
+                lat=sites_df['latitude'].tolist(),
+                lon=sites_df['longitude'].tolist(),
+                mode='markers',
+                marker=dict(
+                    size=marker_sizes,
+                    color=marker_colors,
+                    opacity=1.0,
+                    symbol='circle'
+                ),
+                text=hover_texts,
+                name="monitoring_sites",
+                hoverinfo='text',
+                showlegend=False
+            ))
+        
+        # Apply standard map layout
+        fig = _create_base_map_layout(fig, "Monitoring Sites")
+        
+        return fig, active_count, historic_count, total_count
         
     except Exception as e:
-        logger.error(f"Error loading sites from database: {e}")
-        raise Exception(f"Could not load monitoring sites: {str(e)}")
+        logger.error(f"Error creating site map: {e}")
+        return create_error_map(f"Error creating map: {str(e)}"), 0, 0, 0
+
+def add_parameter_colors_to_map(fig, param_type, param_name, sites_df=None, active_only=False):
+    """
+    Update an existing map figure with parameter-specific color coding.
+    Uses vectorized operations for optimal performance.
+    
+    Args:
+        fig: Existing plotly figure with basic markers
+        param_type: Type of parameter ('chem', 'bio', or 'habitat')
+        param_name: Specific parameter name (e.g., 'do_percent', 'Fish_IBI')
+        sites_df: DataFrame of site information (if None, loads optimally from database)
+        active_only: Boolean - if True, filter to active sites only
+    
+    Returns:
+        Tuple of (updated_figure, sites_with_data_count, total_sites_count)
+    """
+    try:        
+        from visualizations.map_queries import get_sites_for_maps
         
-    finally:
-        if conn:
-            close_connection(conn)
+        # Use provided sites or load from database efficiently
+        if sites_df is None:
+            sites_df = get_sites_for_maps(active_only=active_only)
+        
+        if sites_df.empty:
+            return fig, 0, 0
+        
+        # Clear existing traces (basic markers)
+        fig.data = []
+        
+        # Convert DataFrame to list format for compatibility with existing add_data_markers
+        sites_list = []
+        for _, row in sites_df.iterrows():
+            sites_list.append({
+                "name": row['site_name'],
+                "lat": row['latitude'],
+                "lon": row['longitude'],
+                "county": row['county'],
+                "river_basin": row['river_basin'],
+                "ecoregion": row['ecoregion'],
+                "active": row['active']
+            })
+        
+        # Add parameter-specific markers with filtering enabled
+        if param_type == 'chem':
+            fig, sites_with_data, total_sites = add_data_markers(
+                fig, sites_list, 'chemical', parameter_name=param_name, filter_no_data=True
+           )
+        elif param_type == 'bio':
+            if param_name == 'Fish_IBI':
+                fig, sites_with_data, total_sites = add_data_markers(
+                    fig, sites_list, 'fish', filter_no_data=True
+                )
+            elif param_name == 'Macro_Combined':
+                fig, sites_with_data, total_sites = add_data_markers(
+                    fig, sites_list, 'macro', filter_no_data=True
+                )
+        elif param_type == 'habitat':
+            fig, sites_with_data, total_sites = add_data_markers(
+                fig, sites_list, 'habitat', filter_no_data=True
+            )
+        
+        # Apply standard map layout with parameter-specific title
+        display_name = PARAMETER_LABELS.get(param_name, param_name)
+        fig = _create_base_map_layout(fig, f"Monitoring Sites - {display_name} Status")
+        
+        return fig, sites_with_data, total_sites
+        
+    except Exception as e:
+        logger.error(f"Error adding parameter colors: {e}")
+        return fig, 0, len(sites_df) if sites_df is not None and not sites_df.empty else 0
+
+# ============================================================================
+# DATA PROCESSING FUNCTIONS
+# ============================================================================
 
 def get_latest_data_by_type(data_type):
     """
@@ -250,31 +347,38 @@ def get_status_color(data, data_type):
     else:
         return statuses, colors
 
-def filter_sites_by_active_status(sites, active_only=False):
+def get_total_site_count(active_only=False):
     """
-    Filter sites based on active status and return counts.
+    Get total count of sites efficiently without loading full site data.
     
     Args:
-        sites: List of site dictionaries
-        active_only: Boolean - if True, only return active sites
-    
+        active_only: Boolean - if True, count only active sites
+        
     Returns:
-        Tuple of (filtered_sites, active_count, historic_count, total_count)
+        Integer count of sites
     """
-    if not sites:
-        return [], 0, 0, 0
-    
-    total_count = len(sites)
-    active_sites = [site for site in sites if site.get('active', False)]
-    historic_sites = [site for site in sites if not site.get('active', False)]
-    
-    active_count = len(active_sites)
-    historic_count = len(historic_sites)
-    
-    if active_only:
-        return active_sites, active_count, historic_count, total_count
-    else:
-        return sites, active_count, historic_count, total_count
+    conn = None
+    try:
+        conn = get_connection()
+        
+        if active_only:
+            query = "SELECT COUNT(*) FROM sites WHERE active = 1 AND latitude IS NOT NULL AND longitude IS NOT NULL"
+        else:
+            query = "SELECT COUNT(*) FROM sites WHERE latitude IS NOT NULL AND longitude IS NOT NULL"
+        
+        cursor = conn.cursor()
+        cursor.execute(query)
+        count = cursor.fetchone()[0]
+        
+        return count
+        
+    except Exception as e:
+        logger.error(f"Error getting site count: {e}")
+        return 0
+        
+    finally:
+        if conn:
+            close_connection(conn)
 
 # ============================================================================
 # UI HELPER FUNCTIONS - Display Formatting
@@ -359,10 +463,6 @@ def create_hover_text(df, data_type, config, parameter_name):
     
     return hover_texts.tolist()
 
-# ============================================================================
-# MAP LAYOUT HELPER FUNCTIONS
-# ============================================================================
-
 def _create_base_map_layout(fig, title="Monitoring Sites"):
     """
     Helper function to apply consistent map layout configuration.
@@ -410,53 +510,6 @@ def _create_base_map_layout(fig, title="Monitoring Sites"):
     )
     return fig
 
-def add_site_marker(fig, lat, lon, color, site_name, hover_text=None, active=True):
-    """
-    Add a site marker to the map with different styling for active vs historic sites.
-    
-    Args:
-        fig: The plotly figure to add the marker to
-        lat: Latitude of the marker
-        lon: Longitude of the marker
-        color: Color of the marker (if provided, overrides active/historic styling)
-        site_name: Name of the site
-        hover_text: Text to display on hover (defaults to site_name if None)
-        active: Whether the site is active (True) or historic (False)
-    
-    Returns:
-        The updated figure
-    """
-    
-    # If a specific color is provided (for parameter data), use it
-    if color and color != '':
-        marker_color = color
-        marker_size = 10  
-    else:
-        # Use active/historic styling
-        if active:
-            marker_color = '#3366CC'  # Blue for active sites
-            marker_size = 10
-        else:
-            marker_color = '#9370DB'  # Medium slate blue for historic sites
-            marker_size = 6  
-    
-    fig.add_trace(go.Scattermap(
-        lat=[lat],
-        lon=[lon],
-        mode='markers',
-        marker=dict(
-            size=marker_size,
-            color=marker_color,
-            opacity=1.0,
-            symbol='circle'
-        ),
-        text=[hover_text if hover_text else site_name],
-        name=site_name,
-        hoverinfo='text'
-    ))
-    
-    return fig
-
 def create_error_map(error_message):
     """
     Create a basic map with an error message.
@@ -489,10 +542,6 @@ def create_error_map(error_message):
         ]
     )
     return fig
-
-# ============================================================================
-# MAIN VISUALIZATION FUNCTIONS - Public API
-# ============================================================================
 
 def add_data_markers(fig, sites, data_type, parameter_name=None, season=None, filter_no_data=True):
     """
@@ -603,7 +652,7 @@ def add_data_markers(fig, sites, data_type, parameter_name=None, season=None, fi
 
     hover_texts = create_hover_text(sites_to_plot, data_type, config, parameter_name)
     
-    # Batch add all markers at once u
+    # Batch add all markers at once 
     if len(sites_to_plot) > 0:
         lats = sites_to_plot['lat'].tolist()
         lons = sites_to_plot['lon'].tolist()
@@ -643,143 +692,4 @@ def add_data_markers(fig, sites, data_type, parameter_name=None, season=None, fi
             showlegend=False
         ))
     
-    return fig, sites_with_data, total_sites
-
-def create_basic_site_map(active_only=False):
-    """
-    Create a basic interactive map with all monitoring sites shown with different shapes/colors for active vs historic.
-    
-    Args:
-        active_only: Boolean - if True, show only active sites
-        
-    Returns:
-        Tuple of (figure, active_count, historic_count, total_count)
-    """
-    try:
-        from visualizations.map_queries import get_sites_for_maps
-        
-        # Load sites data 
-        sites_df = get_sites_for_maps(active_only=active_only)
-        
-        if sites_df.empty:
-            return create_error_map("Error: No monitoring sites available"), 0, 0, 0
-        
-        # Calculate counts 
-        if active_only:
-            active_count = len(sites_df)
-            historic_count = 0  # Not included in filtered results
-            total_count = active_count
-        else:
-            active_count = (sites_df['active'] == True).sum()
-            historic_count = (sites_df['active'] == False).sum()
-            total_count = len(sites_df)
-        
-        # Create hover text using vectorized string operations
-        hover_texts = (
-            "<b>Site:</b> " + sites_df['site_name'].astype(str) + "<br>" +
-            "<b>County:</b> " + sites_df['county'].astype(str) + "<br>" +
-            "<b>River Basin:</b> " + sites_df['river_basin'].astype(str) + "<br>" +
-            "<b>Ecoregion:</b> " + sites_df['ecoregion'].astype(str)
-        ).tolist()
-        
-        # Vectorized marker styling based on active status
-        marker_colors = sites_df['active'].map({True: '#3366CC', False: '#9370DB'}).tolist()
-        marker_sizes = sites_df['active'].map({True: 10, False: 6}).tolist()
-        
-        # Create figure and add all markers in single batch operation
-        fig = go.Figure()
-        
-        if len(sites_df) > 0:
-            fig.add_trace(go.Scattermap(
-                lat=sites_df['latitude'].tolist(),
-                lon=sites_df['longitude'].tolist(),
-                mode='markers',
-                marker=dict(
-                    size=marker_sizes,
-                    color=marker_colors,
-                    opacity=1.0,
-                    symbol='circle'
-                ),
-                text=hover_texts,
-                name="monitoring_sites",
-                hoverinfo='text',
-                showlegend=False
-            ))
-        
-        # Apply standard map layout
-        fig = _create_base_map_layout(fig, "Monitoring Sites")
-        
-        return fig, active_count, historic_count, total_count
-        
-    except Exception as e:
-        logger.error(f"Error creating site map: {e}")
-        return create_error_map(f"Error creating map: {str(e)}"), 0, 0, 0
-
-def add_parameter_colors_to_map(fig, param_type, param_name, sites_df=None, active_only=False):
-    """
-    Update an existing map figure with parameter-specific color coding.
-    
-    Args:
-        fig: Existing plotly figure with basic markers
-        param_type: Type of parameter ('chem', 'bio', or 'habitat')
-        param_name: Specific parameter name (e.g., 'do_percent', 'Fish_IBI')
-        sites_df: DataFrame of site information (if None, loads optimally from database)
-        active_only: Boolean - if True, filter to active sites only
-    
-    Returns:
-        Tuple of (updated_figure, sites_with_data_count, total_sites_count)
-    """
-    try:        
-        from visualizations.map_queries import get_sites_for_maps
-        
-        # Use provided sites or load from database 
-        if sites_df is None:
-            sites_df = get_sites_for_maps(active_only=active_only)
-        
-        if sites_df.empty:
-            return fig, 0, 0
-        
-        # Clear existing traces (basic markers)
-        fig.data = []
-        
-        # Convert DataFrame to list format for compatibility with existing add_data_markers
-        sites_list = []
-        for _, row in sites_df.iterrows():
-            sites_list.append({
-                "name": row['site_name'],
-                "lat": row['latitude'],
-                "lon": row['longitude'],
-                "county": row['county'],
-                "river_basin": row['river_basin'],
-                "ecoregion": row['ecoregion'],
-                "active": row['active']
-            })
-        
-        # Add parameter-specific markers with filtering enabled
-        if param_type == 'chem':
-            fig, sites_with_data, total_sites = add_data_markers(
-                fig, sites_list, 'chemical', parameter_name=param_name, filter_no_data=True
-           )
-        elif param_type == 'bio':
-            if param_name == 'Fish_IBI':
-                fig, sites_with_data, total_sites = add_data_markers(
-                    fig, sites_list, 'fish', filter_no_data=True
-                )
-            elif param_name == 'Macro_Combined':
-                fig, sites_with_data, total_sites = add_data_markers(
-                    fig, sites_list, 'macro', filter_no_data=True
-                )
-        elif param_type == 'habitat':
-            fig, sites_with_data, total_sites = add_data_markers(
-                fig, sites_list, 'habitat', filter_no_data=True
-            )
-        
-        # Apply standard map layout with parameter-specific title
-        display_name = PARAMETER_LABELS.get(param_name, param_name)
-        fig = _create_base_map_layout(fig, f"Monitoring Sites - {display_name} Status")
-        
-        return fig, sites_with_data, total_sites
-        
-    except Exception as e:
-        logger.error(f"Error adding parameter colors: {e}")
-        return fig, 0, len(sites_df) if sites_df is not None and not sites_df.empty else 0
+    return fig, sites_with_data, total_sites 
