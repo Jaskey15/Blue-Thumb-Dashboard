@@ -166,8 +166,12 @@ def process_fish_csv_data(site_name=None):
             except Exception as e:
                 logger.error(f"Error processing dates: {e}")
         
-        # Load BT field work dates and process duplicates
+        # Comprehensive date correction using BT data as authoritative source
+        from data_processing.bt_fieldwork_validator import correct_collection_dates, categorize_and_process_duplicates
         bt_df = load_bt_field_work_dates()
+        fish_df = correct_collection_dates(fish_df, bt_df)
+        
+        # Process replicates and duplicates (legacy REP handling)
         fish_df = categorize_and_process_duplicates(fish_df, bt_df)
         
         # Continue with standard processing

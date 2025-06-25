@@ -195,6 +195,7 @@ def get_fish_dataframe(site_name=None):
         SELECT 
             e.event_id,
             s.site_name,
+            e.collection_date,
             e.year,
             f.total_score,
             f.comparison_to_reference,
@@ -213,8 +214,8 @@ def get_fish_dataframe(site_name=None):
             fish_query += " WHERE s.site_name = ?"
             params.append(site_name)
             
-        # Add ordering
-        fish_query += " ORDER BY e.year"
+        # Add ordering by collection date for proper chronological display
+        fish_query += " ORDER BY e.collection_date"
         
         # Execute query
         fish_df = pd.read_sql_query(fish_query, conn, params=params)
@@ -258,6 +259,8 @@ def get_fish_metrics_data_for_table(site_name=None):
         metrics_query = '''
         SELECT 
             s.site_name,
+            e.event_id,
+            e.collection_date,
             e.year,
             e.sample_id,
             m.metric_name,
@@ -275,6 +278,8 @@ def get_fish_metrics_data_for_table(site_name=None):
         summary_query = '''
         SELECT 
             s.site_name,
+            e.event_id,
+            e.collection_date,
             e.year,
             e.sample_id,
             f.total_score,
@@ -297,8 +302,8 @@ def get_fish_metrics_data_for_table(site_name=None):
             params.append(site_name)
         
         # Add order by clause
-        metrics_query += ' ORDER BY s.site_name, e.year, m.metric_name'
-        summary_query += ' ORDER BY s.site_name, e.year'
+        metrics_query += ' ORDER BY s.site_name, e.collection_date, m.metric_name'
+        summary_query += ' ORDER BY s.site_name, e.collection_date'
         
         # Execute queries
         metrics_df = pd.read_sql_query(metrics_query, conn, params=params)

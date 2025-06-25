@@ -51,12 +51,15 @@ Buckhorn Creek:  Binderim Road,fish,8/12/2024,,11486
 Buckhorn Creek:  Binderim Road,Fish,9/20/2005,93,
 Buffalo Creek:  Ballard,Fish,6/30/2011,,
 Buffalo Creek:  Ballard,Fish,9/1/2005,79,
+Buffalo Creek:  Ballard,Fish-boat,9/15/2011,,
 Buffalo Creek:  Cosby,Fish,6/25/2009,,
 Buffalo Creek:  HWY 74B,Fish,7/9/2007,,
 Campbell Creek:  OCU Property,Fish,6/17/2011,,
 Campbell Creek:  OCU Property,Fish,6/13/2007,,
 Caston Creek:  CR 149 (Harmon Road),Fish,8/1/2007,,
+Caston Creek:  CR 149 (Harmon Road),Fish-boat,9/16/2011,,
 Cat Creek: Park on Muskogee Ave.,Fish,7/26/2021,,10776
+Cat Creek: Park on Muskogee Ave.,Fish *REP*,8/18/2021,,10777
 Cave Springs Branch of Honey Creek,Fish,9/4/1999,,
 Cedar Hollow Creek:  Nickel Preserve,Fish,6/26/2017,,9613
 Cedar Hollow Creek:  Nickel Preserve,Fish,8/9/2010,,
@@ -81,6 +84,7 @@ Coal Creek:  Hwy 11,Fish,6/11/2012,,8043
 Coal Creek:  Hwy 11,Fish,8/20/2007,,
 Coal Creek:  Hwy 11,Fish,8/23/2002,108,
 Coal Creek:  Hwy 11,Fish,11/12/1996,,
+Coal Creek:  Hwy 11,Fish-REP,6/14/2012,,8043
 Coal Creek:  Morris Park,Fish,8/10/2021,,10777
 Coal Creek:  Morris Park,Fish,7/28/1998,,
 Coal Creek: N. Sara Rd.,Fish,6/22/2023,,11201
@@ -92,6 +96,10 @@ Cow Creek:  Hwy 51,Fish,6/26/2023,,11201
 Cow Creek:  Hwy 51,Fish,8/7/2019,,10337
 Cow Creek:  Hwy 51,Fish,6/25/2015,,9297
 Cow Creek:  Hwy 51,Fish,6/25/2015,,9297
+Cow Creek:  Hwy 51,Fish *REP*,7/6/2015,,9297
+Cow Creek:  Hwy 51,Fish-REP,6/29/2023,,11201
+Cow Creek:  Hwy 51,Fish-REP,8/8/2019,,10337
+Cow Creek:  Hwy 51,Fish-REP,7/6/2015,,9297
 Cow Creek:  Virginia Avenue,Fish,7/1/2009,,
 Crow Creek:  Zink Park,Fish,8/2/2021,,10776
 Crow Creek:  Zink Park,Fish,7/11/2016,,9601
@@ -176,6 +184,7 @@ Gobbler Creek Trib.:  EW 132 Road,Fish,6/24/2010,,
 Guy James Creek: NW Eubanks St.,Fish,6/14/2018,,10051
 Guy James Creek: NW Eubanks St.,Fish,8/29/2014,,8968
 Guy Sandy Creek,Fish,6/9/2020,,10564
+Guy Sandy Creek,Fish REP,6/29/2020,,10564
 Hagar Creek: E 91st St S,Fish,6/24/2024,,11412
 Haikey Creek Trib: Wolf Creek Park Bridge,Fish,6/3/2021,,10776
 Haikey Creek Tributary:  129th Street East,Fish,10/1/1996,,
@@ -189,6 +198,7 @@ Harlow Trib:  Golden Acres,Fish,6/21/2012,,8043
 Harlow Trib:  Golden Acres,Fish,7/26/2007,,
 Hog Creek: SE 149th,Fish,6/19/2024,,11412
 Hog Creek: SE 149th,Fish,7/5/2018,,10051
+Hog Creek: SE 149th,Fish-REP,8/23/2018,,10052
 Honey Creek:  Berry Bluff,Fish,8/27/2002,117,
 Honey Creek:  Needham,Fish,8/18/2004,,
 Jessie Creek: Hwy 123,Fish,7/30/2024,,11412
@@ -232,6 +242,7 @@ Medicine Creek:  Apache (Stayer),Fish,8/6/2014,,8968
 Medicine Creek:  Apache (Stayer),Fish,8/7/2007,,
 Merkle Creek:  Brooks Street,Fish,6/28/2012,,8043
 Middle Creek:  Buzzard Roost Ranch,Fish,7/2/2018,,10051
+Middle Creek:  Buzzard Roost Ranch,Fish boat,9/4/2013,,8576
 Mill Creek:  McClure Park,Fish,7/23/2007,,
 Mill Creek:  McClure Park,Fish,8/19/2002,79,
 Mill Creek:  McClure Park,Fish,6/5/1998,,
@@ -242,6 +253,7 @@ Mingo Creek:  46th Street North,Fish,8/17/2007,,
 Mingo Creek:  46th Street North,Fish,8/25/2004,,
 Minnehaha Creek:  Canton,Fish,6/26/2009,,
 Mooser Creek Trib: Riverfield School,fish,9/25/2024,,11486
+Mooser Creek Trib: Riverfield School,fish-REP,9/26/2024,,11486
 Mooser Creek:  Elwood,Fish,6/3/1998,,
 Mooser Creek:  Pepsi,Fish,6/25/2024,,11412
 Mooser Creek:  Pepsi,Fish,7/8/2020,,10564
@@ -255,6 +267,7 @@ Mooser Creek:  South Haven,Fish,8/4/2003,102,
 Mooser Creek:  South Haven,Fish,6/1/1998,,
 Morris Creek: Gillham,Fish,7/26/2022,,10997
 Morris Creek: Gillham,Fish,8/2/2018,,10052
+Morris Creek: Gillham,Fish-REP,8/19/2022,,10997
 Mountain Creek:  D 4655 (Kennedy Bridge),Fish,8/9/2011,,
 Mountain Creek:  E 1400 Rd (Shiloh Crossing),Fish,8/10/2011,,
 Mud Creek:  E 2170 Road,Fish,6/28/2011,,
@@ -281,6 +294,7 @@ Park Hill Branch Creek:  Murrell Home,Fish,8/30/2017,,9613
 Park Hill Branch Creek:  Murrell Home,Fish,7/9/2013,,8541
 Park Hill Branch Creek:  Murrell Home,Fish,8/5/2009,,
 Park Hill Branch:  Parkhill Rd.,Fish,6/12/2013,,8541
+Pennington Creek:  Turnaround,Fish-boat,5/15/2012,,7904
 Pennington Creek:  West Road Trail,Fish,6/20/2012,,8043
 Polecat Creek:  33rd West,Fish,7/10/2006,,
 Polecat Creek:  33rd West,Fish,7/5/2006,,
@@ -387,6 +401,7 @@ Stillwater Creek:  S Sangre Road,Fish,6/29/2009,,
 Sugar Creek:  CR 1320,Fish,7/14/2011,,
 Sugar Creek:  CR 1320,Fish,8/6/2007,,
 Summerfield Creek: S. 4510 Road,Fish,7/17/2012,,8051
+Summerfield Creek: S. 4510 Road,Fish-REP,7/18/2012,,8051
 Sycamore Creek:  D 4685,Fish,6/30/2008,,
 Sycamore Creek:  D 4685,Fish,9/18/2000,109,
 TAG Trib. To North Canadian River:  W 192nd Street,Fish,7/15/2010,,
@@ -445,6 +460,7 @@ Wildhorse Creek:  N 3520 Road,Fish,8/3/2005,48,
 Wolf Creek:  Gore Blvd.,Fish,7/10/2023,,11201
 Wolf Creek:  Gore Blvd.,Fish,7/12/2019,,10311
 Wolf Creek:  Gore Blvd.,Fish,7/28/2016,,9601
+Wolf Creek:  Gore Blvd.,Fish - REP,8/2/2016,,9601
 Wolf Creek:  Hwy 46,Fish,6/24/2009,,
 Wolf Creek:  Hwy 46,Fish,9/13/2005,87,
 Wolf Creek:  McMahon Soccer Park,Fish,7/11/2023,,11201
@@ -456,19 +472,3 @@ Wolf Creek:  McMahon Soccer Park,Fish,8/9/2007,,
 Yashoo Creek:  Little River NWR,Fish,8/9/2016,,9601
 Yashoo Creek:  Little River NWR,Fish,6/29/2011,,
 Yashoo Creek:  Little River NWR,Fish,8/31/2005,68,
-Wolf Creek:  Gore Blvd.,Fish - REP,8/2/2016,,9601
-Cat Creek: Park on Muskogee Ave.,Fish *REP*,8/18/2021,,10777
-Cow Creek:  Hwy 51,Fish *REP*,7/6/2015,,9297
-Middle Creek:  Buzzard Roost Ranch,Fish boat,9/4/2013,,8576
-Guy Sandy Creek,Fish REP,6/29/2020,,10564
-Buffalo Creek:  Ballard,Fish-boat,9/15/2011,,
-Caston Creek:  CR 149 (Harmon Road),Fish-boat,9/16/2011,,
-Pennington Creek:  Turnaround,Fish-boat,5/15/2012,,7904
-Coal Creek:  Hwy 11,Fish-REP,6/14/2012,,8043
-Cow Creek:  Hwy 51,Fish-REP,6/29/2023,,11201
-Cow Creek:  Hwy 51,Fish-REP,8/8/2019,,10337
-Cow Creek:  Hwy 51,Fish-REP,7/6/2015,,9297
-Hog Creek: SE 149th,Fish-REP,8/23/2018,,10052
-Mooser Creek Trib: Riverfield School,fish-REP,9/26/2024,,11486
-Morris Creek: Gillham,Fish-REP,8/19/2022,,10997
-Summerfield Creek: S. 4510 Road,Fish-REP,7/18/2012,,8051

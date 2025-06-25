@@ -194,7 +194,7 @@ def create_macro_metrics_table_for_season(metrics_df, summary_df, season):
         season: Season to filter data for ('Summer' or 'Winter')
     
     Returns:
-        Dash DataTable component
+        HTML Div containing Dash DataTable component with footnote
     """
     try:
         # Format data for the selected season using macro-specific utilities
@@ -217,7 +217,13 @@ def create_macro_metrics_table_for_season(metrics_df, summary_df, season):
             styles
         )
         
-        return table
+        # Add footnote for comparison to reference values
+        footnote = html.P(
+            "*Comparison to Reference values are capped at 1.0 even when calculated values exceed 1.0",
+            style={'font-style': 'italic', 'margin-top': '10px', 'font-size': '12px'}
+        )
+        
+        return html.Div([table, footnote])
     
     except Exception as e:
         logger.error(f"Error creating {season} metrics table: {e}")

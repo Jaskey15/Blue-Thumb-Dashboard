@@ -22,16 +22,12 @@ from data_processing.data_queries import get_fish_dataframe, get_fish_metrics_da
 from utils import create_metrics_accordion, setup_logging
 from .visualization_utils import (
     DEFAULT_COLORS, 
-    create_line_plot,
-    update_figure_layout,
-    add_reference_lines,
-    format_metrics_table,
     create_table_styles,
     create_data_table,
-    create_hover_text,
-    update_hover_data,
     create_empty_figure,
-    create_error_figure
+    create_error_figure,
+    calculate_dynamic_y_range,
+    FONT_SIZES
 )
 
 logger = setup_logging("fish_viz", category="visualization")
@@ -63,15 +59,128 @@ FISH_METRIC_ORDER = [
 
 FISH_SUMMARY_LABELS = ['Total Score', 'Comparison to Reference', 'Integrity Class']
 
+def format_fish_metrics_table(metrics_df, summary_df):
+    """
+    Format fish metrics data into a table structure that shows ALL collections
+    including replicates with (REP) notation.
+    
+    Args:
+        metrics_df: DataFrame containing metrics data
+        summary_df: DataFrame containing summary scores
+    
+    Returns:
+        Tuple of (metrics_table, summary_rows) DataFrames
+    """
+    try:
+        if metrics_df.empty or summary_df.empty:
+            return (pd.DataFrame({'Metric': FISH_METRIC_ORDER}), 
+                   pd.DataFrame({'Metric': ['No Data']}))
+        
+        # Get unique collections
+        unique_collections = summary_df.drop_duplicates(subset=['event_id']).copy()
+        unique_collections['collection_date'] = pd.to_datetime(unique_collections['collection_date'])
+        
+        # Group by year and process each year separately
+        collections = []
+        
+        for year, year_group in unique_collections.groupby('year'):
+            # Sort within each year by collection date
+            year_group = year_group.sort_values('collection_date')
+            
+            # Assign REP notation within each year
+            for idx, (_, row) in enumerate(year_group.iterrows()):
+                event_id = row.get('event_id', None)
+                
+                # Create column name with REP notation for second+ samples in same year
+                if idx == 0:
+                    column_name = str(year)
+                else:
+                    column_name = f"{year} (REP)"
+                
+                collections.append({
+                    'event_id': event_id,
+                    'year': year,
+                    'column_name': column_name,
+                    'collection_date': row['collection_date']
+                })
+        
+        # Sort collections by year, then by whether it's REP (original first, then REP)
+        collections.sort(key=lambda x: (x['year'], '(REP)' in x['column_name']))
+        
+        if not collections:
+            return (pd.DataFrame({'Metric': FISH_METRIC_ORDER}), 
+                   pd.DataFrame({'Metric': ['No Data']}))
+        
+        # Create table data dictionary starting with metrics
+        table_data = {'Metric': FISH_METRIC_ORDER}
+        
+        # Add columns for each collection in proper order
+        for collection in collections:
+            column_name = collection['column_name']
+            event_id = collection['event_id']
+            
+            # Get metrics for this specific collection using event_id
+            collection_metrics = metrics_df[metrics_df['event_id'] == event_id]
+            
+            # Add scores for this collection
+            scores = []
+            for metric in FISH_METRIC_ORDER:
+                metric_row = collection_metrics[collection_metrics['metric_name'] == metric]
+                if not metric_row.empty:
+                    try:
+                        score_value = metric_row['metric_score'].values[0]
+                        scores.append(int(score_value))
+                    except (ValueError, TypeError) as e:
+                        logger.warning(f"Could not convert metric score to number: {score_value}, error: {e}")
+                        scores.append('-')
+                else:
+                    scores.append('-')
+            
+            table_data[column_name] = scores
+        
+        # Create metrics table
+        metrics_table = pd.DataFrame(table_data)
+        
+        # Create summary rows
+        summary_rows = pd.DataFrame({'Metric': FISH_SUMMARY_LABELS})
+        
+        # Add summary data for each collection in proper order
+        for collection in collections:
+            column_name = collection['column_name']
+            event_id = collection['event_id']
+            
+            collection_summary = summary_df[summary_df['event_id'] == event_id]
+            if not collection_summary.empty:
+                try:
+                    row = collection_summary.iloc[0]
+                    total_score = int(row['total_score'])
+                    comparison = f"{row['comparison_to_reference']:.2f}"
+                    integrity_class = row['integrity_class']
+                    
+                    summary_data = [total_score, comparison, integrity_class]
+                    summary_rows[column_name] = summary_data
+                except (ValueError, TypeError) as e:
+                    logger.warning(f"Error processing summary data for event {event_id}: {e}")
+                    summary_rows[column_name] = ['-', '-', '-']
+            else:
+                summary_rows[column_name] = ['-', '-', '-']
+        
+        return metrics_table, summary_rows
+    
+    except Exception as e:
+        logger.error(f"Error formatting fish metrics table: {e}")
+        return (pd.DataFrame({'Metric': FISH_METRIC_ORDER}), 
+               pd.DataFrame({'Metric': ['Error']}))
+
 def create_fish_viz(site_name=None):
     """
-    Create fish community visualization for the app.
+    Create fish community visualization with date-based plotting and year labels.
     
     Args:
         site_name: Optional site name to filter data for
     
     Returns:
-        Plotly figure: Line plot showing IBI scores over time.
+        Plotly figure: Line plot showing IBI scores over time with actual collection dates.
     """
     try:
         # Get fish data from the database
@@ -80,31 +189,97 @@ def create_fish_viz(site_name=None):
         if fish_df.empty:
             return create_empty_figure(site_name, "fish")
 
-        # Create the line plot using shared utilities
+        # Parse collection dates
+        fish_df['collection_date'] = pd.to_datetime(fish_df['collection_date'])
+        fish_df = fish_df.sort_values('collection_date')
+        
+        # Create figure
+        fig = go.Figure()
+        
+        # Create hover text
+        hover_text = []
+        for _, row in fish_df.iterrows():
+            text = (f"<b>Collection Date</b>: {row['collection_date'].strftime('%Y-%m-%d')}<br>"
+                   f"<b>IBI Score</b>: {row['comparison_to_reference']:.2f}<br>"
+                   f"<b>Integrity Class</b>: {row['integrity_class']}")
+            hover_text.append(text)
+        
+        # Add trace
+        fig.add_trace(go.Scatter(
+            x=fish_df['collection_date'],
+            y=fish_df['comparison_to_reference'],
+            mode='lines+markers',
+            name='IBI Score',
+            line=dict(color=DEFAULT_COLORS['default']),
+            marker=dict(
+                color=DEFAULT_COLORS['default'],
+                symbol='circle',
+                size=8
+            ),
+            text=hover_text,
+            hovertemplate='%{text}<extra></extra>',
+            hoverinfo='text'
+        ))
+        
+        # Set up title
         title = f"IBI Scores Over Time for {site_name}" if site_name else "IBI Scores Over Time"
-        fig_fish = create_line_plot(
-            fish_df, 
-            title, 
-            y_column='comparison_to_reference',
-            has_seasons=False
+        
+        # Calculate y-range using shared utility
+        y_min, y_max = calculate_dynamic_y_range(fish_df, column='comparison_to_reference')
+        
+        # Get year range for x-axis ticks
+        years = sorted(fish_df['year'].unique()) if 'year' in fish_df.columns else []
+        
+        # Update layout using shared styling constants
+        fig.update_layout(
+            title=title,
+            title_x=0.5,
+            title_font=dict(size=FONT_SIZES['title']),
+            xaxis=dict(
+                title='Year',
+                title_font=dict(size=FONT_SIZES['axis_title']),
+                tickmode='array',
+                tickvals=[pd.Timestamp(f'{year}-01-01') for year in years],
+                ticktext=[str(year) for year in years]
+            ),
+            yaxis=dict(
+                title='IBI Score (Compared to Reference)',
+                title_font=dict(size=FONT_SIZES['axis_title']),
+                range=[y_min, y_max],
+                tickformat='.2f'
+            ),
+            hovermode='closest'
         )
+        
+        # Add integrity reference lines (date-aware version)
+        if years:
+            x_min = pd.Timestamp(f'{min(years)}-01-01')
+            x_max = pd.Timestamp(f'{max(years)}-12-31')
+            
+            for label, threshold in INTEGRITY_THRESHOLDS.items():
+                color = INTEGRITY_COLORS.get(label, 'gray')
+                
+                # Add line
+                fig.add_shape(
+                    type="line",
+                    x0=x_min,
+                    y0=threshold,
+                    x1=x_max,
+                    y1=threshold,
+                    line=dict(color=color, width=1, dash="dash"),
+                )
+                
+                # Add annotation
+                fig.add_annotation(
+                    x=x_min,
+                    y=threshold,
+                    text=label,
+                    showarrow=False,
+                    yshift=10,
+                    xshift=-20
+                )
 
-        # Update layout using shared utilities
-        fig_fish = update_figure_layout(
-            fig_fish, 
-            fish_df, 
-            title,
-            y_label='IBI Score (Compared to Reference)'
-        )
-
-        # Add integrity reference lines
-        fig_fish = add_reference_lines(fig_fish, fish_df, INTEGRITY_THRESHOLDS, INTEGRITY_COLORS)
-
-        # Add hover data using shared utilities
-        hover_text = create_hover_text(fish_df, has_seasons=False, condition_column='integrity_class')
-        fig_fish = update_hover_data(fig_fish, hover_text)
-
-        return fig_fish
+        return fig
     
     except Exception as e:
         logger.error(f"Error creating fish visualization for {site_name}: {e}")
@@ -112,22 +287,20 @@ def create_fish_viz(site_name=None):
 
 def create_fish_metrics_table(metrics_df, summary_df):
     """
-    Create a metrics table for fish data.
+    Create a metrics table for fish data that shows ALL samples including replicates.
     
     Args:
         metrics_df: DataFrame containing metrics data
         summary_df: DataFrame containing summary scores
     
     Returns:
-        Dash DataTable component
+        Dash DataTable component with footnote
     """
     try:
-        # Format the data using shared utilities
-        metrics_table, summary_rows = format_metrics_table(
+        # Format the data using fish-specific logic
+        metrics_table, summary_rows = format_fish_metrics_table(
             metrics_df, 
-            summary_df, 
-            FISH_METRIC_ORDER,
-            FISH_SUMMARY_LABELS
+            summary_df
         )
         
         # Combine metrics and summary rows
@@ -137,7 +310,13 @@ def create_fish_metrics_table(metrics_df, summary_df):
         
         table = create_data_table(full_table, 'fish-metrics-table', styles)
         
-        return table
+        # Add footnote for REP notation
+        footnote = html.P(
+            "*(REP) indicates a replicate sample collected in the same year",
+            style={'font-style': 'italic', 'margin-top': '10px', 'font-size': '12px'}
+        )
+        
+        return html.Div([table, footnote])
     
     except Exception as e:
         logger.error(f"Error creating fish metrics table: {e}")

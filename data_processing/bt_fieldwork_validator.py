@@ -1,25 +1,34 @@
 """
 bt_fieldwork_validator.py - Blue Thumb Field Work Data Validation
 
-This module handles validation and processing of fish collection data against 
-Blue Thumb field work records. It distinguishes between true replicates 
-(separate collection events) and duplicate data entries using BT field work 
-records to assign correct collection dates.
+This module handles comprehensive validation and correction of fish collection data 
+against Blue Thumb field work records. It corrects date mismatches using BT data 
+as the authoritative source when available, and falls back to YEAR field as truth 
+when no BT match exists.
 
 Key Functions:
 - load_bt_field_work_dates(): Load BT field work dates for validation
 - find_bt_site_match(): Find matching BT site names using fuzzy matching
-- categorize_and_process_duplicates(): Main function to distinguish replicates from duplicates
-- average_group_samples(): Helper function to average duplicate sample groups
+- detect_replicates_by_dates(): Detect multiple collection dates for same site/year
+- correct_collection_dates(): Comprehensive date correction for ALL fish records
+- categorize_and_process_duplicates(): Handle replicates vs duplicates using date-based detection
 
-Replicate Logic:
-- Uses BT_fish_collection_dates.csv to identify true REP collections
-- Assigns correct dates to replicate samples (original vs REP date)
-- Averages duplicate entries that are not true replicates
-- Supports ±1 year buffer for matching BT field work data
+Date-Based Replicate Detection Logic:
+1. For ALL fish records with multiple samples per site+year, check BT data
+2. If BT shows multiple dates for same site+year, treat as replicates
+3. Assign actual BT dates chronologically
+4. If no multiple BT dates found, treat as duplicates and average
+
+Comprehensive Date Correction Logic:
+1. For ALL fish records, check if collection_date year matches year field
+2. If mismatch found, try to find BT match for the site
+3. If BT match found, use BT date as authoritative source
+4. If no BT match, use YEAR field as truth (keep month/day, correct year)
+5. Process collections using date-based detection
+6. Average duplicate entries that are not true replicates
 
 Usage:
-- Import and use categorize_and_process_duplicates() as main entry point
+- Import and use correct_collection_dates() as main entry point
 - Requires fish DataFrame and loads BT data automatically
 """
 
@@ -52,11 +61,7 @@ def load_bt_field_work_dates():
         # Add year for matching
         bt_df['Year'] = bt_df['Date_Clean'].dt.year
         
-        # Identify REP collections
-        bt_df['Is_REP'] = bt_df['M/F/H'].astype(str).str.lower().str.contains('rep', na=False)
-        
         logger.info(f"Processed {len(bt_df)} valid BT field work records")
-        logger.info(f"REP collections found: {bt_df['Is_REP'].sum()}")
         return bt_df
         
     except Exception as e:
@@ -95,9 +100,187 @@ def find_bt_site_match(db_site_name, bt_sites, threshold=0.9):
     else:
         return None
 
+def detect_replicates_by_dates(bt_df, site_name, year):
+    """
+    Detect replicates by finding multiple collection dates for same site/year in BT data,
+    regardless of REP labeling.
+    
+    Args:
+        bt_df: BT DataFrame with cleaned data
+        site_name: Site name to check
+        year: Year to check
+        
+    Returns:
+        DataFrame with multiple BT dates for this site/year, or None if not found
+    """
+    if bt_df.empty or 'Site_Clean' not in bt_df.columns:
+        return None
+        
+    # Find BT site match
+    bt_sites = set(bt_df['Site_Clean'].unique())
+    bt_site_match = find_bt_site_match(site_name, bt_sites)
+    
+    if not bt_site_match:
+        return None
+        
+    # Look for multiple dates in target year ±1 buffer
+    for check_year in [year, year-1, year+1]:
+        potential_dates = bt_df[
+            (bt_df['Site_Clean'] == bt_site_match) & 
+            (bt_df['Year'] == check_year)
+        ]
+        
+        if len(potential_dates) >= 2:
+            # Found multiple dates - these are replicates
+            logger.debug(f"Found {len(potential_dates)} dates for {site_name} in {check_year}: date-based replicates")
+            return potential_dates.sort_values('Date_Clean')
+    
+    return None
+
+def correct_collection_dates(fish_df, bt_df=None):
+    """
+    Comprehensive correction of fish collection dates using BT data as authoritative source
+    when available, falling back to YEAR field as truth when no BT match exists.
+    
+    Args:
+        fish_df: DataFrame with fish data
+        bt_df: Optional BT DataFrame (will load if not provided)
+        
+    Returns:
+        DataFrame with corrected collection dates
+    """
+    if fish_df.empty:
+        return fish_df.copy()
+    
+    # Load BT data if not provided
+    if bt_df is None:
+        bt_df = load_bt_field_work_dates()
+    
+    fish_corrected = fish_df.copy()
+    
+    # Ensure collection_date is datetime
+    fish_corrected['collection_date'] = pd.to_datetime(fish_corrected['collection_date'])
+    fish_corrected['year_from_date'] = fish_corrected['collection_date'].dt.year
+    
+    # Find records with year/date mismatches
+    mismatched_mask = fish_corrected['year'] != fish_corrected['year_from_date']
+    mismatched_records = fish_corrected[mismatched_mask]
+    
+    if len(mismatched_records) == 0:
+        logger.info("No date mismatches found - all records consistent")
+        return fish_corrected
+    
+    logger.info(f"Found {len(mismatched_records)} records with year/date mismatches")
+    
+    # Handle empty BT DataFrame
+    if bt_df.empty or 'Site_Clean' not in bt_df.columns:
+        bt_sites = set()
+    else:
+        bt_sites = set(bt_df['Site_Clean'].unique())
+    
+    corrections_applied = 0
+    bt_corrections = 0
+    year_field_corrections = 0
+    correction_log = []
+    
+    # Process each mismatched record
+    for idx, record in mismatched_records.iterrows():
+        site_name = record['site_name']
+        db_year = record['year']  # Year from database field
+        date_year = record['year_from_date']  # Year from collection_date
+        original_date = record['collection_date']
+        
+        correction_applied = False
+        correction_source = None
+        new_date = None
+        
+        # Try to find BT match for this site
+        bt_site_match = find_bt_site_match(site_name, bt_sites)
+        
+        if bt_site_match:
+            # Look for BT records that match this site and either year
+            potential_bt_matches = bt_df[
+                (bt_df['Site_Clean'] == bt_site_match) & 
+                (bt_df['Year'].isin([db_year, date_year]))
+            ]
+            
+            if not potential_bt_matches.empty:
+                # Use the BT date as authoritative source
+                # If multiple matches, prefer the one that matches the database year field
+                db_year_match = potential_bt_matches[potential_bt_matches['Year'] == db_year]
+                if not db_year_match.empty:
+                    bt_date = db_year_match.iloc[0]['Date_Clean']
+                else:
+                    bt_date = potential_bt_matches.iloc[0]['Date_Clean']
+                
+                fish_corrected.at[idx, 'collection_date'] = bt_date
+                fish_corrected.at[idx, 'collection_date_str'] = bt_date.strftime('%Y-%m-%d')
+                fish_corrected.at[idx, 'year'] = bt_date.year
+                
+                new_date = bt_date
+                correction_applied = True
+                correction_source = "BT_truth"
+                bt_corrections += 1
+                
+                correction_log.append({
+                    'site_name': site_name,
+                    'sample_id': record.get('sample_id', 'unknown'),
+                    'original_date': original_date.strftime('%Y-%m-%d'),
+                    'original_year': db_year,
+                    'corrected_date': new_date.strftime('%Y-%m-%d'),
+                    'corrected_year': new_date.year,
+                    'correction_source': correction_source,
+                    'bt_site_match': bt_site_match
+                })
+        
+        # Fallback: use YEAR field as truth if no BT match
+        if not correction_applied:
+            # Keep original month/day but use database year field
+            try:
+                corrected_date = original_date.replace(year=db_year)
+                fish_corrected.at[idx, 'collection_date'] = corrected_date
+                fish_corrected.at[idx, 'collection_date_str'] = corrected_date.strftime('%Y-%m-%d')
+                # year field already correct, no change needed
+                
+                new_date = corrected_date
+                correction_applied = True
+                correction_source = "year_field_truth"
+                year_field_corrections += 1
+                
+                correction_log.append({
+                    'site_name': site_name,
+                    'sample_id': record.get('sample_id', 'unknown'),
+                    'original_date': original_date.strftime('%Y-%m-%d'),
+                    'original_year': date_year,
+                    'corrected_date': new_date.strftime('%Y-%m-%d'),
+                    'corrected_year': db_year,
+                    'correction_source': correction_source,
+                    'bt_site_match': bt_site_match if bt_site_match else 'no_match'
+                })
+                
+            except ValueError as e:
+                logger.warning(f"Could not correct date for {site_name} sample {record.get('sample_id', 'unknown')}: {e}")
+        
+        if correction_applied:
+            corrections_applied += 1
+    
+    # Log summary
+    if corrections_applied > 0:
+        logger.info(f"Date correction complete: {corrections_applied} corrections applied")
+        logger.info(f"  - BT truth corrections: {bt_corrections} ({bt_corrections/corrections_applied*100:.1f}%)")
+        logger.info(f"  - Year field corrections: {year_field_corrections} ({year_field_corrections/corrections_applied*100:.1f}%)")
+        logger.info("All date mismatches successfully resolved")
+    
+    return fish_corrected
+
 def categorize_and_process_duplicates(fish_df, bt_df):
     """
-    Categorize duplicates as replicates vs true duplicates and process accordingly.
+    Categorize duplicates as replicates vs true duplicates using DATE-BASED detection
+    and process accordingly.
+    
+    Logic:
+    - Multiple dates in BT data for same site+year = replicates
+    - No multiple dates found = duplicates (average)
     
     Args:
         fish_df: DataFrame with fish data
@@ -147,63 +330,33 @@ def categorize_and_process_duplicates(fish_df, bt_df):
             (fish_df['year'] == year)
         ].copy()
         
-        # Check for REP data with ±1 year buffer
-        bt_site_match = find_bt_site_match(site_name, bt_sites)
-        rep_data = None
-        year_used = None
+        # Use date-based replicate detection
+        replicate_dates = detect_replicates_by_dates(bt_df, site_name, year)
         
-        if bt_site_match:
-            # Check for REP data in target year ±1
-            for check_year in [year, year-1, year+1]:
-                potential_rep = bt_df[
-                    (bt_df['Site_Clean'] == bt_site_match) & 
-                    (bt_df['Year'] == check_year) &
-                    (bt_df['Is_REP'] == True)
-                ]
-                
-                if not potential_rep.empty:
-                    # Also need the original (non-REP) collection for this site/year
-                    original_collection = bt_df[
-                        (bt_df['Site_Clean'] == bt_site_match) & 
-                        (bt_df['Year'] == check_year) &
-                        (bt_df['Is_REP'] == False)
-                    ]
-                    
-                    if not original_collection.empty:
-                        rep_data = pd.concat([original_collection, potential_rep])
-                        year_used = check_year
-                        break
-        
-        # Process based on whether we found REP data
-        if rep_data is not None and len(rep_data) >= 2:
-            # REPLICATE GROUP: Assign BT dates
-            # Sort BT data by date to get original and REP dates
-            rep_data_sorted = rep_data.sort_values('Date_Clean')
-            original_date = rep_data_sorted.iloc[0]['Date_Clean']
-            rep_date = rep_data_sorted.iloc[1]['Date_Clean']
+        # Process based on whether we found multiple dates in BT data
+        if replicate_dates is not None and len(replicate_dates) >= 2:
+            # REPLICATE GROUP: Multiple dates found in BT data
+            # Sort BT data by date to get chronological order
+            replicate_dates_sorted = replicate_dates.sort_values('Date_Clean')
             
             # Sort fish samples to get consistent assignment
             group_samples_sorted = group_samples.sort_values('sample_id')
             
-            # Assign dates (first sample gets earlier date, second gets later date)
+            # Assign dates chronologically (first sample gets earliest date, etc.)
             for i, (idx, sample) in enumerate(group_samples_sorted.iterrows()):
-                if i == 0:
-                    # First sample gets original date
-                    fish_processed.at[idx, 'collection_date'] = original_date
-                    fish_processed.at[idx, 'collection_date_str'] = original_date.strftime('%Y-%m-%d')
-                    fish_processed.at[idx, 'year'] = original_date.year
-                    assignment_type = "Original"
-                elif i == 1:
-                    # Second sample gets REP date
-                    fish_processed.at[idx, 'collection_date'] = rep_date
-                    fish_processed.at[idx, 'collection_date_str'] = rep_date.strftime('%Y-%m-%d')
-                    fish_processed.at[idx, 'year'] = rep_date.year
-                    assignment_type = "REP"
+                if i < len(replicate_dates_sorted):
+                    # Assign the i-th BT date to the i-th sample
+                    bt_date = replicate_dates_sorted.iloc[i]['Date_Clean']
+                    fish_processed.at[idx, 'collection_date'] = bt_date
+                    fish_processed.at[idx, 'collection_date_str'] = bt_date.strftime('%Y-%m-%d')
+                    fish_processed.at[idx, 'year'] = bt_date.year
+                    assignment_type = f"Date_{i+1}" if i > 0 else "Original"
                 else:
-                    # Additional samples (shouldn't happen based on our analysis, but handle gracefully)
-                    assignment_type = f"Extra_{i}"
+                    # Extra samples beyond available BT dates
+                    assignment_type = f"Extra_{i+1}"
                 
                 # Log the assignment
+                year_used = replicate_dates_sorted.iloc[0]['Year']  # Year from BT data
                 date_assignments.append({
                     'site_name': site_name,
                     'original_year': year,
@@ -211,13 +364,15 @@ def categorize_and_process_duplicates(fish_df, bt_df):
                     'sample_id': sample['sample_id'],
                     'assignment_type': assignment_type,
                     'assigned_date': fish_processed.at[idx, 'collection_date_str'],
-                    'year_buffer_used': year_used != year
+                    'year_buffer_used': year_used != year,
+                    'detection_method': 'date_based'
                 })
             
             rep_groups_processed += 1
+            logger.debug(f"Processed {site_name} ({year}) as replicates: {len(replicate_dates_sorted)} BT dates found")
             
         else:
-            # DUPLICATE GROUP: Average scores
+            # DUPLICATE GROUP: No multiple dates in BT data - treat as duplicates
             # Calculate averaged record
             averaged_record = average_group_samples(group_samples)
             
@@ -228,6 +383,7 @@ def categorize_and_process_duplicates(fish_df, bt_df):
             # Add averaged record
             records_to_add.append(averaged_record)
             duplicate_groups_averaged += 1
+            logger.debug(f"Processed {site_name} ({year}) as duplicates: no multiple BT dates found")
     
     # Apply removals and additions for averaged groups
     if records_to_remove:
@@ -237,7 +393,7 @@ def categorize_and_process_duplicates(fish_df, bt_df):
         fish_processed = pd.concat([fish_processed, pd.DataFrame(records_to_add)], ignore_index=True)
     
     # Log concise summary
-    logger.info(f"Fish duplicate processing: {rep_groups_processed} replicate groups, {duplicate_groups_averaged} groups averaged, {len(date_assignments)} date assignments")
+    logger.info(f"Fish duplicate processing (date-based): {rep_groups_processed} replicate groups, {duplicate_groups_averaged} groups averaged, {len(date_assignments)} date assignments")
     
     return fish_processed
 
@@ -261,4 +417,4 @@ def average_group_samples(group):
     for col in score_columns:
         averaged_row[col] = None
     
-    return averaged_row 
+    return averaged_row
