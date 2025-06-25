@@ -120,7 +120,7 @@ li {
 }
 
 /* =================================
-   TABS
+   TAB STYLING
    ================================= */
 
 /* Make tabs extend full width with even spacing */
@@ -149,6 +149,13 @@ li {
 .nav-tabs .nav-link {
   text-align: center;
   width: 100%;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.nav-tabs .nav-link.active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
 }
 
 /* =================================
