@@ -29,6 +29,7 @@ from .visualization_utils import (
     create_error_figure,
     add_date_aware_reference_lines,
     update_date_aware_layout,
+    generate_hover_text,
     FONT_SIZES
 )
 
@@ -95,15 +96,17 @@ def create_macro_viz(site_name=None):
             # Get color for this season using shared constants
             color = DEFAULT_COLORS.get(season, DEFAULT_COLORS.get('default', 'blue'))
             
-            # Create hover text for this season
-            hover_text = []
-            for _, row in season_data.iterrows():
-                text = (f"<b>Collection Date</b>: {row['collection_date'].strftime('%Y-%m-%d')}<br>"
-                       f"<b>Season</b>: {row['season']}<br>"
-                       f"<b>Habitat Type</b>: {row['habitat']}<br>"
-                       f"<b>Bioassessment Score</b>: {row['comparison_to_reference']:.2f}<br>"
-                       f"<b>Biological Condition</b>: {row['biological_condition']}")
-                hover_text.append(text)
+            # Define hover fields for macro seasonal data
+            hover_fields = {
+                'Collection Date': 'collection_date',
+                'Season': 'season',
+                'Habitat Type': 'habitat',
+                'Bioassessment Score': 'comparison_to_reference',
+                'Biological Condition': 'biological_condition'
+            }
+            
+            # Create hover text for this season using shared utility
+            hover_text = generate_hover_text(season_data, hover_fields)
             
             # Add trace for this season
             fig.add_trace(go.Scatter(

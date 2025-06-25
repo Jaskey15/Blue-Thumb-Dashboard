@@ -199,24 +199,7 @@ def create_date_based_trace(df, date_column, y_column, name, color=None, hover_f
         # Create hover text if fields provided
         hover_text = []
         if hover_fields:
-            for _, row in df_copy.iterrows():
-                text_parts = []
-                for display_name, column_name in hover_fields.items():
-                    if column_name in row:
-                        value = row[column_name]
-                        # Format dates
-                        if 'date' in column_name.lower() and hasattr(value, 'strftime'):
-                            value = value.strftime('%Y-%m-%d')
-                        # Format numeric scores
-                        elif display_name.lower().endswith('score') and isinstance(value, (int, float)):
-                            if column_name == 'total_score':  # Habitat scores are integers
-                                value = int(value)
-                            else:  # Biological scores are decimals
-                                value = f"{value:.2f}"
-                        text_parts.append(f"<b>{display_name}</b>: {value}")
-                hover_text.append("<br>".join(text_parts))
-        else:
-            hover_text = None
+            hover_text = generate_hover_text(df_copy, hover_fields)
         
         # Create trace
         trace = go.Scatter(
@@ -240,6 +223,64 @@ def create_date_based_trace(df, date_column, y_column, name, color=None, hover_f
     except Exception as e:
         logger.error(f"Error creating date-based trace: {e}")
         return go.Scatter()
+
+def generate_hover_text(df, hover_fields):
+    """
+    Generate hover text for biological visualizations with flexible field mapping.
+    
+    Args:
+        df: DataFrame containing the data
+        hover_fields: Dictionary mapping display names to column names
+                     e.g., {'Collection Date': 'collection_date', 'Score': 'comparison_to_reference'}
+                     
+    Special field handling:
+        - Date fields (containing 'date'): Formatted as YYYY-MM-DD
+        - Score fields (containing 'score'): Formatted based on column name
+          - 'total_score': Integer (habitat data)
+          - Other scores: 2 decimal places (biological data)
+        - All other fields: Display as-is
+    
+    Returns:
+        List of hover text strings
+    """
+    try:
+        hover_text = []
+        
+        for _, row in df.iterrows():
+            text_parts = []
+            
+            for display_name, column_name in hover_fields.items():
+                if column_name in row and pd.notna(row[column_name]):
+                    value = row[column_name]
+                    
+                    # Format dates
+                    if 'date' in column_name.lower() and hasattr(value, 'strftime'):
+                        formatted_value = value.strftime('%Y-%m-%d')
+                    
+                    # Format numeric scores
+                    elif 'score' in display_name.lower() and isinstance(value, (int, float)):
+                        if column_name == 'total_score':  # Habitat scores are integers
+                            formatted_value = int(value)
+                        else:  # Biological scores are decimals
+                            formatted_value = f"{value:.2f}"
+                    
+                    # Display other fields as-is
+                    else:
+                        formatted_value = value
+                    
+                    text_parts.append(f"<b>{display_name}</b>: {formatted_value}")
+                
+                # Handle missing values gracefully
+                elif column_name in hover_fields.values():
+                    text_parts.append(f"<b>{display_name}</b>: Unknown")
+            
+            hover_text.append("<br>".join(text_parts))
+        
+        return hover_text
+    
+    except Exception as e:
+        logger.error(f"Error generating hover text: {e}")
+        return []
 
 # =============================================================================
 # Existing Functions (Preserved)
