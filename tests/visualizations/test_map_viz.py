@@ -17,17 +17,15 @@ sys.path.insert(0, project_root)
 
 from visualizations.map_viz import (
     # Core helper functions
-    load_sites_from_database,
     get_latest_data_by_type,
     get_status_color,
-    filter_sites_by_active_status,
+    get_total_site_count,
     
     # UI helper functions
     create_hover_text,
     
     # Map layout helper functions
     _create_base_map_layout,
-    add_site_marker,
     create_error_map,
     
     # Main visualization functions
@@ -40,6 +38,9 @@ from visualizations.map_viz import (
     PARAMETER_LABELS,
     MAP_PARAMETER_LABELS
 )
+
+# Import optimized functions from map_queries
+from visualizations.map_queries import get_sites_for_maps
 from utils import setup_logging
 
 # Set up logging for tests
@@ -128,8 +129,8 @@ class TestMapViz(unittest.TestCase):
 
     @patch('visualizations.map_viz.get_connection')
     @patch('visualizations.map_viz.close_connection')
-    def test_load_sites_from_database_success(self, mock_close, mock_get_conn):
-        """Test successful loading of sites from database."""
+    def test_get_total_site_count_all_sites(self, mock_close, mock_get_conn):
+        """Test getting total count of all sites."""
         # Mock database connection and cursor
         mock_conn = MagicMock()
         mock_cursor = MagicMock()
@@ -137,37 +138,50 @@ class TestMapViz(unittest.TestCase):
         mock_conn.cursor.return_value = mock_cursor
         
         # Mock query results
-        mock_cursor.fetchall.return_value = [
-            ('Site A', 35.0, -98.0, 'County A', 'Basin A', 'Ecoregion A', 1),
-            ('Site B', 35.1, -98.1, None, 'Basin B', 'Ecoregion B', 0)
-        ]
+        mock_cursor.fetchone.return_value = (376,)  # Total sites count
         
-        sites = load_sites_from_database()
+        count = get_total_site_count(active_only=False)
         
-        # Should return list of site dictionaries
-        self.assertIsInstance(sites, list)
-        self.assertEqual(len(sites), 2)
+        # Should return integer count
+        self.assertIsInstance(count, int)
+        self.assertEqual(count, 376)
         
-        # Check first site structure
-        site = sites[0]
-        self.assertEqual(site['name'], 'Site A')
-        self.assertEqual(site['lat'], 35.0)
-        self.assertEqual(site['lon'], -98.0)
-        self.assertEqual(site['county'], 'County A')
-        self.assertTrue(site['active'])
-        
-        # Check handling of None values
-        site2 = sites[1]
-        self.assertEqual(site2['county'], 'Unknown')
-        self.assertFalse(site2['active'])
+        # Should execute correct SQL query
+        mock_cursor.execute.assert_called_with(
+            "SELECT COUNT(*) FROM sites WHERE latitude IS NOT NULL AND longitude IS NOT NULL"
+        )
 
     @patch('visualizations.map_viz.get_connection')
-    def test_load_sites_from_database_error(self, mock_get_conn):
-        """Test error handling in load_sites_from_database."""
+    @patch('visualizations.map_viz.close_connection')
+    def test_get_total_site_count_active_only(self, mock_close, mock_get_conn):
+        """Test getting count of active sites only."""
+        # Mock database connection and cursor
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_get_conn.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+        
+        # Mock query results
+        mock_cursor.fetchone.return_value = (105,)  # Active sites count
+        
+        count = get_total_site_count(active_only=True)
+        
+        self.assertEqual(count, 105)
+        
+        # Should execute correct SQL query for active sites
+        mock_cursor.execute.assert_called_with(
+            "SELECT COUNT(*) FROM sites WHERE active = 1 AND latitude IS NOT NULL AND longitude IS NOT NULL"
+        )
+
+    @patch('visualizations.map_viz.get_connection')
+    def test_get_total_site_count_error(self, mock_get_conn):
+        """Test error handling in get_total_site_count."""
         mock_get_conn.side_effect = Exception("Database connection failed")
         
-        with self.assertRaises(Exception):
-            load_sites_from_database()
+        count = get_total_site_count()
+        
+        # Should return 0 on error
+        self.assertEqual(count, 0)
 
     @patch('visualizations.map_viz.get_latest_chemical_data_for_maps')
     def test_get_latest_data_by_type_chemical(self, mock_get_chem):
@@ -290,29 +304,7 @@ class TestMapViz(unittest.TestCase):
         self.assertEqual(result_colors.iloc[2], COLORS['poor'])
         self.assertEqual(result_colors.iloc[3], 'gray')  # None becomes gray
 
-    def test_filter_sites_by_active_status_all_sites(self):
-        """Test filtering sites with active_only=False."""
-        sites, active_count, historic_count, total_count = filter_sites_by_active_status(
-            self.sample_sites, active_only=False
-        )
-        
-        # Should return all sites
-        self.assertEqual(len(sites), 3)
-        self.assertEqual(active_count, 2)  # 2 active sites
-        self.assertEqual(historic_count, 1)  # 1 historic site
-        self.assertEqual(total_count, 3)
 
-    def test_filter_sites_by_active_status_active_only(self):
-        """Test filtering sites with active_only=True."""
-        sites, active_count, historic_count, total_count = filter_sites_by_active_status(
-            self.sample_sites, active_only=True
-        )
-        
-        # Should return only active sites
-        self.assertEqual(len(sites), 2)
-        self.assertEqual(active_count, 2)
-        self.assertEqual(historic_count, 1)  # Total historic sites in original list
-        self.assertEqual(total_count, 3)  # Original total
 
     # =============================================================================
     # UI HELPER FUNCTION TESTS - Formatting and Text Creation
@@ -433,47 +425,7 @@ class TestMapViz(unittest.TestCase):
         self.assertEqual(len(fig.layout.annotations), 1)
         self.assertIn("Esri", fig.layout.annotations[0].text)
 
-    def test_add_site_marker_with_color(self):
-        """Test adding site marker with specific color."""
-        fig = go.Figure()
-        
-        updated_fig = add_site_marker(
-            fig, 35.123, -98.456, '#ff0000', 'Test Site',
-            hover_text="Test hover text", active=True
-        )
-        
-        # Should return the same figure
-        self.assertIs(updated_fig, fig)
-        
-        # Should add one trace
-        self.assertEqual(len(fig.data), 1)
-        
-        trace = fig.data[0]
-        self.assertEqual(trace.lat[0], 35.123)
-        self.assertEqual(trace.lon[0], -98.456)
-        self.assertEqual(trace.marker.color, '#ff0000')
-        self.assertEqual(trace.marker.size, 10)
-        self.assertEqual(trace.text[0], "Test hover text")
 
-    def test_add_site_marker_active_site(self):
-        """Test adding marker for active site without specific color."""
-        fig = go.Figure()
-        
-        add_site_marker(fig, 35.123, -98.456, '', 'Active Site', active=True)
-        
-        trace = fig.data[0]
-        self.assertEqual(trace.marker.color, '#3366CC')  # Blue for active
-        self.assertEqual(trace.marker.size, 10)
-
-    def test_add_site_marker_historic_site(self):
-        """Test adding marker for historic site without specific color."""
-        fig = go.Figure()
-        
-        add_site_marker(fig, 35.123, -98.456, '', 'Historic Site', active=False)
-        
-        trace = fig.data[0]
-        self.assertEqual(trace.marker.color, '#9370DB')  # Purple for historic
-        self.assertEqual(trace.marker.size, 6)
 
     def test_create_error_map(self):
         """Test creation of error map."""
@@ -567,10 +519,19 @@ class TestMapViz(unittest.TestCase):
         # Should include all sites even those without data
         self.assertEqual(total_sites, len(self.sample_sites))
 
-    def test_create_basic_site_map_all_sites(self):
+    @patch('visualizations.map_queries.get_sites_for_maps')
+    def test_create_basic_site_map_all_sites(self, mock_get_sites):
         """Test creation of basic site map with all sites."""
-        with patch('visualizations.map_viz.load_sites_from_database', return_value=self.sample_sites):
-            fig, active_count, historic_count, total_count = create_basic_site_map(active_only=False)
+        # Create DataFrame from sample sites for mocking
+        sites_df = pd.DataFrame([
+            {'site_name': site['name'], 'latitude': site['lat'], 'longitude': site['lon'],
+             'county': site['county'], 'river_basin': site['river_basin'], 
+             'ecoregion': site['ecoregion'], 'active': site['active']}
+            for site in self.sample_sites
+        ])
+        mock_get_sites.return_value = sites_df
+        
+        fig, active_count, historic_count, total_count = create_basic_site_map(active_only=False)
         
         # Should return a plotly Figure
         self.assertIsInstance(fig, go.Figure)
@@ -580,32 +541,44 @@ class TestMapViz(unittest.TestCase):
         self.assertEqual(historic_count, 1)
         self.assertEqual(total_count, 3)
         
-        # Should have markers for all sites
-        self.assertEqual(len(fig.data), 3)
+        # Should have one trace with all sites
+        self.assertEqual(len(fig.data), 1)
         
         # Should have map layout
         self.assertIsNotNone(fig.layout.map)
 
-    def test_create_basic_site_map_active_only(self):
+    @patch('visualizations.map_queries.get_sites_for_maps')
+    def test_create_basic_site_map_active_only(self, mock_get_sites):
         """Test creation of basic site map with active sites only."""
-        with patch('visualizations.map_viz.load_sites_from_database', return_value=self.sample_sites):
-            fig, active_count, historic_count, total_count = create_basic_site_map(active_only=True)
+        # Create DataFrame with only active sites
+        active_sites = [site for site in self.sample_sites if site['active']]
+        sites_df = pd.DataFrame([
+            {'site_name': site['name'], 'latitude': site['lat'], 'longitude': site['lon'],
+             'county': site['county'], 'river_basin': site['river_basin'], 
+             'ecoregion': site['ecoregion'], 'active': site['active']}
+            for site in active_sites
+        ])
+        mock_get_sites.return_value = sites_df
+        
+        fig, active_count, historic_count, total_count = create_basic_site_map(active_only=True)
         
         # Should return a plotly Figure
         self.assertIsInstance(fig, go.Figure)
         
         # Should have correct counts
-        self.assertEqual(active_count, 2)
-        self.assertEqual(historic_count, 1)  # Total historic in original list
+        self.assertEqual(active_count, 2)  # Only active sites returned
+        self.assertEqual(historic_count, 0)  # No historic sites in filtered results
         self.assertEqual(total_count, 2)     # Only active sites
         
-        # Should have markers for active sites only
-        self.assertEqual(len(fig.data), 2)
+        # Should have one trace with active sites only
+        self.assertEqual(len(fig.data), 1)
 
-    def test_create_basic_site_map_no_sites(self):
+    @patch('visualizations.map_queries.get_sites_for_maps')
+    def test_create_basic_site_map_no_sites(self, mock_get_sites):
         """Test creation of basic site map with no sites."""
-        with patch('visualizations.map_viz.load_sites_from_database', return_value=[]):
-            fig, active_count, historic_count, total_count = create_basic_site_map()
+        mock_get_sites.return_value = pd.DataFrame()  # Empty DataFrame
+        
+        fig, active_count, historic_count, total_count = create_basic_site_map()
         
         # Should return error map
         self.assertIsInstance(fig, go.Figure)
@@ -614,79 +587,120 @@ class TestMapViz(unittest.TestCase):
         self.assertEqual(total_count, 0)
 
     @patch('visualizations.map_viz.add_data_markers')
-    def test_add_parameter_colors_to_map_chemical(self, mock_add_markers):
+    @patch('visualizations.map_queries.get_sites_for_maps')
+    def test_add_parameter_colors_to_map_chemical(self, mock_get_sites, mock_add_markers):
         """Test adding parameter colors for chemical data."""
+        # Mock sites DataFrame
+        sites_df = pd.DataFrame([
+            {'site_name': site['name'], 'latitude': site['lat'], 'longitude': site['lon'],
+             'county': site['county'], 'river_basin': site['river_basin'], 
+             'ecoregion': site['ecoregion'], 'active': site['active']}
+            for site in self.sample_sites
+        ])
+        mock_get_sites.return_value = sites_df
         mock_add_markers.return_value = (go.Figure(), 5, 10)
         
         fig = go.Figure()
         updated_fig, sites_with_data, total_sites = add_parameter_colors_to_map(
-            fig, 'chem', 'do_percent', self.sample_sites
+            fig, 'chem', 'do_percent', sites_df=None, active_only=False
         )
         
-        # Should call add_data_markers with correct parameters
-        mock_add_markers.assert_called_once_with(
-            fig, self.sample_sites, 'chemical', parameter_name='do_percent', filter_no_data=True
-        )
+        # Should call add_data_markers with converted sites list
+        mock_add_markers.assert_called_once()
+        call_args = mock_add_markers.call_args
+        self.assertEqual(call_args[0][2], 'chemical')  # data_type
+        self.assertEqual(call_args[1]['parameter_name'], 'do_percent')
+        self.assertEqual(call_args[1]['filter_no_data'], True)
         
         self.assertEqual(sites_with_data, 5)
         self.assertEqual(total_sites, 10)
 
     @patch('visualizations.map_viz.add_data_markers')
-    def test_add_parameter_colors_to_map_fish(self, mock_add_markers):
+    @patch('visualizations.map_queries.get_sites_for_maps')
+    def test_add_parameter_colors_to_map_fish(self, mock_get_sites, mock_add_markers):
         """Test adding parameter colors for fish data."""
+        sites_df = pd.DataFrame([
+            {'site_name': site['name'], 'latitude': site['lat'], 'longitude': site['lon'],
+             'county': site['county'], 'river_basin': site['river_basin'], 
+             'ecoregion': site['ecoregion'], 'active': site['active']}
+            for site in self.sample_sites
+        ])
+        mock_get_sites.return_value = sites_df
         mock_add_markers.return_value = (go.Figure(), 3, 8)
         
         fig = go.Figure()
         updated_fig, sites_with_data, total_sites = add_parameter_colors_to_map(
-            fig, 'bio', 'Fish_IBI', self.sample_sites
+            fig, 'bio', 'Fish_IBI', sites_df=None, active_only=False
         )
         
-        mock_add_markers.assert_called_once_with(
-            fig, self.sample_sites, 'fish', filter_no_data=True
-        )
+        mock_add_markers.assert_called_once()
+        call_args = mock_add_markers.call_args
+        self.assertEqual(call_args[0][2], 'fish')  # data_type
 
     @patch('visualizations.map_viz.add_data_markers')
-    def test_add_parameter_colors_to_map_macro(self, mock_add_markers):
+    @patch('visualizations.map_queries.get_sites_for_maps')
+    def test_add_parameter_colors_to_map_macro(self, mock_get_sites, mock_add_markers):
         """Test adding parameter colors for macro data."""
+        sites_df = pd.DataFrame([
+            {'site_name': site['name'], 'latitude': site['lat'], 'longitude': site['lon'],
+             'county': site['county'], 'river_basin': site['river_basin'], 
+             'ecoregion': site['ecoregion'], 'active': site['active']}
+            for site in self.sample_sites
+        ])
+        mock_get_sites.return_value = sites_df
         mock_add_markers.return_value = (go.Figure(), 4, 12)
         
         fig = go.Figure()
         updated_fig, sites_with_data, total_sites = add_parameter_colors_to_map(
-            fig, 'bio', 'Macro_Combined', self.sample_sites
+            fig, 'bio', 'Macro_Combined', sites_df=None, active_only=False
         )
         
-        mock_add_markers.assert_called_once_with(
-            fig, self.sample_sites, 'macro', filter_no_data=True
-        )
+        mock_add_markers.assert_called_once()
+        call_args = mock_add_markers.call_args
+        self.assertEqual(call_args[0][2], 'macro')  # data_type
 
     @patch('visualizations.map_viz.add_data_markers')
-    def test_add_parameter_colors_to_map_habitat(self, mock_add_markers):
+    @patch('visualizations.map_queries.get_sites_for_maps')
+    def test_add_parameter_colors_to_map_habitat(self, mock_get_sites, mock_add_markers):
         """Test adding parameter colors for habitat data."""
+        sites_df = pd.DataFrame([
+            {'site_name': site['name'], 'latitude': site['lat'], 'longitude': site['lon'],
+             'county': site['county'], 'river_basin': site['river_basin'], 
+             'ecoregion': site['ecoregion'], 'active': site['active']}
+            for site in self.sample_sites
+        ])
+        mock_get_sites.return_value = sites_df
         mock_add_markers.return_value = (go.Figure(), 2, 6)
         
         fig = go.Figure()
         updated_fig, sites_with_data, total_sites = add_parameter_colors_to_map(
-            fig, 'habitat', 'Habitat_Grade', self.sample_sites
+            fig, 'habitat', 'Habitat_Grade', sites_df=None, active_only=False
         )
         
-        mock_add_markers.assert_called_once_with(
-            fig, self.sample_sites, 'habitat', filter_no_data=True
-        )
+        mock_add_markers.assert_called_once()
+        call_args = mock_add_markers.call_args
+        self.assertEqual(call_args[0][2], 'habitat')  # data_type
 
     @patch('visualizations.map_viz.add_data_markers')
-    def test_add_parameter_colors_to_map_default_sites(self, mock_add_markers):
+    @patch('visualizations.map_queries.get_sites_for_maps')
+    def test_add_parameter_colors_to_map_default_sites(self, mock_get_sites, mock_add_markers):
         """Test adding parameter colors when no sites are provided (loads from database)."""
+        sites_df = pd.DataFrame([
+            {'site_name': site['name'], 'latitude': site['lat'], 'longitude': site['lon'],
+             'county': site['county'], 'river_basin': site['river_basin'], 
+             'ecoregion': site['ecoregion'], 'active': site['active']}
+            for site in self.sample_sites
+        ])
+        mock_get_sites.return_value = sites_df
         mock_add_markers.return_value = (go.Figure(), 3, 3)
         
-        with patch('visualizations.map_viz.load_sites_from_database', return_value=self.sample_sites):
-            fig = go.Figure()
-            updated_fig, sites_with_data, total_sites = add_parameter_colors_to_map(
-                fig, 'chem', 'pH'  # No sites parameter provided
-            )
-            
-            # Should use sites loaded from database
-            call_args = mock_add_markers.call_args[0]
-            self.assertEqual(call_args[1], self.sample_sites)
+        fig = go.Figure()
+        updated_fig, sites_with_data, total_sites = add_parameter_colors_to_map(
+            fig, 'chem', 'pH'  # No sites parameter provided
+        )
+        
+        # Should use sites loaded from database
+        mock_get_sites.assert_called_once_with(active_only=False)
 
     # =============================================================================
     # CONSTANTS AND CONFIGURATION TESTS
@@ -757,39 +771,36 @@ class TestMapViz(unittest.TestCase):
             # Expected behavior for database errors
             pass
 
-    def test_filter_sites_by_active_status_empty_list(self):
-        """Test filtering with empty sites list."""
-        sites, active_count, historic_count, total_count = filter_sites_by_active_status(
-            [], active_only=False
-        )
-        
-        self.assertEqual(len(sites), 0)
-        self.assertEqual(active_count, 0)
-        self.assertEqual(historic_count, 0)
-        self.assertEqual(total_count, 0)
-
     # =============================================================================
     # INTEGRATION TESTS
     # =============================================================================
 
     @patch('visualizations.map_viz.get_latest_data_by_type')
-    def test_full_workflow_chemical_map(self, mock_get_data):
+    @patch('visualizations.map_queries.get_sites_for_maps')
+    def test_full_workflow_chemical_map(self, mock_get_sites, mock_get_data):
         """Test complete workflow for creating a chemical parameter map."""
+        # Mock sites DataFrame
+        sites_df = pd.DataFrame([
+            {'site_name': site['name'], 'latitude': site['lat'], 'longitude': site['lon'],
+             'county': site['county'], 'river_basin': site['river_basin'], 
+             'ecoregion': site['ecoregion'], 'active': site['active']}
+            for site in self.sample_sites
+        ])
+        mock_get_sites.return_value = sites_df
         mock_get_data.return_value = self.sample_chemical_data
         
-        with patch('visualizations.map_viz.load_sites_from_database', return_value=self.sample_sites):
-            # Create basic map
-            fig, active_count, historic_count, total_count = create_basic_site_map()
-            
-            # Add parameter coloring
-            updated_fig, sites_with_data, total_sites = add_parameter_colors_to_map(
-                fig, 'chem', 'do_percent'
-            )
-            
-            # Should have a complete map with parameter coloring
-            self.assertIsInstance(updated_fig, go.Figure)
-            self.assertGreater(len(updated_fig.data), 0)
-            self.assertIsNotNone(updated_fig.layout.map)
+        # Create basic map
+        fig, active_count, historic_count, total_count = create_basic_site_map()
+        
+        # Add parameter coloring
+        updated_fig, sites_with_data, total_sites = add_parameter_colors_to_map(
+            fig, 'chem', 'do_percent'
+        )
+        
+        # Should have a complete map with parameter coloring
+        self.assertIsInstance(updated_fig, go.Figure)
+        self.assertGreater(len(updated_fig.data), 0)
+        self.assertIsNotNone(updated_fig.layout.map)
 
     def test_hover_text_consistency(self):
         """Test that hover text is consistent across data types."""
