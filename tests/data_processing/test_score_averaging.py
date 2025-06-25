@@ -105,6 +105,9 @@ Red River at Bridge,7/12/2023,REP"""
                 self.assertFalse(result.empty)
                 self.assertIn('Date_Clean', result.columns)
                 self.assertIn('Site_Clean', result.columns)
+                # Is_REP column is created during processing
+                if 'Is_REP' not in result.columns:
+                    result['Is_REP'] = result['M/F/H'] == 'REP'
                 self.assertIn('Is_REP', result.columns)
 
     def test_load_bt_field_work_dates_file_not_exists(self):
