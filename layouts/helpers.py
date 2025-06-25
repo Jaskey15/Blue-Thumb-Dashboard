@@ -169,39 +169,6 @@ def create_watershed_image_section():
         ], className="d-flex h-100 align-items-center justify-content-center flex-column")
     ], width=6, className="d-flex align-items-center")
 
-def create_source_data_links():
-    """
-    Create links to source data files.
-    
-    Returns:
-        An unordered list with links to source data files
-    """
-    return html.Ul([
-        # Links to PDFs
-        html.Li(
-            html.A(
-                "Tenmile Data Packet (PDF)",  
-                href="/assets/source_data/Tenmile data packet.pdf",    
-                target="_blank"                   
-            )
-        ),
-        html.Li(
-            html.A(
-                "Data Definitions (PDF)",
-                href="/assets/source_data/data definitions.pdf",
-                target="_blank"
-            )
-        ),
-        # Link to Excel data
-        html.Li(
-            html.A(
-                "Tenmile Chemical Data (Excel)",
-                href="/assets/source_data/Tenmile chemical.xlsx",
-                target="_blank"
-            )
-        )
-    ])
-
 def create_season_month_selectors():
     """
     Create the season and month selection controls for chemical data filtering.

@@ -6,7 +6,6 @@ import dash_bootstrap_components as dbc
 from dash import html
 from utils import load_markdown_content
 from ..constants import TAB_STYLES
-from ..helpers import create_source_data_links
 
 def create_source_data_tab():
     """
@@ -19,8 +18,7 @@ def create_source_data_tab():
         tab_content = html.Div([
             dbc.Row([
                 dbc.Col([
-                    load_markdown_content('source_data.md'),
-                    create_source_data_links()
+                    load_markdown_content('source_data.md')
                 ], width=12)
             ])
         ], className="tab-content-wrapper")
