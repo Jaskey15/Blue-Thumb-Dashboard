@@ -120,6 +120,38 @@ li {
 }
 
 /* =================================
+   TABS
+   ================================= */
+
+/* Make tabs extend full width with even spacing */
+#main-tabs {
+  margin-left: 0;
+  margin-right: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.nav-tabs {
+  width: 100%;
+  display: flex;
+  margin-left: 0;
+  margin-right: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.nav-tabs .nav-item {
+  flex: 1;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.nav-tabs .nav-link {
+  text-align: center;
+  width: 100%;
+}
+
+/* =================================
    COMPONENTS
    ================================= */
 

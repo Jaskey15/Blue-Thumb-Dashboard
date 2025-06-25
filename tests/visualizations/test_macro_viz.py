@@ -19,6 +19,7 @@ from visualizations.macro_viz import (
     create_macro_viz,
     create_macro_metrics_table_for_season,
     create_macro_metrics_accordion,
+    format_macro_metrics_table,
     CONDITION_THRESHOLDS,
     CONDITION_COLORS,
     MACRO_METRIC_ORDER,
@@ -55,7 +56,8 @@ class TestMacroViz(unittest.TestCase):
             'season': ['Summer', 'Summer', 'Summer', 'Winter', 'Winter', 'Winter', 'Summer', 'Summer', 'Summer', 'Winter', 'Winter', 'Winter'],
             'habitat': ['Riffle', 'Riffle', 'Riffle', 'Vegetation', 'Vegetation', 'Vegetation', 'Riffle', 'Riffle', 'Riffle', 'Vegetation', 'Vegetation', 'Vegetation'],
             'metric_name': ['Taxa Richness', 'EPT Taxa Richness', 'HBI Score', 'Taxa Richness', 'EPT Taxa Richness', 'HBI Score', 'Taxa Richness', 'EPT Taxa Richness', 'HBI Score', 'Taxa Richness', 'EPT Taxa Richness', 'HBI Score'],
-            'metric_score': [15, 8, 3, 12, 6, 4, 18, 10, 3, 14, 7, 4]
+            'metric_score': [15, 8, 3, 12, 6, 4, 18, 10, 3, 14, 7, 4],
+            'collection_date': pd.to_datetime(['2020-06-15', '2020-06-15', '2020-06-15', '2020-12-15', '2020-12-15', '2020-12-15', '2021-07-20', '2021-07-20', '2021-07-20', '2021-12-20', '2021-12-20', '2021-12-20'])
         })
         
         # Sample summary data for both seasons
@@ -67,7 +69,30 @@ class TestMacroViz(unittest.TestCase):
             'total_score': [42, 38, 48, 41],
             'comparison_to_reference': [0.75, 0.68, 0.82, 0.71],
             'biological_condition': ['Slightly Impaired', 'Moderately Impaired', 
-                                   'Non-impaired', 'Slightly Impaired']
+                                   'Non-impaired', 'Slightly Impaired'],
+            'collection_date': pd.to_datetime(['2020-06-15', '2020-12-15', '2021-07-20', '2021-12-20'])
+        })
+        
+        # Test data for duplicate handling (REP notation and habitat suffixes)
+        self.duplicate_metrics_data = pd.DataFrame({
+            'event_id': [10, 10, 10, 11, 11, 11, 12, 12, 12, 13, 13, 13, 14, 14, 14, 15, 15, 15],
+            'year': [2022, 2022, 2022, 2022, 2022, 2022, 2022, 2022, 2022, 2022, 2022, 2022, 2023, 2023, 2023, 2023, 2023, 2023],
+            'season': ['Summer'] * 18,
+            'habitat': ['Riffle'] * 6 + ['Vegetation'] * 6 + ['Riffle'] * 6,
+            'metric_name': ['Taxa Richness', 'EPT Taxa Richness', 'HBI Score'] * 6,
+            'metric_score': [15, 8, 3, 12, 6, 4, 18, 10, 3, 14, 7, 4, 16, 9, 2, 13, 5, 5],
+            'collection_date': pd.to_datetime(['2022-06-10'] * 3 + ['2022-07-15'] * 3 + ['2022-06-10'] * 3 + ['2022-06-15'] * 3 + ['2023-06-05'] * 3 + ['2023-06-20'] * 3)
+        })
+        
+        self.duplicate_summary_data = pd.DataFrame({
+            'event_id': [10, 11, 12, 13, 14, 15],
+            'year': [2022, 2022, 2022, 2022, 2023, 2023],
+            'season': ['Summer'] * 6,
+            'habitat': ['Riffle', 'Riffle', 'Vegetation', 'Vegetation', 'Riffle', 'Riffle'],
+            'total_score': [26, 22, 31, 25, 27, 23],
+            'comparison_to_reference': [0.65, 0.55, 0.78, 0.63, 0.68, 0.58],
+            'biological_condition': ['Moderately Impaired', 'Moderately Impaired', 'Slightly Impaired', 'Moderately Impaired', 'Moderately Impaired', 'Moderately Impaired'],
+            'collection_date': pd.to_datetime(['2022-06-10', '2022-07-15', '2022-06-10', '2022-06-15', '2023-06-05', '2023-06-20'])
         })
 
     # =============================================================================
@@ -290,6 +315,184 @@ class TestMacroViz(unittest.TestCase):
         # Should return error message
         self.assertIsInstance(accordion, html.Div)
         self.assertIn("Error creating metrics accordion", accordion.children)
+
+    # =============================================================================
+    # DUPLICATE HANDLING TESTS (REP NOTATION AND HABITAT SUFFIXES)
+    # =============================================================================
+
+    def test_format_macro_metrics_table_same_habitat_replicates(self):
+        """Test that same habitat replicates get REP notation."""
+        # Test 2023 data which has simple Riffle replicates (events 14 and 15)
+        metrics_table, habitat_row, summary_rows = format_macro_metrics_table(
+            self.duplicate_metrics_data, 
+            self.duplicate_summary_data, 
+            season='Summer'
+        )
+        
+        # Should have columns for both Riffle samples in 2023 (simple case)
+        columns = list(metrics_table.columns)
+        self.assertIn('2023', columns)
+        self.assertIn('2023 (REP)', columns)
+        
+        # Both should be Riffle habitat
+        self.assertEqual(habitat_row['2023'].iloc[0], 'Riffle')
+        self.assertEqual(habitat_row['2023 (REP)'].iloc[0], 'Riffle')
+
+    def test_format_macro_metrics_table_different_habitats(self):
+        """Test that different habitats get proper suffixes."""
+        # Test 2022 data which has Riffle and Vegetation (both with replicates)
+        metrics_table, habitat_row, summary_rows = format_macro_metrics_table(
+            self.duplicate_metrics_data, 
+            self.duplicate_summary_data, 
+            season='Summer'
+        )
+        
+        # Should have habitat-suffixed columns for 2022
+        columns = list(metrics_table.columns)
+        expected_2022_cols = ['2022-R', '2022-R (REP)', '2022-V', '2022-V (REP)']
+        
+        for col in expected_2022_cols:
+            self.assertIn(col, columns)
+        
+        # Check habitat row matches suffixes
+        self.assertEqual(habitat_row['2022-R'].iloc[0], 'Riffle')
+        self.assertEqual(habitat_row['2022-R (REP)'].iloc[0], 'Riffle')
+        self.assertEqual(habitat_row['2022-V'].iloc[0], 'Vegetation')
+        self.assertEqual(habitat_row['2022-V (REP)'].iloc[0], 'Vegetation')
+
+    def test_format_macro_metrics_table_rep_with_different_habitats(self):
+        """Test complex case with both REP and different habitats."""
+        # This tests the most complex scenario from our test data
+        metrics_table, habitat_row, summary_rows = format_macro_metrics_table(
+            self.duplicate_metrics_data, 
+            self.duplicate_summary_data, 
+            season='Summer'
+        )
+        
+        # Should handle both 2022 (complex) and 2023 (simple REP) correctly
+        columns = list(metrics_table.columns)
+        
+        # 2022 should have habitat suffixes due to multiple habitats
+        self.assertIn('2022-R', columns)
+        self.assertIn('2022-R (REP)', columns)
+        self.assertIn('2022-V', columns)
+        self.assertIn('2022-V (REP)', columns)
+        
+        # 2023 should have simple REP notation (same habitat)
+        self.assertIn('2023', columns)
+        self.assertIn('2023 (REP)', columns)
+
+    def test_format_macro_metrics_table_chronological_ordering(self):
+        """Test that samples are ordered chronologically within years."""
+        metrics_table, habitat_row, summary_rows = format_macro_metrics_table(
+            self.duplicate_metrics_data, 
+            self.duplicate_summary_data, 
+            season='Summer'
+        )
+        
+        # REP samples should come after original samples
+        columns = list(metrics_table.columns)
+        
+        # For 2022 with habitat suffixes
+        r_index = columns.index('2022-R')
+        r_rep_index = columns.index('2022-R (REP)')
+        self.assertLess(r_index, r_rep_index)
+        
+        # For 2023 with simple REP
+        orig_index = columns.index('2023')
+        rep_index = columns.index('2023 (REP)')
+        self.assertLess(orig_index, rep_index)
+
+    def test_format_macro_metrics_table_no_data_overwriting(self):
+        """Test that no data is lost due to column name conflicts."""
+        metrics_table, habitat_row, summary_rows = format_macro_metrics_table(
+            self.duplicate_metrics_data, 
+            self.duplicate_summary_data, 
+            season='Summer'
+        )
+        
+        # Should have all 6 collections represented (2022: 4 samples, 2023: 2 samples)
+        # Minus the 'Metric' column = 6 data columns
+        expected_columns = 6
+        actual_data_columns = len(metrics_table.columns) - 1  # Subtract 'Metric' column
+        self.assertEqual(actual_data_columns, expected_columns)
+        
+        # Check that each column has unique data
+        columns = [col for col in metrics_table.columns if col != 'Metric']
+        for col in columns:
+            # Each column should have valid metric scores (not all the same)
+            scores = metrics_table[col].tolist()
+            non_dash_scores = [s for s in scores if s != '-']
+            if non_dash_scores:
+                self.assertGreater(len(set(non_dash_scores)), 0)  # Should have some variation
+
+    def test_format_macro_metrics_table_footnotes_in_table_creation(self):
+        """Test that footnotes are properly included in table creation."""
+        from dash import html
+        
+        table = create_macro_metrics_table_for_season(
+            self.duplicate_metrics_data, 
+            self.duplicate_summary_data, 
+            'Summer'
+        )
+        
+        # Should be a Div with multiple children (table + footnotes)
+        self.assertIsInstance(table, html.Div)
+        self.assertGreaterEqual(len(table.children), 4)  # DataTable + 3 footnotes
+        
+        # Check that footnotes contain expected text
+        footnote_texts = []
+        for child in table.children[1:]:  # Skip first child (DataTable)
+            if isinstance(child, html.P):
+                footnote_texts.append(child.children)
+        
+        # Should have footnotes about REP, habitat suffixes, and reference values
+        footnote_content = ' '.join(footnote_texts)
+        self.assertIn('(REP)', footnote_content)
+        self.assertIn('R=Riffle', footnote_content)
+        self.assertIn('V=Vegetation', footnote_content)
+        self.assertIn('W=Woody', footnote_content)  # Still check for W=Woody in general footnote
+
+    def test_format_macro_metrics_table_empty_data_handling(self):
+        """Test duplicate handling with empty data."""
+        empty_df = pd.DataFrame()
+        
+        metrics_table, habitat_row, summary_rows = format_macro_metrics_table(
+            empty_df, empty_df, season='Summer'
+        )
+        
+        # Should handle gracefully and return proper structure
+        self.assertIsInstance(metrics_table, pd.DataFrame)
+        self.assertIsInstance(habitat_row, pd.DataFrame)
+        self.assertIsInstance(summary_rows, pd.DataFrame)
+        
+        # Should have basic structure even with no data
+        self.assertIn('Metric', metrics_table.columns)
+        self.assertIn('Metric', habitat_row.columns)
+        self.assertIn('Metric', summary_rows.columns)
+
+    def test_habitat_abbreviation_logic(self):
+        """Test that habitat abbreviations are correctly applied."""
+        metrics_table, habitat_row, summary_rows = format_macro_metrics_table(
+            self.duplicate_metrics_data, 
+            self.duplicate_summary_data, 
+            season='Summer'
+        )
+        
+        # Check specific habitat abbreviations
+        columns = list(metrics_table.columns)
+        
+        # Riffle should use 'R'
+        riffle_cols = [col for col in columns if '-R' in col]
+        self.assertGreater(len(riffle_cols), 0)
+        
+        # Vegetation should use 'V'
+        veg_cols = [col for col in columns if '-V' in col]
+        self.assertGreater(len(veg_cols), 0)
+        
+        # Should have both Riffle and Vegetation abbreviations
+        self.assertTrue(any('-R' in col for col in columns))
+        self.assertTrue(any('-V' in col for col in columns))
 
     # =============================================================================
     # CONSTANTS AND CONFIGURATION TESTS

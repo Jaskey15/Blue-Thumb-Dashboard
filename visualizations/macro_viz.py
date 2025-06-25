@@ -180,13 +180,21 @@ def create_macro_metrics_table_for_season(metrics_df, summary_df, season):
             styles
         )
         
-        # Add footnote for comparison to reference values
-        footnote = html.P(
+        # Add footnotes for REP notation and habitat suffixes
+        footnote1 = html.P(
+            "*(REP) indicates a replicate sample collected in the same year/season/habitat",
+            style={'font-style': 'italic', 'margin-top': '8px', 'margin-bottom': '2px', 'font-size': '12px'}
+        )
+        footnote2 = html.P(
+            "*Year-R/V/W suffixes indicate different habitat types: R=Riffle, V=Vegetation, W=Woody",
+            style={'font-style': 'italic', 'margin-top': '2px', 'margin-bottom': '2px', 'font-size': '12px'}
+        )
+        footnote3 = html.P(
             "*Comparison to Reference values are capped at 1.0 even when calculated values exceed 1.0",
-            style={'font-style': 'italic', 'margin-top': '10px', 'font-size': '12px'}
+            style={'font-style': 'italic', 'margin-top': '2px', 'margin-bottom': '5px', 'font-size': '12px'}
         )
         
-        return html.Div([table, footnote])
+        return html.Div([table, footnote1, footnote2, footnote3])
     
     except Exception as e:
         logger.error(f"Error creating {season} metrics table: {e}")
@@ -259,21 +267,54 @@ def format_macro_metrics_table(metrics_df, summary_df, season=None):
         collections = []
         # Get unique collections from metrics data with all necessary info
         unique_collections = metrics_df.drop_duplicates(subset=['event_id']).copy()
+        unique_collections['collection_date'] = pd.to_datetime(unique_collections['collection_date'])
         
-        for _, row in unique_collections.iterrows():
-            year = row.get('year', 'Unknown')
-            habitat = row.get('habitat', 'Unknown')
-            event_id = row.get('event_id', None)
+        # Group by year to handle replicates and different habitats
+        for year, year_group in unique_collections.groupby('year'):
+            # Sort within each year by collection date
+            year_group = year_group.sort_values('collection_date')
             
-            collections.append({
-                'event_id': event_id,
-                'year': year,
-                'habitat': habitat,
-                'column_name': str(year)  # Just use year as column name
-            })
+            # Group by habitat within the year to identify replicates
+            habitat_counts = {}
+            
+            for _, row in year_group.iterrows():
+                habitat = row.get('habitat', 'Unknown')
+                event_id = row.get('event_id', None)
+                
+                # Track how many samples we've seen for this habitat in this year
+                if habitat not in habitat_counts:
+                    habitat_counts[habitat] = 0
+                habitat_counts[habitat] += 1
+                
+                # Create column name based on habitat and whether it's a replicate
+                if habitat_counts[habitat] == 1:
+                    # First sample for this habitat in this year
+                    column_name = str(year)
+                else:
+                    # Replicate sample - add REP notation
+                    column_name = f"{year} (REP)"
+                
+                # Check if there are different habitats in this year
+                unique_habitats_this_year = year_group['habitat'].nunique()
+                
+                if unique_habitats_this_year > 1:
+                    # Multiple habitats in same year - add habitat suffix
+                    habitat_abbrev = habitat[0] if habitat else 'U'  # R for Riffle, V for Vegetation, W for Woody
+                    if habitat_counts[habitat] == 1:
+                        column_name = f"{year}-{habitat_abbrev}"
+                    else:
+                        column_name = f"{year}-{habitat_abbrev} (REP)"
+                
+                collections.append({
+                    'event_id': event_id,
+                    'year': year,
+                    'habitat': habitat,
+                    'column_name': column_name,
+                    'collection_date': row['collection_date']
+                })
         
-        # Sort collections by year and habitat for consistent ordering
-        collections = sorted(collections, key=lambda x: (x['year'], x['habitat']))
+        # Sort collections by year, then by whether it's REP (original first, then REP)
+        collections.sort(key=lambda x: (x['year'], '(REP)' in x['column_name']))
         
         if not collections:
             return (pd.DataFrame({'Metric': MACRO_METRIC_ORDER}), 
