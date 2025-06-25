@@ -16,20 +16,20 @@ Usage:
 
 import os
 import pandas as pd
+import plotly.graph_objects as go
 
 from dash import html, dash_table
 from data_processing.data_queries import get_habitat_dataframe, get_habitat_metrics_data_for_table
 from utils import create_metrics_accordion, setup_logging
 from .visualization_utils import (
-    create_line_plot,
-    update_figure_layout,
-    add_reference_lines,
+    DEFAULT_COLORS,
     format_metrics_table,
     create_table_styles,
     create_data_table,
-    update_hover_data,
     create_empty_figure,
     create_error_figure,
+    calculate_dynamic_y_range,
+    FONT_SIZES
 )
 
 logger = setup_logging("habitat_viz", category="visualization")
@@ -69,13 +69,13 @@ HABITAT_SUMMARY_LABELS = ['Total Points', 'Habitat Grade']
 
 def create_habitat_viz(site_name=None):
     """
-    Create habitat assessment visualization for the app.
+    Create habitat assessment visualization with date-based plotting and year labels.
     
     Args:
         site_name: Optional site name to filter data for
     
     Returns:
-        Plotly figure: Line plot showing habitat scores over time with grade threshold lines.
+        Plotly figure: Line plot showing habitat scores over time with actual assessment dates.
     """
     try:
         # Get habitat data from the database
@@ -84,41 +84,100 @@ def create_habitat_viz(site_name=None):
         if habitat_df.empty:
             return create_empty_figure(site_name, "habitat")
 
-        # Create the line plot using shared utilities
-        title = f'Habitat Grades Over Time for {site_name}' if site_name else 'Habitat Assessment Scores Over Time'
-        fig = create_line_plot(
-            habitat_df, 
-            title, 
-            y_column='total_score',
-            has_seasons=False
-        )
-
-        # Update layout using shared utilities
-        fig = update_figure_layout(
-            fig, 
-            habitat_df, 
-            title,
-            y_label='Habitat Grade',
-            y_column='total_score',
-            tick_format='d'  
-        )
-
-        # Add habitat grade reference lines using shared utilities
-        fig = add_reference_lines(fig, habitat_df, HABITAT_GRADE_THRESHOLDS, HABITAT_GRADE_COLORS)
-
-        # Create custom hover text for habitat data
+        # Parse assessment dates
+        habitat_df['assessment_date'] = pd.to_datetime(habitat_df['assessment_date'])
+        habitat_df = habitat_df.sort_values('assessment_date')
+        
+        # Create figure
+        fig = go.Figure()
+        
+        # Create hover text
         hover_text = []
         for _, row in habitat_df.iterrows():
-            grade = row.get('habitat_grade', 'Unknown')
-            hover_text.append(f"<b>Year</b>: {row['year']}<br><b>Score</b>: {int(row['total_score'])}<br><b>Grade</b>: {grade}")
+            text = (f"<b>Assessment Date</b>: {row['assessment_date'].strftime('%Y-%m-%d')}<br>"
+                   f"<b>Habitat Score</b>: {int(row['total_score'])}<br>"
+                   f"<b>Grade</b>: {row['habitat_grade']}")
+            hover_text.append(text)
         
-        # Update hover data using shared utilities
-        fig = update_hover_data(fig, hover_text)
+        # Add trace
+        fig.add_trace(go.Scatter(
+            x=habitat_df['assessment_date'],
+            y=habitat_df['total_score'],
+            mode='lines+markers',
+            name='Habitat Score',
+            line=dict(color=DEFAULT_COLORS['default']),
+            marker=dict(
+                color=DEFAULT_COLORS['default'],
+                symbol='circle',
+                size=8
+            ),
+            text=hover_text,
+            hovertemplate='%{text}<extra></extra>',
+            hoverinfo='text'
+        ))
+        
+        # Set up title
+        title = f"Habitat Scores Over Time for {site_name}" if site_name else "Habitat Scores Over Time"
+        
+        # Calculate y-range using shared utility
+        y_min, y_max = calculate_dynamic_y_range(habitat_df, column='total_score')
+        
+        # Get year range for x-axis ticks
+        years = sorted(habitat_df['year'].unique()) if 'year' in habitat_df.columns else []
+        
+        # Update layout using shared styling constants
+        fig.update_layout(
+            title=title,
+            title_x=0.5,
+            title_font=dict(size=FONT_SIZES['title']),
+            xaxis=dict(
+                title='Year',
+                title_font=dict(size=FONT_SIZES['axis_title']),
+                tickmode='array',
+                tickvals=[pd.Timestamp(f'{year}-01-01') for year in years],
+                ticktext=[str(year) for year in years]
+            ),
+            yaxis=dict(
+                title='Habitat Score',
+                title_font=dict(size=FONT_SIZES['axis_title']),
+                range=[y_min, y_max],
+                tickformat='d'
+            ),
+            hovermode='closest'
+        )
+        
+        # Add habitat grade reference lines (date-aware version)
+        if years:
+            x_min = pd.Timestamp(f'{min(years)}-01-01')
+            x_max = pd.Timestamp(f'{max(years)}-12-31')
+            
+            for label, threshold in HABITAT_GRADE_THRESHOLDS.items():
+                color = HABITAT_GRADE_COLORS.get(label, 'gray')
+                
+                # Add line
+                fig.add_shape(
+                    type="line",
+                    x0=x_min,
+                    y0=threshold,
+                    x1=x_max,
+                    y1=threshold,
+                    line=dict(color=color, width=1, dash="dash"),
+                )
+                
+                # Add annotation
+                fig.add_annotation(
+                    x=x_min,
+                    y=threshold,
+                    text=label,
+                    showarrow=False,
+                    yshift=10,
+                    xshift=-20
+                )
 
         return fig
         
     except Exception as e:
-        logger.error(f"Error creating habitat visualization: {e}")
+        logger.error(f"Error creating habitat visualization for {site_name}: {e}")
         return create_error_figure(str(e))
 
 def create_habitat_metrics_table(metrics_df, summary_df):
