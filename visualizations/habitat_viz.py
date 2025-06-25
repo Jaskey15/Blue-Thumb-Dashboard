@@ -28,7 +28,9 @@ from .visualization_utils import (
     create_data_table,
     create_empty_figure,
     create_error_figure,
-    calculate_dynamic_y_range,
+    add_date_aware_reference_lines,
+    update_date_aware_layout,
+    create_date_based_trace,
     FONT_SIZES
 )
 
@@ -44,11 +46,11 @@ HABITAT_GRADE_THRESHOLDS = {
 }
 
 HABITAT_GRADE_COLORS = {
-    'A': '#1e8449',    # Green (A grade)
-    'B': '#7cb342',    # Light green (B grade)
-    'C': '#ff9800',    # Orange (C grade)
-    'D': '#e53e3e',    # Red-orange (D grade)
-    'F': '#e74c3c'     # Red (F grade)
+    'A': '#1e8449',    # Green 
+    'B': '#7cb342',    # Light green 
+    'C': '#ff9800',    # Orange 
+    'D': '#e53e3e',    # Red-orange 
+    'F': '#e74c3c'     # Red 
 }
 
 HABITAT_METRIC_ORDER = [
@@ -84,95 +86,45 @@ def create_habitat_viz(site_name=None):
         if habitat_df.empty:
             return create_empty_figure(site_name, "habitat")
 
-        # Parse assessment dates
-        habitat_df['assessment_date'] = pd.to_datetime(habitat_df['assessment_date'])
-        habitat_df = habitat_df.sort_values('assessment_date')
-        
         # Create figure
         fig = go.Figure()
         
-        # Create hover text
-        hover_text = []
-        for _, row in habitat_df.iterrows():
-            text = (f"<b>Assessment Date</b>: {row['assessment_date'].strftime('%Y-%m-%d')}<br>"
-                   f"<b>Habitat Score</b>: {int(row['total_score'])}<br>"
-                   f"<b>Grade</b>: {row['habitat_grade']}")
-            hover_text.append(text)
+        # Define hover fields for habitat data
+        hover_fields = {
+            'Assessment Date': 'assessment_date',
+            'Habitat Score': 'total_score',
+            'Grade': 'habitat_grade'
+        }
         
-        # Add trace
-        fig.add_trace(go.Scatter(
-            x=habitat_df['assessment_date'],
-            y=habitat_df['total_score'],
-            mode='lines+markers',
+        # Create date-based trace using shared utility
+        trace = create_date_based_trace(
+            habitat_df,
+            date_column='assessment_date',
+            y_column='total_score',
             name='Habitat Score',
-            line=dict(color=DEFAULT_COLORS['default']),
-            marker=dict(
-                color=DEFAULT_COLORS['default'],
-                symbol='circle',
-                size=8
-            ),
-            text=hover_text,
-            hovertemplate='%{text}<extra></extra>',
-            hoverinfo='text'
-        ))
+            color=DEFAULT_COLORS['default'],
+            hover_fields=hover_fields
+        )
+        
+        # Add trace to figure
+        fig.add_trace(trace)
         
         # Set up title
         title = f"Habitat Scores Over Time for {site_name}" if site_name else "Habitat Scores Over Time"
         
-        # Calculate y-range using shared utility
-        y_min, y_max = calculate_dynamic_y_range(habitat_df, column='total_score')
-        
-        # Get year range for x-axis ticks
-        years = sorted(habitat_df['year'].unique()) if 'year' in habitat_df.columns else []
-        
-        # Update layout using shared styling constants
-        fig.update_layout(
-            title=title,
-            title_x=0.5,
-            title_font=dict(size=FONT_SIZES['title']),
-            xaxis=dict(
-                title='Year',
-                title_font=dict(size=FONT_SIZES['axis_title']),
-                tickmode='array',
-                tickvals=[pd.Timestamp(f'{year}-01-01') for year in years],
-                ticktext=[str(year) for year in years]
-            ),
-            yaxis=dict(
-                title='Habitat Score',
-                title_font=dict(size=FONT_SIZES['axis_title']),
-                range=[y_min, y_max],
-                tickformat='d'
-            ),
-            hovermode='closest'
+        # Update layout using shared utility
+        fig = update_date_aware_layout(
+            fig,
+            habitat_df,
+            title,
+            y_label='Habitat Score',
+            y_column='total_score',
+            tick_format='d',
+            has_legend=False
         )
         
-        # Add habitat grade reference lines (date-aware version)
-        if years:
-            x_min = pd.Timestamp(f'{min(years)}-01-01')
-            x_max = pd.Timestamp(f'{max(years)}-12-31')
-            
-            for label, threshold in HABITAT_GRADE_THRESHOLDS.items():
-                color = HABITAT_GRADE_COLORS.get(label, 'gray')
-                
-                # Add line
-                fig.add_shape(
-                    type="line",
-                    x0=x_min,
-                    y0=threshold,
-                    x1=x_max,
-                    y1=threshold,
-                    line=dict(color=color, width=1, dash="dash"),
-                )
-                
-                # Add annotation
-                fig.add_annotation(
-                    x=x_min,
-                    y=threshold,
-                    text=label,
-                    showarrow=False,
-                    yshift=10,
-                    xshift=-20
-                )
+        # Add habitat grade reference lines using shared utility
+        fig = add_date_aware_reference_lines(fig, habitat_df, HABITAT_GRADE_THRESHOLDS, HABITAT_GRADE_COLORS)
 
         return fig
         

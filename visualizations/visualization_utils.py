@@ -8,6 +8,9 @@ styling and reduce code duplication.
 Key Functions:
 - create_line_plot(): Generic line plot creation
 - add_reference_lines(): Add threshold reference lines to plots
+- add_date_aware_reference_lines(): Date-aware reference lines (NEW)
+- update_date_aware_layout(): Date-aware layout configuration (NEW)
+- create_date_based_trace(): Date-based trace creation (NEW)
 - format_metrics_table(): Format metrics data into table structure
 - create_table_styles(): Consistent table styling
 - Helper functions for error handling and data processing
@@ -38,6 +41,209 @@ FONT_SIZES = {
     'header': 12,
     'cell': 11
 }
+
+# =============================================================================
+# NEW: Date-Aware Visualization Functions (Phase 1 Extractions)
+# =============================================================================
+
+def add_date_aware_reference_lines(fig, df, thresholds, colors=None):
+    """
+    Add date-aware reference lines for threshold values to biological visualizations.
+    This replaces the old add_reference_lines function with improved date-based positioning.
+    
+    Args:
+        fig: Plotly figure to add reference lines to
+        df: DataFrame containing the data with year values
+        thresholds: Dictionary of {label: threshold_value}
+        colors: Dictionary of {label: color} for line colors
+    
+    Returns:
+        Updated figure with date-aware reference lines
+    """
+    try:
+        if df.empty or not thresholds:
+            return fig
+        
+        # Get min and max year for date-aware reference lines
+        years = sorted(df['year'].unique()) if 'year' in df.columns else []
+        
+        if not years:
+            logger.warning("No year data found for reference lines")
+            return fig
+        
+        # Create date-aware bounds
+        x_min = pd.Timestamp(f'{min(years)}-01-01')
+        x_max = pd.Timestamp(f'{max(years)}-12-31')
+        
+        # Add reference lines for each threshold
+        for label, threshold in thresholds.items():
+            color = 'gray'
+            if colors and label in colors:
+                color = colors[label]
+            elif label.lower() in DEFAULT_COLORS:
+                color = DEFAULT_COLORS[label.lower()]
+            
+            # Add line
+            fig.add_shape(
+                type="line",
+                x0=x_min,
+                y0=threshold,
+                x1=x_max,
+                y1=threshold,
+                line=dict(color=color, width=1, dash="dash"),
+            )
+            
+            # Add annotation
+            fig.add_annotation(
+                x=x_min,
+                y=threshold,
+                text=label,
+                showarrow=False,
+                yshift=10,
+                xshift=-20
+            )
+        
+        return fig
+    
+    except Exception as e:
+        logger.error(f"Error adding date-aware reference lines: {e}")
+        return fig
+
+def update_date_aware_layout(fig, df, title, y_label, y_column='comparison_to_reference', tick_format='.2f', has_legend=False):
+    """
+    Apply date-aware layout settings to biological visualization figures.
+    
+    Args:
+        fig: Plotly figure to update
+        df: DataFrame containing the data
+        title: Plot title
+        y_label: Y-axis label
+        y_column: Column name to use for y-range calculation
+        tick_format: Format string for y-axis ticks (default: '.2f')
+        has_legend: Whether to add legend title (for multi-trace plots like macro viz)
+    
+    Returns:
+        Updated figure with consistent layout
+    """
+    try:
+        if df.empty:
+            return fig
+        
+        # Calculate y-range using the specified column
+        y_min, y_max = calculate_dynamic_y_range(df, column=y_column)
+        
+        # Get unique years for x-axis
+        years = sorted(df['year'].unique()) if 'year' in df.columns else []
+        
+        # Update layout with date-aware x-axis
+        layout_updates = {
+            'title': title,
+            'title_x': 0.5,
+            'title_font': dict(size=FONT_SIZES['title']),
+            'xaxis': dict(
+                title='Year',
+                title_font=dict(size=FONT_SIZES['axis_title']),
+                tickmode='array',
+                tickvals=[pd.Timestamp(f'{year}-01-01') for year in years],
+                ticktext=[str(year) for year in years]
+            ),
+            'yaxis': dict(
+                title=y_label,
+                title_font=dict(size=FONT_SIZES['axis_title']),
+                range=[y_min, y_max],
+                tickformat=tick_format
+            ),
+            'hovermode': 'closest'
+        }
+        
+        # Add legend title if needed (for macro viz with seasons)
+        if has_legend:
+            layout_updates['legend_title_text'] = 'Season'
+        
+        fig.update_layout(**layout_updates)
+        
+        return fig
+    
+    except Exception as e:
+        logger.error(f"Error updating date-aware layout: {e}")
+        return fig
+
+def create_date_based_trace(df, date_column, y_column, name, color=None, hover_fields=None):
+    """
+    Create a date-based scatter trace for biological visualizations.
+    
+    Args:
+        df: DataFrame containing the data
+        date_column: Name of the date column (e.g., 'collection_date', 'assessment_date')
+        y_column: Name of the y-axis data column
+        name: Name for the trace
+        color: Color for the trace (uses default if None)
+        hover_fields: Dictionary mapping display names to column names for hover text
+                     e.g., {'Collection Date': 'collection_date', 'Score': 'comparison_to_reference'}
+    
+    Returns:
+        Plotly Scatter trace object
+    """
+    try:
+        if df.empty:
+            return go.Scatter()
+        
+        # Parse and sort by date
+        df_copy = df.copy()
+        df_copy[date_column] = pd.to_datetime(df_copy[date_column])
+        df_copy = df_copy.sort_values(date_column)
+        
+        # Set color
+        trace_color = color if color else DEFAULT_COLORS['default']
+        
+        # Create hover text if fields provided
+        hover_text = []
+        if hover_fields:
+            for _, row in df_copy.iterrows():
+                text_parts = []
+                for display_name, column_name in hover_fields.items():
+                    if column_name in row:
+                        value = row[column_name]
+                        # Format dates
+                        if 'date' in column_name.lower() and hasattr(value, 'strftime'):
+                            value = value.strftime('%Y-%m-%d')
+                        # Format numeric scores
+                        elif display_name.lower().endswith('score') and isinstance(value, (int, float)):
+                            if column_name == 'total_score':  # Habitat scores are integers
+                                value = int(value)
+                            else:  # Biological scores are decimals
+                                value = f"{value:.2f}"
+                        text_parts.append(f"<b>{display_name}</b>: {value}")
+                hover_text.append("<br>".join(text_parts))
+        else:
+            hover_text = None
+        
+        # Create trace
+        trace = go.Scatter(
+            x=df_copy[date_column],
+            y=df_copy[y_column],
+            mode='lines+markers',
+            name=name,
+            line=dict(color=trace_color),
+            marker=dict(
+                color=trace_color,
+                symbol='circle',
+                size=8
+            ),
+            text=hover_text,
+            hovertemplate='%{text}<extra></extra>' if hover_text else None,
+            hoverinfo='text' if hover_text else 'y'
+        )
+        
+        return trace
+    
+    except Exception as e:
+        logger.error(f"Error creating date-based trace: {e}")
+        return go.Scatter()
+
+# =============================================================================
+# Existing Functions (Preserved)
+# =============================================================================
 
 def create_line_plot(df, title, y_column='comparison_to_reference', 
                     has_seasons=False, color_map=None):
@@ -115,7 +321,7 @@ def calculate_dynamic_y_range(df, column='comparison_to_reference'):
         
         # Use different minimum ranges based on data type
         if column == 'total_score':
-            # Habitat data: minimum range 0-100, expand if data exceeds ~90
+            # Habitat data: minimum range 0-110, expand if data exceeds ~90
             y_upper_limit = max(110, max_value * 1.1)
         else:
             # Biological data: minimum range 0-1.1, expand if data exceeds ~1.0

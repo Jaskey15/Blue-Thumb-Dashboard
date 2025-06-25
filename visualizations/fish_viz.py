@@ -26,7 +26,9 @@ from .visualization_utils import (
     create_data_table,
     create_empty_figure,
     create_error_figure,
-    calculate_dynamic_y_range,
+    add_date_aware_reference_lines,
+    update_date_aware_layout,
+    create_date_based_trace,
     FONT_SIZES
 )
 
@@ -189,95 +191,45 @@ def create_fish_viz(site_name=None):
         if fish_df.empty:
             return create_empty_figure(site_name, "fish")
 
-        # Parse collection dates
-        fish_df['collection_date'] = pd.to_datetime(fish_df['collection_date'])
-        fish_df = fish_df.sort_values('collection_date')
-        
         # Create figure
         fig = go.Figure()
         
-        # Create hover text
-        hover_text = []
-        for _, row in fish_df.iterrows():
-            text = (f"<b>Collection Date</b>: {row['collection_date'].strftime('%Y-%m-%d')}<br>"
-                   f"<b>IBI Score</b>: {row['comparison_to_reference']:.2f}<br>"
-                   f"<b>Integrity Class</b>: {row['integrity_class']}")
-            hover_text.append(text)
+        # Define hover fields for fish data
+        hover_fields = {
+            'Collection Date': 'collection_date',
+            'IBI Score': 'comparison_to_reference',
+            'Integrity Class': 'integrity_class'
+        }
         
-        # Add trace
-        fig.add_trace(go.Scatter(
-            x=fish_df['collection_date'],
-            y=fish_df['comparison_to_reference'],
-            mode='lines+markers',
+        # Create date-based trace using shared utility
+        trace = create_date_based_trace(
+            fish_df,
+            date_column='collection_date',
+            y_column='comparison_to_reference',
             name='IBI Score',
-            line=dict(color=DEFAULT_COLORS['default']),
-            marker=dict(
-                color=DEFAULT_COLORS['default'],
-                symbol='circle',
-                size=8
-            ),
-            text=hover_text,
-            hovertemplate='%{text}<extra></extra>',
-            hoverinfo='text'
-        ))
+            color=DEFAULT_COLORS['default'],
+            hover_fields=hover_fields
+        )
+        
+        # Add trace to figure
+        fig.add_trace(trace)
         
         # Set up title
         title = f"IBI Scores Over Time for {site_name}" if site_name else "IBI Scores Over Time"
         
-        # Calculate y-range using shared utility
-        y_min, y_max = calculate_dynamic_y_range(fish_df, column='comparison_to_reference')
-        
-        # Get year range for x-axis ticks
-        years = sorted(fish_df['year'].unique()) if 'year' in fish_df.columns else []
-        
-        # Update layout using shared styling constants
-        fig.update_layout(
-            title=title,
-            title_x=0.5,
-            title_font=dict(size=FONT_SIZES['title']),
-            xaxis=dict(
-                title='Year',
-                title_font=dict(size=FONT_SIZES['axis_title']),
-                tickmode='array',
-                tickvals=[pd.Timestamp(f'{year}-01-01') for year in years],
-                ticktext=[str(year) for year in years]
-            ),
-            yaxis=dict(
-                title='IBI Score (Compared to Reference)',
-                title_font=dict(size=FONT_SIZES['axis_title']),
-                range=[y_min, y_max],
-                tickformat='.2f'
-            ),
-            hovermode='closest'
+        # Update layout using shared utility
+        fig = update_date_aware_layout(
+            fig,
+            fish_df,
+            title,
+            y_label='IBI Score (Compared to Reference)',
+            y_column='comparison_to_reference',
+            tick_format='.2f',
+            has_legend=False
         )
         
-        # Add integrity reference lines (date-aware version)
-        if years:
-            x_min = pd.Timestamp(f'{min(years)}-01-01')
-            x_max = pd.Timestamp(f'{max(years)}-12-31')
-            
-            for label, threshold in INTEGRITY_THRESHOLDS.items():
-                color = INTEGRITY_COLORS.get(label, 'gray')
-                
-                # Add line
-                fig.add_shape(
-                    type="line",
-                    x0=x_min,
-                    y0=threshold,
-                    x1=x_max,
-                    y1=threshold,
-                    line=dict(color=color, width=1, dash="dash"),
-                )
-                
-                # Add annotation
-                fig.add_annotation(
-                    x=x_min,
-                    y=threshold,
-                    text=label,
-                    showarrow=False,
-                    yshift=10,
-                    xshift=-20
-                )
+        # Add integrity reference lines using shared utility
+        fig = add_date_aware_reference_lines(fig, fish_df, INTEGRITY_THRESHOLDS, INTEGRITY_COLORS)
 
         return fig
     
