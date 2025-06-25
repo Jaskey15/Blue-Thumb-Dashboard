@@ -121,54 +121,6 @@ def create_dropdown_row(id_value, label_text, options, default_value=None, clear
         ], width=12)
     ], className="mb-2")
 
-def create_overview_image_section():
-    """
-    Create the overview image section with caption.
-    
-    Returns:
-        A Column component with the overview image
-    """
-    return dbc.Col([
-        html.Div([
-            create_image_with_caption(
-                src='/assets/images/healthy_stream_diagram.png',
-                caption="The key elements of a healthy stream ecosystem include riparian vegetation, diverse aquatic life, and clean water flow."
-            )
-        ], className="d-flex align-items-center justify-content-center h-100 flex-column")
-    ], width=6, style={"display": "flex", "align-items": "center"}) 
-
-def create_habitat_image_section():
-    """
-    Create the habitat image section with caption.
-    
-    Returns:
-        A Column component with the habitat image
-    """
-    return dbc.Col([
-        html.Div([
-            create_image_with_caption(
-                src='/assets/images/stream_habitat_diagram.jpg',
-                caption="The physical features evaluated during habitat assessment include stream structure, bank stability, and riparian zone components."
-            )
-        ], className="d-flex h-100 align-items-center justify-content-center")
-    ], width=6, className="d-flex align-items-center")
-
-def create_watershed_image_section():
-    """
-    Create the watershed image section with caption.
-    
-    Returns:
-        A Column component with the watershed image
-    """
-    return dbc.Col([
-        html.Div([
-            create_image_with_caption(
-                src='/assets/images/watershed_diagram.jpg',
-                caption="In a watershed, water flows from higher elevations through various landscapes and eventually to streams, rivers, and lakes."
-            )
-        ], className="d-flex h-100 align-items-center justify-content-center flex-column")
-    ], width=6, className="d-flex align-items-center")
-
 def create_season_month_selectors():
     """
     Create the season and month selection controls for chemical data filtering.

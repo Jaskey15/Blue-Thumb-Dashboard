@@ -4,9 +4,9 @@ Protect Our Streams tab layout for the Tenmile Creek Water Quality Dashboard.
 
 import dash_bootstrap_components as dbc
 from dash import html
-from utils import load_markdown_content
+from utils import load_markdown_content, create_image_with_caption
 from ..constants import TAB_STYLES
-from ..helpers import create_action_card, create_watershed_image_section
+from ..helpers import create_action_card
 
 def create_protect_our_streams_tab():
     """
@@ -63,7 +63,14 @@ def create_protect_our_streams_tab():
                 ], width=6),
                 
                 # Right column for image 
-                create_watershed_image_section()
+                dbc.Col([
+                    html.Div([
+                        create_image_with_caption(
+                            src='/assets/images/watershed_diagram.jpg',
+                            caption="In a watershed, water flows from higher elevations through various landscapes and eventually to streams, rivers, and lakes."
+                        )
+                    ], className="d-flex h-100 align-items-center justify-content-center flex-column")
+                ], width=6, className="d-flex align-items-center")
             ]),
             
             # Second row for "Actions You Can Take" section

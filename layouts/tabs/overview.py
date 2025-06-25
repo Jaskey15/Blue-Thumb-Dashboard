@@ -4,10 +4,8 @@ Overview tab layout for the Tenmile Creek Water Quality Dashboard.
 
 import dash_bootstrap_components as dbc
 from dash import dcc, html
-from utils import load_markdown_content
+from utils import load_markdown_content, create_image_with_caption
 from ..constants import PARAMETER_OPTIONS, TAB_STYLES
-from ..helpers import create_overview_image_section
-
 
 def create_overview_tab():
     """
@@ -27,7 +25,14 @@ def create_overview_tab():
                 ], width=6),
                 
                 # Right column for image 
-                create_overview_image_section()
+                dbc.Col([
+                    html.Div([
+                        create_image_with_caption(
+                            src='/assets/images/healthy_stream_diagram.png',
+                            caption="The key elements of a healthy stream ecosystem include riparian vegetation, diverse aquatic life, and clean water flow."
+                        )
+                    ], className="d-flex align-items-center justify-content-center h-100 flex-column")
+                ], width=6, style={"display": "flex", "align-items": "center"})
             ]),
             
             # Second row: Monitoring Site Locations section
