@@ -17,7 +17,7 @@ def create_habitat_tab():
                 html.P([
                     "Select a site below to begin analysis. "
                     "You can find site names and locations on the ",
-                    html.A("Overview tab.", id="habitat-overview-link", href="#", style={"text-decoration": "underline"}),
+                    html.A("Overview tab", id="habitat-overview-link", href="#", style={"text-decoration": "underline"}),
                 ], className="mt-3")  # Add some top margin to separate from markdown content
             ], width=6),
             
@@ -25,7 +25,7 @@ def create_habitat_tab():
             dbc.Col([
                 html.Img(
                     src="/assets/images/stream_habitat_diagram.jpg",
-                    className="img-fluid",
+                    className="img-fluid tab-image-container",
                     style={'width': '100%', 'height': 'auto'},
                     alt="Stream habitat diagram showing riffle, run, and pool features"
                 )

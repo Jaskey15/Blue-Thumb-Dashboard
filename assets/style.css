@@ -173,6 +173,8 @@ li {
   border-color: var(--color-primary-dark);
 }
 
+
+
 /* CARDS - Protect Our Streams tab styling */
 .action-card .card-header {
   background-color: rgba(46, 139, 87, 0.1);
@@ -265,6 +267,12 @@ li {
 /* =================================
    UTILITIES
    ================================= */
+
+/* Spacing for image containers in tabs */
+.tab-image-container {
+  margin-top: 50px;
+}
+
 figcaption {
   font-style: italic;
   color: var(--color-muted);

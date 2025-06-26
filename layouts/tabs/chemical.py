@@ -21,9 +21,9 @@ def create_chemical_tab():
                 load_markdown_content('chemical/chemical_intro.md')
             ]),
             html.P([
-                "Search for a site below to begin analysis. "
+                "Select a site and parameter below to begin analysis. "
                 "You can find site names and locations on the ",
-                html.A("Overview tab.", id="chemical-overview-link", href="#", style={"text-decoration": "underline"}),
+                html.A("Overview tab", id="chemical-overview-link", href="#", style={"text-decoration": "underline"}),
                 
             ])
         ], className="mb-4"),

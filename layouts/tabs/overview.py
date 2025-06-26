@@ -31,14 +31,13 @@ def create_overview_tab():
                             src='/assets/images/healthy_stream_diagram.png',
                             caption="The key elements of a healthy stream ecosystem include riparian vegetation, diverse aquatic life, and clean water flow."
                         )
-                    ], className="d-flex align-items-center justify-content-center h-100 flex-column")
+                    ], className="d-flex align-items-center justify-content-center h-100 flex-column tab-image-container")
                 ], width=6, style={"display": "flex", "align-items": "center"})
             ]),
             
             # Second row: Monitoring Site Locations section
             dbc.Row([
                 dbc.Col([
-                    html.H3("Monitoring Site Locations", className="mt-4 mb-3"),
                     load_markdown_content('overview/monitoring_sites.md')
                 ], width=12)
             ]),

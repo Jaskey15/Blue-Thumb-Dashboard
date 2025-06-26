@@ -69,7 +69,7 @@ def create_protect_our_streams_tab():
                             src='/assets/images/watershed_diagram.jpg',
                             caption="In a watershed, water flows from higher elevations through various landscapes and eventually to streams, rivers, and lakes."
                         )
-                    ], className="d-flex h-100 align-items-center justify-content-center flex-column")
+                    ], className="d-flex h-100 align-items-center justify-content-center flex-column tab-image-container")
                 ], width=6, className="d-flex align-items-center")
             ]),
             

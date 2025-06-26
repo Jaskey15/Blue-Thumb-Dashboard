@@ -17,7 +17,7 @@ def create_biological_tab():
             html.P([
                 "Select a community type and search for a site below to begin analysis. "
                 "You can find site names and locations on the ",
-                html.A("Overview tab.", id="biological-overview-link", href="#", style={"text-decoration": "underline"}),
+                html.A("Overview tab", id="biological-overview-link", href="#", style={"text-decoration": "underline"}),
                 
             ])
         ], className="mb-4"),
