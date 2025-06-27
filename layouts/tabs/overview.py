@@ -17,32 +17,14 @@ def create_overview_tab():
     try:
         # Create the layout WITHOUT creating the map
         tab_content = html.Div([
-            # First row: Overview text and image
-            dbc.Row([
-                # Left column for text 
-                dbc.Col([
-                    load_markdown_content('overview/overview.md')
-                ], width=6),
-                
-                # Right column for image 
-                dbc.Col([
-                    html.Div([
-                        create_image_with_caption(
-                            src='/assets/images/healthy_stream_diagram.png',
-                            caption="The key elements of a healthy stream ecosystem include riparian vegetation, diverse aquatic life, and clean water flow."
-                        )
-                    ], className="d-flex align-items-center justify-content-center h-100 flex-column tab-image-container")
-                ], width=6, style={"display": "flex", "align-items": "center"})
-            ]),
-            
-            # Second row: Monitoring Site Locations section
+            # First row: Monitoring Site Locations section
             dbc.Row([
                 dbc.Col([
                     load_markdown_content('overview/monitoring_sites.md')
                 ], width=12)
             ]),
             
-            # Third row: Parameter selection dropdown
+            # Second row: Parameter selection dropdown
             dbc.Row([
                 dbc.Col([
                     html.Label(
@@ -65,7 +47,7 @@ def create_overview_tab():
                 ], width=12)
             ], className="mt-3 mb-3"),
 
-            # Fourth row: Active sites toggle - UPDATED TO MATCH CHEMICAL TAB STYLING
+            # Third row: Active sites toggle - UPDATED TO MATCH CHEMICAL TAB STYLING
             dbc.Row([
                 dbc.Col([
                     html.Label(
@@ -85,7 +67,7 @@ def create_overview_tab():
                 ], width=12)
             ], className="mb-3"),
             
-            # Fifth row: Map (empty initially, filled by callback)
+            # Fourth row: Map (empty initially, filled by callback)
             dbc.Row([
                 dbc.Col([
                     dcc.Graph(
@@ -100,7 +82,7 @@ def create_overview_tab():
                 ], width=12)
             ]),
             
-            # Sixth row: Dynamic Legend Container
+            # Fifth row: Dynamic Legend Container
             dbc.Row([
                 dbc.Col([
                     html.Div(id='map-legend-container', className="text-center mt-2 mb-4")
