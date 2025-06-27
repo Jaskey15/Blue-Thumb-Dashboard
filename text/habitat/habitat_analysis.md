@@ -1,5 +1,6 @@
-### Analysis
+### Description
 
 Tenmile Creek habitat assessments show interesting variations since the start of monitoring. In 2012, the stream scored an excellent 118.2 points, with high ratings for instream cover, canopy cover, flow, bank stability, and streamside cover. By 2016, the overall score decreased to 88.5 points, likely due to drier conditions as noted in the Blue Thumb records, which mentioned the riffles had been dry for two weeks prior to assessment. Components like rocky runs/riffles and flow received low scores during this period. The 2022 assessment showed improvement with a score of 96.1 points, suggesting some recovery in stream conditions. Throughout all assessments, canopy cover shading and streamside cover consistently scored high, indicating the riparian zone maintains good vegetation despite other fluctuations.
 
+### Interpretation
 The varying scores over time highlight how stream habitats respond to changing weather patterns and flow conditions. While some habitat features like channel sinuosity (how much the stream meanders) consistently scored low across all surveys, other components improved or declined based on conditions. For example, pool variability improved from medium in 2012 to high in both 2016 and 2022, while pool bottom substrate declined from medium to low in the 2022 assessment. These changes demonstrate that stream habitats are dynamic systems that require ongoing monitoring to understand their health and trends.

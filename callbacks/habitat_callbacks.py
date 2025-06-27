@@ -104,6 +104,17 @@ def register_habitat_callbacks(app):
     # ===========================
     
     @app.callback(
+        Output('habitat-controls-content', 'style'),
+        Input('habitat-site-dropdown', 'value')
+    )
+    def show_habitat_controls(selected_site):
+        """Show habitat content when a site is selected."""
+        if selected_site:
+            logger.info(f"Habitat site selected: {selected_site}")
+            return {'display': 'block'}
+        return {'display': 'none'}
+    
+    @app.callback(
         Output('habitat-content-container', 'children'),
         Input('habitat-site-dropdown', 'value'),
         prevent_initial_call=True
