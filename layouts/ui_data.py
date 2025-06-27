@@ -368,4 +368,18 @@ CHEMICAL_DIAGRAM_CAPTIONS = {
     'soluble_nitrogen': 'Nitrogen in aquatic ecosystems cycles through various compounds (ammonia, nitrite, nitrate) as it moves through plants, animals, and microorganisms.',
     'Phosphorus': 'Illustration of phosphorus movement through aquatic ecosystems, from external inputs to algae, animals, microbes, and sediment.',
     'Chloride': 'Sources of chloride in streams include road salt, water softeners, and agricultural inputs. Excessive concentrations have a negative impact on stream health.'
+}
+
+# ===========================================================================================
+# HABITAT DIAGRAM DATA
+# ===========================================================================================
+
+# Habitat diagram mapping
+HABITAT_DIAGRAMS = {
+    'habitat_assessment': '/assets/images/stream_habitat_diagram.jpg',
+}
+
+# Dictionary of captions for habitat diagrams
+HABITAT_DIAGRAM_CAPTIONS = {
+    'habitat_assessment': 'Essential stream habitat features: riffles provide oxygenated water for feeding, runs offer deeper water for fish movement, pools create refuges during low flows, and riparian corridors provide shade and bank stability.'
 } 

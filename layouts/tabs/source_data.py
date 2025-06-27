@@ -49,7 +49,7 @@ def create_source_data_tab():
                     ], className="action-header-content")
                 ]),
                 dbc.CardBody([
-                    html.P("Blue Thumb chemical data collected since January 2020", 
+                    html.P("Chemical data collected since January 2020 with interactive mapping capabilities", 
                            className="card-text mb-3"),
                     dbc.Button(
                         [html.I(className="fas fa-external-link-alt me-2"), "Access Blue Thumb App Map"],

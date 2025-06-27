@@ -20,7 +20,7 @@ def create_overview_tab():
             # First row: Monitoring Site Locations section
             dbc.Row([
                 dbc.Col([
-                    load_markdown_content('overview/monitoring_sites.md')
+                    load_markdown_content('monitoring_sites.md')
                 ], width=12)
             ]),
             

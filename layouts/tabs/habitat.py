@@ -4,17 +4,21 @@ Habitat tab layout for the Dashboard
 
 import dash_bootstrap_components as dbc
 from dash import dcc, html
-from utils import load_markdown_content
+from utils import load_markdown_content, create_image_with_caption
+from layouts.ui_data import HABITAT_DIAGRAMS, HABITAT_DIAGRAM_CAPTIONS
 
 def create_habitat_tab():
     """Create the habitat assessment tab with searchable dropdown for site selection."""
     return html.Div([
         # Description - always visible (matching chemical tab structure)
         html.Div([
-            load_markdown_content('habitat/habitat_intro.md'),
+            html.H3("Habitat Assessment", className="mb-3"),
             html.P([
-                "Select a site below to begin analysis. "
-                "You can find site names and locations on the ",
+                "Habitat assessment evaluates the physical features of streams that support aquatic life. "
+                "As part of Blue Thumb's comprehensive approach to stream health monitoring, habitat data "
+                "provides crucial context for interpreting chemical and biological results. Physical habitat "
+                "quality directly influences the biotic community and serves as the foundation for a healthy "
+                "stream ecosystem. Select a site below to begin analysis. You can find site names and locations on the ",
                 html.A("Overview tab", id="habitat-overview-link", href="#", style={"text-decoration": "underline"}),
                 "."
             ])
@@ -57,16 +61,17 @@ def create_habitat_tab():
             dbc.Row([
                 dbc.Col([
                     html.Div(id='habitat-explanation-container', children=[
-                        load_markdown_content('habitat/habitat_analysis.md')
+                        load_markdown_content('habitat_analysis.md', link_target="_blank")
                     ])
                 ], width=6, className="d-flex"),  
                 dbc.Col([
                     html.Div(id='habitat-diagram-container', children=[
-                        html.Img(
-                            src="/assets/images/stream_habitat_diagram.jpg",
+                        create_image_with_caption(
+                            src=HABITAT_DIAGRAMS['habitat_assessment'],
+                            caption=HABITAT_DIAGRAM_CAPTIONS['habitat_assessment'],
                             className="img-fluid tab-image-container",
                             style={'width': '100%', 'height': 'auto'},
-                            alt="Stream habitat diagram showing riffle, run, and pool features"
+                            alt_text="Stream habitat diagram showing riffle, run, and pool features"
                         )
                     ])
                 ], width=6, className="d-flex align-items-center")  
