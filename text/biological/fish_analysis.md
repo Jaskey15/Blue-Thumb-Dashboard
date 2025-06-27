@@ -1,3 +1,0 @@
-### Interpretation
-
-The fish community’s IBI scores are compared against a reference stream and given an integrity class, ranging from very poor to excellent. Tenmile Creek has demonstrated consistent improvement since monitoring began in 2012, with the 2022 assessment showing results that surpassed the high-quality reference stream metrics. The fish community now exhibits exceptional species diversity, appropriate trophic structure, and the presence of sensitive indicator species, confirming the robust biological health of this stream section.

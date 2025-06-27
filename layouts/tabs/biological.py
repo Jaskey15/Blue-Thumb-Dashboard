@@ -11,15 +11,17 @@ def create_biological_tab():
     return html.Div([
         # Description - always visible
         html.Div([
+            html.H3("Biological Assessment", className="mb-3"),
             html.P([
-                load_markdown_content('biological/biological_intro.md')
+                "Biological monitoring uses the organisms living in streams as direct indicators of ecosystem health. "
+                "Fish and macroinvertebrates serve as nature's report card, reflecting both chemical and physical "
+                "conditions over extended periods. This provides a more comprehensive view of stream health than "
+                "chemical testing alone, as biological communities integrate all environmental factors throughout "
+                "their lifecycle. Select a community type and site below to begin analysis. You can find site "
+                "names and location on the ",
+                html.A("overview tab", id="biological-overview-link", href="#", style={"text-decoration": "underline"}),
+                "."
             ]),
-            html.P([
-                "Select a community type and site below to begin analysis. "
-                "You can find site names and locations on the ",
-                html.A("Overview tab", id="biological-overview-link", href="#", style={"text-decoration": "underline"}),
-                
-            ])
         ], className="mb-4"),
         
         # Community selection - always visible

@@ -368,7 +368,7 @@ def create_biological_community_display(selected_community, selected_site):
             # Fourth row: Analysis section
             dbc.Row([
                 dbc.Col([
-                    load_markdown_content(f"biological/{selected_community}_analysis.md")
+                    load_markdown_content(f"biological/{selected_community}_interpretation.md")
                 ], width=12)
             ], className="mb-4"),
         ])

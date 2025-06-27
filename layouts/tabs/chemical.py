@@ -23,7 +23,8 @@ def create_chemical_tab():
                 "parameters helps detect problems and track restoration progress over time. ",
                 "Select a site and parameter below to begin analysis. You can find site names and "
                 "locations on the ",
-                html.A("Overview tab", id="chemical-overview-link", href="#", style={"text-decoration": "underline"}),
+                html.A("overview tab", id="chemical-overview-link", href="#", style={"text-decoration": "underline"}),
+                "."
             ])
         ], className="mb-4"),
         
