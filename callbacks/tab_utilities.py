@@ -356,14 +356,14 @@ def create_biological_community_display(selected_community, selected_site):
             dbc.Row([
                 # Left column: Description
                 dbc.Col([
-                    load_markdown_content(f"biological/{selected_community}_description.md")
+                    load_markdown_content(f'biological/{selected_community}_description.md', link_target="_blank")
                 ], width=6),
                 
                 # Right column: Species gallery
                 dbc.Col([
                     create_species_gallery(selected_community)
                 ], width=6, className="d-flex align-items-center"),
-            ], className="mb-4"),
+            ]),
             
             # Fourth row: Analysis section
             dbc.Row([

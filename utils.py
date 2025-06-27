@@ -139,13 +139,14 @@ def round_parameter_value(param_name, value, data_type='chemical'):
         logger.warning(f"Could not round value {value} for parameter {param_name}")
         return None
 
-def load_markdown_content(filename, fallback_message=None):
+def load_markdown_content(filename, fallback_message=None, link_target=None):
     """
     Load content from a markdown file and convert it to Dash components.
     
     Args:
         filename: Path to the markdown file relative to the text directory
         fallback_message: Optional custom message to display if loading fails
+        link_target: Optional target attribute for links (e.g., "_blank")
         
     Returns:
         Dash component with the markdown content
@@ -170,8 +171,13 @@ def load_markdown_content(filename, fallback_message=None):
         with open(file_path, 'r', encoding='utf-8') as file:
             content = file.read()
             
+        # Create markdown component with optional link_target
+        markdown_props = {}
+        if link_target:
+            markdown_props['link_target'] = link_target
+            
         return html.Div([
-            dcc.Markdown(content)
+            dcc.Markdown(content, **markdown_props)
         ], className="markdown-content")
     
     except Exception as e:
