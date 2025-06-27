@@ -15,7 +15,7 @@ def create_biological_tab():
                 load_markdown_content('biological/biological_intro.md')
             ]),
             html.P([
-                "Select a community type and search for a site below to begin analysis. "
+                "Select a community type and site below to begin analysis. "
                 "You can find site names and locations on the ",
                 html.A("Overview tab", id="biological-overview-link", href="#", style={"text-decoration": "underline"}),
                 

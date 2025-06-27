@@ -337,20 +337,7 @@ def create_biological_community_display(selected_community, selected_site):
         from layouts.helpers import create_species_gallery
             
         # Create unified layout for the community
-        content = html.Div([
-            # First row: Description on left, gallery on right
-            dbc.Row([
-                # Left column: Description
-                dbc.Col([
-                    load_markdown_content(f"biological/{selected_community}_description.md")
-                ], width=6),
-                
-                # Right column: Species gallery
-                dbc.Col([
-                    create_species_gallery(selected_community)
-                ], width=6, className="d-flex align-items-center"),
-            ], className="mb-4"),
-            
+        content = html.Div([ 
             # Second row: Graph (full width)
             dbc.Row([
                 dbc.Col([
@@ -363,6 +350,19 @@ def create_biological_community_display(selected_community, selected_site):
                 dbc.Col([
                     metrics_accordion
                 ], width=12)
+            ], className="mb-4"),
+
+            # First row: Description on left, gallery on right
+            dbc.Row([
+                # Left column: Description
+                dbc.Col([
+                    load_markdown_content(f"biological/{selected_community}_description.md")
+                ], width=6),
+                
+                # Right column: Species gallery
+                dbc.Col([
+                    create_species_gallery(selected_community)
+                ], width=6, className="d-flex align-items-center"),
             ], className="mb-4"),
             
             # Fourth row: Analysis section

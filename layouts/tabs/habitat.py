@@ -19,18 +19,9 @@ def create_habitat_tab():
                     "You can find site names and locations on the ",
                     html.A("Overview tab", id="habitat-overview-link", href="#", style={"text-decoration": "underline"}),
                 ], className="mt-3")  # Add some top margin to separate from markdown content
-            ], width=6),
+            ], width=12),
             
-            # Right column - image
-            dbc.Col([
-                html.Img(
-                    src="/assets/images/stream_habitat_diagram.jpg",
-                    className="img-fluid tab-image-container",
-                    style={'width': '100%', 'height': 'auto'},
-                    alt="Stream habitat diagram showing riffle, run, and pool features"
-                )
-            ], width=6)
-        ], className="mb-4"),
+           
         
         # Site selection section - simplified with searchable dropdown
         dbc.Row([
@@ -54,10 +45,23 @@ def create_habitat_tab():
                 )
             ], width=12)
         ], className="mb-4"),
+
+
         
         # Content container (shows visualization when site is selected)
         html.Div(id="habitat-content-container", children=[
             html.P("Select a site above to view habitat assessment data.", 
                    className="text-center text-muted mt-5")
         ]),
+                 # Right column - image
+            dbc.Col([
+                html.Img(
+                    src="/assets/images/stream_habitat_diagram.jpg",
+                    className="img-fluid tab-image-container",
+                    style={'width': '100%', 'height': 'auto'},
+                    alt="Stream habitat diagram showing riffle, run, and pool features"
+                )
+            ], width=6)
+        ], className="mb-4"),
+        
     ], className="tab-content-wrapper") 

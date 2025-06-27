@@ -5,8 +5,6 @@ Chemical tab layout for the Tenmile Creek Water Quality Dashboard.
 import dash_bootstrap_components as dbc
 from dash import dcc, html
 from data_processing.data_queries import get_chemical_date_range
-from utils import load_markdown_content
-
 
 def create_chemical_tab():
     """Create the chemical data tab layout with searchable dropdown for site selection."""
@@ -17,14 +15,15 @@ def create_chemical_tab():
     return html.Div([
         # Description - always visible
         html.Div([
+            html.H3("Chemical Water Quality", className="mb-3"),
             html.P([
-                load_markdown_content('chemical/chemical_intro.md')
-            ]),
-            html.P([
-                "Select a site and parameter below to begin analysis. "
-                "You can find site names and locations on the ",
+                "Chemical water quality data provides crucial insights into stream health by revealing "
+                "pollution sources and environmental stressors that may not be immediately visible. ",
+                "While chemical data alone cannot determine if a stream is healthy, monitoring key "
+                "parameters helps detect problems and track restoration progress over time. ",
+                "Select a site and parameter below to begin analysis. You can find site names and "
+                "locations on the ",
                 html.A("Overview tab", id="chemical-overview-link", href="#", style={"text-decoration": "underline"}),
-                
             ])
         ], className="mb-4"),
         
