@@ -13,6 +13,9 @@ def create_chemical_tab():
     min_year, max_year = get_chemical_date_range()
     
     return html.Div([
+        # Download component (hidden, triggered by callback)
+        dcc.Download(id="chemical-download-component"),
+
         # Description - always visible
         html.Div([
             html.H3("Chemical Water Quality", className="mb-3"),
@@ -134,7 +137,7 @@ def create_chemical_tab():
                 ], width=7)
             ], className="mb-3"),
             
-            # Highlight switch 
+            # Highlight switch and download button row
             dbc.Row([
                 dbc.Col([
                     html.Label(
@@ -147,7 +150,16 @@ def create_chemical_tab():
                         value=True,
                         style={"display": "inline-block", "vertical-align": "middle"}
                     )
-                ], width=6)
+                ], width=6),
+                dbc.Col([
+                    dbc.Button(
+                        [html.I(className="fas fa-download me-2"), "Download Chemical Data"],
+                        id="chemical-download-btn",
+                        color="success",
+                        size="sm",
+                        style={'display': 'none'}  # Initially hidden
+                    )
+                ], width=6, className="d-flex justify-content-end align-items-center")
             ], className="mb-3"),
             
             # Graph 

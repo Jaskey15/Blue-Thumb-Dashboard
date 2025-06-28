@@ -280,8 +280,6 @@ def create_gallery_navigation_callback(gallery_type):
     
     return update_gallery
 
-
-
 def create_biological_community_info(selected_community):
     """
     Create community-specific content (description, gallery, interpretation).
@@ -361,6 +359,9 @@ def create_biological_site_display(selected_community, selected_site):
             viz_figure = create_fish_viz(selected_site)
             metrics_accordion = create_fish_metrics_accordion(selected_site)
             
+            # Set download button text for fish
+            download_text = [html.I(className="fas fa-download me-2"), "Download Fish Data"]
+            
         elif selected_community == 'macro':
             from visualizations.macro_viz import create_macro_viz, create_macro_metrics_accordion
             from data_processing.data_queries import get_macroinvertebrate_dataframe
@@ -381,6 +382,9 @@ def create_biological_site_display(selected_community, selected_site):
             viz_figure = create_macro_viz(selected_site)
             metrics_accordion = create_macro_metrics_accordion(selected_site)
             
+            # Set download button text for macro
+            download_text = [html.I(className="fas fa-download me-2"), "Download Macro Data"]
+            
         else:
             return create_error_state(
                 "Invalid Community Type",
@@ -389,19 +393,32 @@ def create_biological_site_display(selected_community, selected_site):
             
         # Create site-specific layout (charts and metrics only)
         content = html.Div([
+            # Download button row
+            dbc.Row([
+                dbc.Col([
+                    dbc.Button(
+                        download_text,
+                        id="biological-download-btn",
+                        color="success",
+                        size="sm",
+                        style={'display': 'block'}  # Make button visible
+                    )
+                ], width=12, className="d-flex justify-content-end")
+            ]),
+            
             # Graph row
             dbc.Row([
                 dbc.Col([
                     dcc.Graph(figure=viz_figure)
                 ], width=12)
-            ], className="mb-4"),
+            ], className="mb-2"),
             
             # Metrics accordion row
             dbc.Row([
                 dbc.Col([
                     metrics_accordion
                 ], width=12)
-            ], className="mb-4"),
+            ], className="mb-2"),
         ])
         
         return content
@@ -546,7 +563,7 @@ def create_habitat_display(site_name):
             # Metrics accordion section - full width
             html.Div([
                 habitat_accordion
-            ], className="mb-4"),
+            ], className="mb-2"),
         ])   
         return display
         

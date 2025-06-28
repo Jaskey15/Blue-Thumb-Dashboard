@@ -9,6 +9,9 @@ from utils import load_markdown_content
 def create_biological_tab():
     """Create the biological data tab layout with searchable dropdown for site selection."""
     return html.Div([
+        # Download component (hidden, triggered by callback)
+        dcc.Download(id="biological-download-component"),
+
         # Description - always visible
         html.Div([
             html.H3("Biological Assessment", className="mb-3"),
@@ -65,7 +68,22 @@ def create_biological_tab():
         # Content container - split into community-specific and site-specific sections
         html.Div([
             # Site-specific content (charts, metrics) - appears first
-            html.Div(id='biological-site-content', className="mt-4"),
+            html.Div([
+                # Download button container
+                dbc.Row([
+                    dbc.Col([
+                        dbc.Button(
+                            id="biological-download-btn",
+                            color="success",
+                            size="sm",
+                            style={'display': 'none'}  # Initially hidden
+                        )
+                    ], width=12, className="d-flex justify-content-end")
+                ]),
+                
+                # Site content container
+                html.Div(id='biological-site-content-inner')
+            ], id='biological-site-content'),
             
             # Community-specific content (description, gallery, interpretation) - appears second
             html.Div(id='biological-community-content', className="mt-4")

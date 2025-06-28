@@ -185,15 +185,20 @@ def register_chemical_callbacks(app):
     # ===========================
     
     @app.callback(
-        Output('chemical-controls-content', 'style'),
-        Input('chemical-site-dropdown', 'value')
+        [Output('chemical-controls-content', 'style'),
+         Output('chemical-download-btn', 'style')],
+        [Input('chemical-site-dropdown', 'value'),
+         Input('chemical-parameter-dropdown', 'value')]
     )
-    def show_chemical_controls(selected_site):
-        """Show parameter controls when a site is selected."""
-        if selected_site:
+    def show_chemical_controls(selected_site, selected_parameter):
+        """Show parameter controls and download button when a site and parameter are selected."""
+        if selected_site and selected_parameter:
+            logger.info(f"Chemical site selected: {selected_site}, parameter: {selected_parameter}")
+            return {'display': 'block'}, {'display': 'block'}
+        elif selected_site:
             logger.info(f"Chemical site selected: {selected_site}")
-            return {'display': 'block'}
-        return {'display': 'none'}
+            return {'display': 'block'}, {'display': 'none'}
+        return {'display': 'none'}, {'display': 'none'}
     
     # ================================
     # 4. DATA VISUALIZATION & FILTERS
