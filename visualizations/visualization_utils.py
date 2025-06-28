@@ -137,31 +137,36 @@ def update_layout(fig, df, title, y_label, y_column='comparison_to_reference', t
         layout_updates = {
             'title': title,
             'title_x': 0.5,
-            'title_font': dict(size=FONT_SIZES['title']),
             'xaxis': dict(
                 title='Year',
-                title_font=dict(size=FONT_SIZES['axis_title']),
                 tickmode='array',
                 tickvals=[pd.Timestamp(f'{year}-01-01') for year in years],
                 ticktext=[str(year) for year in years]
             ),
             'yaxis': dict(
                 title=y_label,
-                title_font=dict(size=FONT_SIZES['axis_title']),
                 range=[y_min, y_max],
                 tickformat=tick_format
             ),
-            'hovermode': 'closest'
+            'hovermode': 'closest',
+            'template': 'seaborn'  # Add white template to match chemical viz
         }
         
-        # Add legend title if needed (for macro viz with seasons)
+        # Add legend configuration if needed (matching chemical viz style)
         if has_legend:
-            layout_updates['legend_title_text'] = 'Season'
+            layout_updates['legend'] = dict(
+                orientation="h",
+                yanchor="bottom",
+                y=1.02,
+                xanchor="right",
+                x=1,
+                title_text='Season'
+            )
         
         fig.update_layout(**layout_updates)
         
         return fig
-    
+        
     except Exception as e:
         logger.error(f"Error updating layout: {e}")
         return fig

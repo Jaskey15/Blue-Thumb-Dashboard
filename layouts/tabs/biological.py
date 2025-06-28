@@ -62,8 +62,14 @@ def create_biological_tab():
             
         ], id='biological-site-search-section', className="mb-4", style={'display': 'none'}),
         
-        # Content container - shows biological data after both selections are made
-        html.Div(id='biological-content-container', className="mt-4"),
+        # Content container - split into community-specific and site-specific sections
+        html.Div([
+            # Site-specific content (charts, metrics) - appears first
+            html.Div(id='biological-site-content', className="mt-4"),
+            
+            # Community-specific content (description, gallery, interpretation) - appears second
+            html.Div(id='biological-community-content', className="mt-4")
+        ], id='biological-content-container', className="mt-4"),
         
         # Legacy controls content section - keeping for compatibility with existing callbacks
         html.Div(id="biological-controls-content", style={'display': 'none'})

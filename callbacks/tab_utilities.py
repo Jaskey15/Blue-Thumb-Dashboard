@@ -227,8 +227,8 @@ def create_species_display(item):
         ),
         # Text container with fixed height
         html.Div([
-            html.H5(item['name'], className="mt-3"),
-            html.P(item['description'], className="mt-2")
+            html.H5(item['name'], className="mt-2"),
+            html.P(item['description'], className="mt-1")
         ], style={'min-height': '80px'})
     ], style={'min-height': '400px'})
 
@@ -280,16 +280,70 @@ def create_gallery_navigation_callback(gallery_type):
     
     return update_gallery
 
-def create_biological_community_display(selected_community, selected_site):
+
+
+def create_biological_community_info(selected_community):
     """
-    Create a complete display for biological community data with visualizations.
+    Create community-specific content (description, gallery, interpretation).
+    This content only depends on the community type, not the specific site.
+    
+    Args:
+        selected_community: Community type ('fish' or 'macro')
+        
+    Returns:
+        Dash HTML component with community-specific content
+    """
+    try:
+        if not selected_community or selected_community not in ['fish', 'macro']:
+            return html.Div()
+        
+        # Import gallery creation function
+        from layouts.helpers import create_species_gallery
+        
+        # Create community-specific layout
+        content = html.Div([
+            # Description and gallery row
+            dbc.Row([
+                # Left column: Description
+                dbc.Col([
+                    load_markdown_content(f'biological/{selected_community}_description.md', link_target="_blank")
+                ], width=6),
+                
+                # Right column: Species gallery
+                dbc.Col([
+                    create_species_gallery(selected_community)
+                ], width=6, className="d-flex align-items-center"),
+            ], className="mb-4"),
+            
+            # Analysis section
+            dbc.Row([
+                dbc.Col([
+                    load_markdown_content(f"biological/{selected_community}_interpretation.md")
+                ], width=12)
+            ], className="mb-4"),
+        ])
+        
+        return content
+        
+    except Exception as e:
+        logger.error(f"Error creating biological community info for {selected_community}: {e}")
+        return create_error_state(
+            f"Error Loading {selected_community.title()} Information",
+            f"Could not load {selected_community} community information. Please try again.",
+            str(e)
+        )
+
+def create_biological_site_display(selected_community, selected_site):
+    """
+    Create site-specific content (charts and metrics).
+    This content depends on both the community type and the specific site.
     
     Args:
         selected_community: Community type ('fish' or 'macro')
         selected_site: Selected site name
         
     Returns:
-        Dash HTML component with the complete community display
+        Dash HTML component with site-specific visualizations
     """
     try:
         # Import required functions for visualization
@@ -332,43 +386,20 @@ def create_biological_community_display(selected_community, selected_site):
                 "Invalid Community Type",
                 f"'{selected_community}' is not a valid community type."
             )
-
-        # Import gallery creation function
-        from layouts.helpers import create_species_gallery
             
-        # Create unified layout for the community
-        content = html.Div([ 
-            # Second row: Graph (full width)
+        # Create site-specific layout (charts and metrics only)
+        content = html.Div([
+            # Graph row
             dbc.Row([
                 dbc.Col([
                     dcc.Graph(figure=viz_figure)
                 ], width=12)
             ], className="mb-4"),
             
-            # Third row: Accordion section for metrics tables
+            # Metrics accordion row
             dbc.Row([
                 dbc.Col([
                     metrics_accordion
-                ], width=12)
-            ], className="mb-4"),
-
-            # First row: Description on left, gallery on right
-            dbc.Row([
-                # Left column: Description
-                dbc.Col([
-                    load_markdown_content(f'biological/{selected_community}_description.md', link_target="_blank")
-                ], width=6),
-                
-                # Right column: Species gallery
-                dbc.Col([
-                    create_species_gallery(selected_community)
-                ], width=6, className="d-flex align-items-center"),
-            ]),
-            
-            # Fourth row: Analysis section
-            dbc.Row([
-                dbc.Col([
-                    load_markdown_content(f"biological/{selected_community}_interpretation.md")
                 ], width=12)
             ], className="mb-4"),
         ])
@@ -376,7 +407,7 @@ def create_biological_community_display(selected_community, selected_site):
         return content
         
     except Exception as e:
-        logger.error(f"Error creating biological display for {selected_community} at {selected_site}: {e}")
+        logger.error(f"Error creating biological site display for {selected_community} at {selected_site}: {e}")
         return create_error_state(
             f"Error Loading {selected_community.title()} Data",
             f"Could not load {selected_community} data for {selected_site}. Please try again.",
@@ -522,10 +553,6 @@ def create_habitat_display(site_name):
                             color="success",
                             size="sm",
                             className="mb-2"
-                        ),
-                        html.Small(
-                            f"Download all habitat metrics data for {site_name}",
-                            className="text-muted d-block"
                         )
                     ])
                 ], width=6)  # Left-aligned in a 6-column span

@@ -6,7 +6,7 @@ This file contains callbacks specific to the biological data tab.
 import dash
 from dash import html, Input, Output, State
 from utils import setup_logging
-from .tab_utilities import create_biological_community_display, create_gallery_navigation_callback
+from .tab_utilities import create_biological_community_info, create_biological_site_display, create_gallery_navigation_callback
 from .helper_functions import create_empty_state, create_error_state
 
 # Configure logging
@@ -235,24 +235,44 @@ def register_biological_callbacks(app):
             )
     
     # ===========================
-    # 4. MAIN CONTENT DISPLAY
+    # 4. SEPARATED CONTENT DISPLAY
     # ===========================
     
     @app.callback(
-        Output('biological-content-container', 'children'),
+        Output('biological-community-content', 'children'),
+        [Input('biological-community-dropdown', 'value')]
+    )
+    def update_biological_community_content(selected_community):
+        """Update community-specific content (description, gallery, interpretation)."""
+        if not selected_community:
+            return html.Div()
+        
+        try:
+            logger.info(f"Creating biological community content for {selected_community}")
+            return create_biological_community_info(selected_community)
+        except Exception as e:
+            logger.error(f"Error creating biological community content: {e}")
+            return create_error_state(
+                f"Error Loading {selected_community.title()} Information",
+                f"Could not load {selected_community} community information. Please try again.",
+                str(e)
+            )
+    
+    @app.callback(
+        Output('biological-site-content', 'children'),
         [Input('biological-community-dropdown', 'value'),
          Input('biological-site-dropdown', 'value')]
     )
-    def update_biological_display(selected_community, selected_site):
-        """Update biological display based on selected community and site."""
+    def update_biological_site_content(selected_community, selected_site):
+        """Update site-specific content (charts, metrics)."""
         if not selected_community or not selected_site:
             return create_empty_state("Please select a community type and site to view biological data.")
         
         try:
-            logger.info(f"Creating biological display for {selected_community} at {selected_site}")
-            return create_biological_community_display(selected_community, selected_site)
+            logger.info(f"Creating biological site display for {selected_community} at {selected_site}")
+            return create_biological_site_display(selected_community, selected_site)
         except Exception as e:
-            logger.error(f"Error creating biological display: {e}")
+            logger.error(f"Error creating biological site display: {e}")
             return create_error_state(
                 f"Error Loading {selected_community.title()} Data",
                 f"Could not load {selected_community} data for {selected_site}. Please try again.",

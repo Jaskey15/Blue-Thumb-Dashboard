@@ -53,8 +53,6 @@ def create_image_credits_modal():
     """
     # Image sources and attributions
     image_sources = [
-        ("Stream Habitat Diagram", "Engaging Bellevue", 
-         "https://www.engagingbellevue.com/watershed-management/news_feed/watershed-map"),
         ("Dissolved Oxygen Graphic", "Queen Mary University of London", 
          "https://www.qmul.ac.uk/chesswatch/water-quality-sensors/dissolved-oxygen/"),
         ("pH Scale Graphic", "Water Rangers", 
@@ -65,14 +63,6 @@ def create_image_credits_modal():
          "https://www.iisd.org/ela/blog/back-to-basics-how-and-why-phosphorus-cycles-through-a-lake/"),
         ("Chloride Graphic", "LWV Upper Mississippi River Region", 
          "https://www.lwvumrr.org/blog/a-view-from-illinois-minnesota-and-wisconson-on-saltwise-and-saltsmart-practices"),
-        ("Bluegill Sunfish Image", "Wired2fish", 
-         "https://www.wired2fish.com/crappie-fishing/bluegill-sunfish-a-comprehensive-species-guide"),
-        ("Redfin Shiner Image", "Iowa Department of Natural Resources", 
-         "https://programs.iowadnr.gov/bionet/Fish/Species/27"),
-        ("Mosquitofish Image", "Wikipedia", 
-         "https://en.wikipedia.org/wiki/Mosquitofish"),
-        ("Longear Sunfish Image", "Illinois Department of Natural Resources", 
-         "https://dnr.illinois.gov/education/wildaboutpages/wildaboutfishes/wafsunfish/waflongearsunfish.html"),
         ("Caddisfly Image", "Britannica", 
          "https://www.britannica.com/animal/caddisfly"),
         ("Non-biting-midge image", "iNaturalist", 

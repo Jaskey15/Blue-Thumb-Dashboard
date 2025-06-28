@@ -297,26 +297,26 @@ FISH_DATA = [
     {
         "id": 0,
         "name": "Bluegill Sunfish",
-        "image": "/assets/images/fish/Bluegill_Sunfish.jpg",
+        "image": "assets/images/fish/bluegill_sunfish.jpg",
         "description": "Bluegill Sunfish have a deep, compressed body with blue and orange coloration."
     },
     {
         "id": 1,
         "name": "Longear Sunfish",
-        "image": "/assets/images/fish/Longear_Sunfish.jpeg",
+        "image": "assets/images/fish/longear_sunfish.jpg",
         "description": "Longear Sunfish are known for their vibrant colors and distinctive long ear flap."
     },
     {
         "id": 2,
         "name": "Mosquitofish",
-        "image": "/assets/images/fish/Mosquitofish.jpg",
+        "image": "assets/images/fish/mosquitofish.jpg",
         "description": "Mosquitofish are small fish that help control mosquito populations by eating their larvae."
     },
     {
         "id": 3,
-        "name": "Redfin Shiner",
-        "image": "/assets/images/fish/Redfin_Shiner.jpg",
-        "description": "Redfin Shiners have silvery bodies with reddish fins, particularly noticeable during breeding season."
+        "name": "Red Shiner",
+        "image": "assets/images/fish/red_shiner.jpg",
+        "description": "Red shiners are small, colorful minnows known for their adaptability and vibrant breeding colors."
     }
 ]
 
