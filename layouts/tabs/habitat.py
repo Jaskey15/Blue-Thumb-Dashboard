@@ -10,6 +10,9 @@ from layouts.ui_data import HABITAT_DIAGRAMS, HABITAT_DIAGRAM_CAPTIONS
 def create_habitat_tab():
     """Create the habitat assessment tab with searchable dropdown for site selection."""
     return html.Div([
+        # Download component (hidden, triggered by callback)
+        dcc.Download(id="habitat-download-component"),
+        
         # Description - always visible (matching chemical tab structure)
         html.Div([
             html.H3("Habitat Assessment", className="mb-3"),
@@ -26,12 +29,12 @@ def create_habitat_tab():
         
         # Site selection section - simplified with searchable dropdown
         html.Div([
-            html.Label("Select Site:", className="form-label mb-2", style={'fontWeight': 'bold', 'fontSize': '1rem'}),
+            html.Label("Select Site:", className="form-label", style={'fontWeight': 'bold', 'fontSize': '1rem', 'marginBottom': '0.1rem'}),
             
             # Helper text
             html.Small(
                 "Click the dropdown and start typing to search for monitoring sites",
-                className="text-muted mb-2 d-block"
+                className="text-muted mb-1 d-block"
             ),
 
             # Searchable dropdown for site selection

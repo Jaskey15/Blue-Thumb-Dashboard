@@ -495,6 +495,7 @@ def create_habitat_display(site_name):
     try:
         # Import required functions
         from visualizations.habitat_viz import create_habitat_viz, create_habitat_metrics_accordion
+        import dash_bootstrap_components as dbc
         
         # Create habitat visualization chart
         habitat_fig = create_habitat_viz(site_name)
@@ -510,6 +511,25 @@ def create_habitat_display(site_name):
                 config={'displayModeBar': False},
                 style={'height': '500px'}
             ),
+            
+            # Download section - between graph and metrics, bottom left
+            dbc.Row([
+                dbc.Col([
+                    html.Div([
+                        dbc.Button(
+                            [html.I(className="fas fa-download me-2"), "Download Habitat Data"],
+                            id="habitat-download-btn",
+                            color="success",
+                            size="sm",
+                            className="mb-2"
+                        ),
+                        html.Small(
+                            f"Download all habitat metrics data for {site_name}",
+                            className="text-muted d-block"
+                        )
+                    ])
+                ], width=6)  # Left-aligned in a 6-column span
+            ], className="mb-3"),
             
             # Metrics accordion section - full width
             html.Div([

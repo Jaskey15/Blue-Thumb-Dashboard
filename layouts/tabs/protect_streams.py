@@ -59,7 +59,7 @@ def create_protect_our_streams_tab():
             dbc.Row([
                 # Left column for text 
                 dbc.Col([
-                    load_markdown_content('protect_our_streams_intro.md')
+                    load_markdown_content('protect_our_streams_intro.md', link_target="_blank")
                 ], width=6),
                 
                 # Right column for image 
@@ -76,7 +76,7 @@ def create_protect_our_streams_tab():
             # Second row for "Actions You Can Take" section
             dbc.Row([
                 dbc.Col([
-                    html.H3("Actions You Can Take", className="mt-4"),
+                    html.H3("Actions You Can Take"),
                     main_tabs
                 ], width=12)
             ])

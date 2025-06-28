@@ -28,7 +28,9 @@ def create_icon_attribution_modal():
                     html.Li([html.A("Three Musketeers", href="https://www.flaticon.com/authors/three-musketeers", target="_blank")]),
                     html.Li([html.A("nangicon", href="https://www.flaticon.com/authors/nangicon", target="_blank")]),
                     html.Li([html.A("Slamlabs", href="https://www.flaticon.com/authors/slamlabs", target="_blank")]),
-                    html.Li([html.A("Good Ware", href="https://www.flaticon.com/authors/good-ware", target="_blank")])
+                    html.Li([html.A("Good Ware", href="https://www.flaticon.com/authors/good-ware", target="_blank")]),
+                    html.Li([html.A("Catkuro", href="https://www.flaticon.com/free-icons/report", target="_blank")]),
+                    html.Li([html.A("Hajicon", href="https://www.flaticon.com/free-icons/analysis", target="_blank")])
                 ]),
                 html.P([
                     "All icons from ",

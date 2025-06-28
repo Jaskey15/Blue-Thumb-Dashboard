@@ -21,8 +21,10 @@ def create_source_data_tab():
             dbc.Card([
                 dbc.CardHeader([
                     html.Div([
-                        # Space reserved for icon (to be added later)
-                        html.Div(style={"width": "40px", "height": "40px", "margin-right": "12px", "flex-shrink": "0"}),
+                        html.Img(
+                            src="/assets/icons/exploration.png",
+                            style={"width": "40px", "height": "40px", "margin-right": "12px", "flex-shrink": "0"}
+                        ),
                         html.H5("Historical Data (Pre-2020)", className="action-title")
                     ], className="action-header-content")
                 ]),
@@ -43,8 +45,10 @@ def create_source_data_tab():
             dbc.Card([
                 dbc.CardHeader([
                     html.Div([
-                        # Space reserved for icon (to be added later)
-                        html.Div(style={"width": "40px", "height": "40px", "margin-right": "12px", "flex-shrink": "0"}),
+                        html.Img(
+                            src="/assets/icons/chemistry.png",
+                            style={"width": "40px", "height": "40px", "margin-right": "12px", "flex-shrink": "0"}
+                        ),
                         html.H5("Current Chemical Data (2020+)", className="action-title")
                     ], className="action-header-content")
                 ]),
@@ -65,8 +69,10 @@ def create_source_data_tab():
             dbc.Card([
                 dbc.CardHeader([
                     html.Div([
-                        # Space reserved for icon (to be added later)
-                        html.Div(style={"width": "40px", "height": "40px", "margin-right": "12px", "flex-shrink": "0"}),
+                        html.Img(
+                            src="/assets/icons/report.png",
+                            style={"width": "40px", "height": "40px", "margin-right": "12px", "flex-shrink": "0"}
+                        ),
                         html.H5("Site Interpretations", className="action-title")
                     ], className="action-header-content")
                 ]),

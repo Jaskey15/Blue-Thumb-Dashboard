@@ -21,7 +21,9 @@ def create_chemical_tab():
                 "pollution sources and environmental stressors that may not be immediately visible. ",
                 "While chemical data alone cannot determine if a stream is healthy, monitoring key "
                 "parameters helps detect problems and track restoration progress over time. ",
-                "Select a site and parameter below to begin analysis. You can find site names and "
+                "For more information on chemical testing procedures visit the ",
+                html.A("Blue Thumb website", href="https://www.bluethumbok.com/monitoring-info.html", target="_blank", style={"text-decoration": "underline"}),
+                ". Select a site and parameter below to begin analysis. You can find site names and "
                 "locations on the ",
                 html.A("overview tab", id="chemical-overview-link", href="#", style={"text-decoration": "underline"}),
                 "."
@@ -30,12 +32,12 @@ def create_chemical_tab():
         
         # Site selection section - simplified with searchable dropdown
         html.Div([
-            html.Label("Select Site:", className="form-label mb-2", style={'fontWeight': 'bold', 'fontSize': '1rem'}),
+            html.Label("Select Site:", className="form-label", style={'fontWeight': 'bold', 'fontSize': '1rem', 'marginBottom': '0.1rem'}),
             
             # Helper text
             html.Small(
                 "Click the dropdown and start typing to search for monitoring sites",
-                className="text-muted mb-2 d-block"
+                className="text-muted mb-1 d-block"
             ),
 
             # Searchable dropdown for site selection
