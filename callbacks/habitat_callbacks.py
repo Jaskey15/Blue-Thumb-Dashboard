@@ -203,7 +203,7 @@ def register_habitat_callbacks(app):
             final_df = final_df.sort_values(['site_name', 'year'])
             
             # Generate filename with timestamp
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            timestamp = datetime.now().strftime("%d-%m-%Y")
             filename = f"all_sites_habitat_data_{timestamp}.csv"
             
             logger.info(f"Successfully prepared habitat data export for all sites with {len(final_df)} assessments")
