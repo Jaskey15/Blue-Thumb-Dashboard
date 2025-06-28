@@ -543,21 +543,6 @@ def create_habitat_display(site_name):
                 style={'height': '500px'}
             ),
             
-            # Download section - between graph and metrics, bottom left
-            dbc.Row([
-                dbc.Col([
-                    html.Div([
-                        dbc.Button(
-                            [html.I(className="fas fa-download me-2"), "Download Habitat Data"],
-                            id="habitat-download-btn",
-                            color="success",
-                            size="sm",
-                            className="mb-2"
-                        )
-                    ])
-                ], width=6)  # Left-aligned in a 6-column span
-            ], className="mb-3"),
-            
             # Metrics accordion section - full width
             html.Div([
                 habitat_accordion

@@ -137,6 +137,8 @@ def update_layout(fig, df, title, y_label, y_column='comparison_to_reference', t
         layout_updates = {
             'title': title,
             'title_x': 0.5,
+            'title_y': 0.95,  # Adjust this value (0.95 to 0.99) to move title closer to plot
+            'margin': dict(t=70),  # Reduce top margin (default is usually 80-100)
             'xaxis': dict(
                 title='Year',
                 tickmode='array',

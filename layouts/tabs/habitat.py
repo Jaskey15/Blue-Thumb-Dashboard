@@ -53,6 +53,17 @@ def create_habitat_tab():
             # Visualizations section
             dbc.Row([
                 dbc.Col([
+                    # Download button - positioned above graph
+                    html.Div([
+                        dbc.Button(
+                            [html.I(className="fas fa-download me-2"), "Download Habitat Data"],
+                            id="habitat-download-btn",
+                            color="success",
+                            size="sm",
+                        )
+                    ], style={'textAlign': 'right'}),
+                    
+                    # Content container
                     html.Div(id="habitat-content-container", children=[
                         html.P("Select a site above to view habitat assessment data.", 
                                className="text-center text-muted mt-5")
