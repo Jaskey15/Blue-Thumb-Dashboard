@@ -354,7 +354,7 @@ def register_biological_callbacks(app):
                     return dash.no_update
                 
                 # Generate filename with timestamp
-                timestamp = datetime.now().strftime("%d-%m-%Y")
+                timestamp = datetime.now().strftime("%m-%d-%Y")
                 filename = f"blue_thumb_macro_data_{timestamp}.csv"
                 
                 logger.info(f"Successfully prepared macro data export with {len(data_df)} records")

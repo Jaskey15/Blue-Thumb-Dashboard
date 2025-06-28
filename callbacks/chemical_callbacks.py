@@ -3,7 +3,9 @@ Chemical callbacks for the Tenmile Creek Water Quality Dashboard.
 """
 
 import dash
-from dash import html, Input, Output, State
+from dash import html, Input, Output, State, dcc
+from datetime import datetime
+import pandas as pd
 from utils import setup_logging, get_sites_with_data
 from data_processing.data_queries import get_chemical_data_from_db
 from data_processing.chemical_utils import KEY_PARAMETERS, get_reference_values
@@ -311,5 +313,46 @@ def register_chemical_callbacks(app):
                 str(e)
             )
             return error_state, html.Div(), html.Div()
+
+    # ===========================
+    # 5. DATA DOWNLOAD
+    # ===========================
+    
+    @app.callback(
+        Output('chemical-download-component', 'data'),
+        Input('chemical-download-btn', 'n_clicks'),
+        prevent_initial_call=True
+    )
+    def download_chemical_data(n_clicks):
+        """Download chemical data CSV file with timestamp."""
+        if not n_clicks:
+            return dash.no_update
+        
+        try:
+            logger.info("Downloading chemical data CSV")
+            
+            # Read the processed chemical data CSV
+            processed_chemical_path = 'data/processed/processed_chemical_data.csv'
+            chemical_df = pd.read_csv(processed_chemical_path)
+            
+            if chemical_df.empty:
+                logger.warning("No chemical data found in processed CSV")
+                return dash.no_update
+            
+            # Generate filename with timestamp
+            timestamp = datetime.now().strftime("%m-%d-%Y")
+            filename = f"blue_thumb_chemical_data_{timestamp}.csv"
+            
+            logger.info(f"Successfully prepared chemical data export with {len(chemical_df)} records")
+            
+            return dcc.send_data_frame(
+                chemical_df.to_csv,
+                filename,
+                index=False
+            )
+                
+        except Exception as e:
+            logger.error(f"Error downloading chemical data: {e}")
+            return dash.no_update
 
 
