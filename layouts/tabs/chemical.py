@@ -137,7 +137,7 @@ def create_chemical_tab():
                 ], width=7)
             ], className="mb-3"),
             
-            # Highlight switch and download button row
+            # Highlight switch and download buttons row
             dbc.Row([
                 dbc.Col([
                     html.Label(
@@ -153,7 +153,14 @@ def create_chemical_tab():
                 ], width=6),
                 dbc.Col([
                     dbc.Button(
-                        [html.I(className="fas fa-download me-2"), "Download Chemical Data"],
+                        [html.I(className="fas fa-download me-2"), "Download Site Data"],
+                        id="chemical-download-site-btn",
+                        color="success",
+                        size="sm",
+                        style={'display': 'none', 'marginRight': '10px'}  # Initially hidden with right margin
+                    ),
+                    dbc.Button(
+                        [html.I(className="fas fa-download me-2"), "Download All Chemical Data"],
                         id="chemical-download-btn",
                         color="success",
                         size="sm",
