@@ -383,7 +383,7 @@ def create_biological_site_display(selected_community, selected_site):
             metrics_accordion = create_macro_metrics_accordion(selected_site)
             
             # Set download button text for macro
-            download_text = [html.I(className="fas fa-download me-2"), "Download Macro Data"]
+            download_text = [html.I(className="fas fa-download me-2"), "Download Macroinvertebrate Data"]
             
         else:
             return create_error_state(

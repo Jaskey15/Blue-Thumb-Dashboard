@@ -152,64 +152,29 @@ def register_habitat_callbacks(app):
         prevent_initial_call=True
     )
     def download_habitat_data(n_clicks):
-        """Download habitat metrics data for all sites in original format."""
+        """Download habitat data CSV file with timestamp."""
         if not n_clicks:
             return dash.no_update
         
         try:
-            logger.info("Downloading habitat data for all sites")
+            logger.info("Downloading habitat data CSV")
             
-            # Import the data query function
-            from data_processing.data_queries import get_habitat_metrics_data_for_table
+            # Read the processed habitat data CSV
+            processed_habitat_path = 'data/processed/processed_habitat_data.csv'
+            habitat_df = pd.read_csv(processed_habitat_path)
             
-            # Get the habitat metrics data for all sites
-            metrics_df, summary_df = get_habitat_metrics_data_for_table()
-            
-            if metrics_df.empty or summary_df.empty:
-                logger.warning("No habitat data found")
+            if habitat_df.empty:
+                logger.warning("No habitat data found in processed CSV")
                 return dash.no_update
-            
-            # Pivot metrics from long to wide format (one column per metric)
-            metrics_wide = metrics_df.pivot_table(
-                index=['site_name', 'year', 'assessment_id'],
-                columns='metric_name',
-                values='score',
-                aggfunc='first'
-            ).reset_index()
-            
-            # Flatten column names (remove multi-level index)
-            metrics_wide.columns.name = None
-            
-            # Merge with summary data
-            final_df = metrics_wide.merge(
-                summary_df[['assessment_id', 'total_score', 'habitat_grade']], 
-                on='assessment_id', 
-                how='left'
-            )
-            
-            # Drop assessment_id as it's internal
-            final_df = final_df.drop('assessment_id', axis=1)
-            
-            # Reorder columns to match original format: site, year, metrics, then summary
-            metric_columns = [col for col in final_df.columns if col not in ['site_name', 'year', 'total_score', 'habitat_grade']]
-            
-            # Define the final column order
-            final_columns = ['site_name', 'year'] + sorted(metric_columns) + ['total_score', 'habitat_grade']
-            
-            # Select and reorder columns
-            final_df = final_df[final_columns]
-            
-            # Sort by site name and year for organized output
-            final_df = final_df.sort_values(['site_name', 'year'])
             
             # Generate filename with timestamp
             timestamp = datetime.now().strftime("%d-%m-%Y")
-            filename = f"all_sites_habitat_data_{timestamp}.csv"
+            filename = f"blue_thumb_habitat_data_{timestamp}.csv"
             
-            logger.info(f"Successfully prepared habitat data export for all sites with {len(final_df)} assessments")
+            logger.info(f"Successfully prepared habitat data export with {len(habitat_df)} records")
             
             return dcc.send_data_frame(
-                final_df.to_csv,
+                habitat_df.to_csv,
                 filename,
                 index=False
             )

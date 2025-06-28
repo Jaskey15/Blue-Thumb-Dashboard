@@ -4,7 +4,9 @@ This file contains callbacks specific to the biological data tab.
 """
 
 import dash
-from dash import html, Input, Output, State
+from dash import html, Input, Output, State, dcc
+from datetime import datetime
+import pandas as pd
 from utils import setup_logging
 from .tab_utilities import create_biological_community_info, create_biological_site_display, create_gallery_navigation_callback
 from .helper_functions import create_empty_state, create_error_state
@@ -306,5 +308,69 @@ def register_biological_callbacks(app):
         """Handle macroinvertebrate gallery navigation."""
         update_gallery = create_gallery_navigation_callback('macro')
         return update_gallery(prev_clicks, next_clicks, current_index)
+
+    # ===========================
+    # 6. DATA DOWNLOAD
+    # ===========================
+    
+    @app.callback(
+        Output('biological-download-component', 'data'),
+        Input('biological-download-btn', 'n_clicks'),
+        [State('biological-community-dropdown', 'value')],
+        prevent_initial_call=True
+    )
+    def download_biological_data(n_clicks, selected_community):
+        """Download biological data CSV file with timestamp based on selected community type."""
+        if not n_clicks or not selected_community:
+            return dash.no_update
+        
+        try:
+            if selected_community == 'fish':
+                logger.info("Downloading fish data CSV")
+                
+                # Read the processed fish data CSV
+                processed_data_path = 'data/processed/processed_fish_data.csv'
+                data_df = pd.read_csv(processed_data_path)
+                
+                if data_df.empty:
+                    logger.warning("No fish data found in processed CSV")
+                    return dash.no_update
+                
+                # Generate filename with timestamp
+                timestamp = datetime.now().strftime("%d-%m-%Y")
+                filename = f"blue_thumb_fish_data_{timestamp}.csv"
+                
+                logger.info(f"Successfully prepared fish data export with {len(data_df)} records")
+                
+            elif selected_community == 'macro':
+                logger.info("Downloading macro data CSV")
+                
+                # Read the processed macro data CSV
+                processed_data_path = 'data/processed/processed_macro_data.csv'
+                data_df = pd.read_csv(processed_data_path)
+                
+                if data_df.empty:
+                    logger.warning("No macro data found in processed CSV")
+                    return dash.no_update
+                
+                # Generate filename with timestamp
+                timestamp = datetime.now().strftime("%d-%m-%Y")
+                filename = f"blue_thumb_macro_data_{timestamp}.csv"
+                
+                logger.info(f"Successfully prepared macro data export with {len(data_df)} records")
+                
+            else:
+                logger.warning(f"Unknown community type for download: {selected_community}")
+                return dash.no_update
+            
+            return dcc.send_data_frame(
+                data_df.to_csv,
+                filename,
+                index=False
+            )
+                
+        except Exception as e:
+            logger.error(f"Error downloading {selected_community} data: {e}")
+            return dash.no_update
 
 
