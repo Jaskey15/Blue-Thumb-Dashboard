@@ -489,7 +489,7 @@ def create_single_parameter_visualization(df_filtered, parameter, reference_valu
     except Exception as e:
         logger.error(f"Error creating single parameter view for {parameter}: {e}")
         error_state = create_error_state(
-            "Visualization Error", 
+            "Visualization Error",  
             f"Could not create {parameter} visualization.", 
             str(e)
         )

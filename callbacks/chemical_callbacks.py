@@ -4,7 +4,6 @@ Chemical callbacks for the Tenmile Creek Water Quality Dashboard.
 
 import dash
 from dash import html, Input, Output, State, dcc
-from datetime import datetime
 import pandas as pd
 from utils import setup_logging, get_sites_with_data
 from data_processing.data_queries import get_chemical_data_from_db
@@ -320,17 +319,24 @@ def register_chemical_callbacks(app):
     
     @app.callback(
         Output('chemical-download-component', 'data'),
-        Input('chemical-download-btn', 'n_clicks'),
+        [Input('chemical-download-btn', 'n_clicks'),
+         Input('chemical-download-site-btn', 'n_clicks')],
+        [State('chemical-site-dropdown', 'value')],
         prevent_initial_call=True
     )
-    def download_chemical_data(n_clicks):
-        """Download chemical data CSV file with timestamp."""
-        if not n_clicks:
+    def download_chemical_data(all_clicks, site_clicks, selected_site):
+        """Download chemical data CSV file with timestamp - all data or site-specific."""
+        if not all_clicks and not site_clicks:
             return dash.no_update
         
+        # Determine which button was clicked
+        ctx = dash.callback_context
+        if not ctx.triggered:
+            return dash.no_update
+        
+        button_id = ctx.triggered[0]['prop_id'].split('.')[0]
+        
         try:
-            logger.info("Downloading chemical data CSV")
-            
             # Read the processed chemical data CSV
             processed_chemical_path = 'data/processed/processed_chemical_data.csv'
             chemical_df = pd.read_csv(processed_chemical_path)
@@ -339,17 +345,45 @@ def register_chemical_callbacks(app):
                 logger.warning("No chemical data found in processed CSV")
                 return dash.no_update
             
-            # Generate filename with timestamp
-            timestamp = datetime.now().strftime("%m-%d-%Y")
-            filename = f"blue_thumb_chemical_data_{timestamp}.csv"
+            # Handle site-specific download
+            if button_id == 'chemical-download-site-btn':
+                if not selected_site:
+                    logger.warning("No site selected for site-specific download")
+                    return dash.no_update
+                
+                # Filter data for selected site
+                site_df = chemical_df[chemical_df['Site_Name'] == selected_site]
+                
+                if site_df.empty:
+                    logger.warning(f"No chemical data found for site: {selected_site}")
+                    return dash.no_update
+                
+                # Generate site-specific filename
+                # Sanitize site name for filename (replace spaces and special chars with underscores)
+                site_name = selected_site.replace(' ', '_').replace(':', '').replace('(', '').replace(')', '').replace(',', '')
+                filename = f"{site_name}_chemical_data.csv"
+                
+                logger.info(f"Successfully prepared chemical data export for {selected_site} with {len(site_df)} records")
+                
+                return dcc.send_data_frame(
+                    site_df.to_csv,
+                    filename,
+                    index=False
+                )
             
-            logger.info(f"Successfully prepared chemical data export with {len(chemical_df)} records")
-            
-            return dcc.send_data_frame(
-                chemical_df.to_csv,
-                filename,
-                index=False
-            )
+            # Handle all data download
+            elif button_id == 'chemical-download-btn':
+                logger.info("Downloading all chemical data CSV")
+                
+                filename = f"blue_thumb_chemical_data.csv"
+                
+                logger.info(f"Successfully prepared chemical data export with {len(chemical_df)} records")
+                
+                return dcc.send_data_frame(
+                    chemical_df.to_csv,
+                    filename,
+                    index=False
+                )
                 
         except Exception as e:
             logger.error(f"Error downloading chemical data: {e}")

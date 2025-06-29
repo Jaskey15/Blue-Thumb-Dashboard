@@ -5,7 +5,6 @@ This file contains callbacks specific to the habitat data tab.
 
 import dash
 import pandas as pd
-from datetime import datetime
 from dash import html, Input, Output, State, dcc
 from utils import setup_logging, get_sites_with_data
 from .tab_utilities import create_habitat_display
@@ -167,9 +166,8 @@ def register_habitat_callbacks(app):
                 logger.warning("No habitat data found in processed CSV")
                 return dash.no_update
             
-            # Generate filename with timestamp
-            timestamp = datetime.now().strftime("%d-%m-%Y")
-            filename = f"blue_thumb_habitat_data_{timestamp}.csv"
+            # Generate filename
+            filename = f"blue_thumb_habitat_data.csv"
             
             logger.info(f"Successfully prepared habitat data export with {len(habitat_df)} records")
             

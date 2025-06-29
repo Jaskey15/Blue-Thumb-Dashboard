@@ -5,7 +5,6 @@ This file contains callbacks specific to the biological data tab.
 
 import dash
 from dash import html, Input, Output, State, dcc
-from datetime import datetime
 import pandas as pd
 from utils import setup_logging
 from .tab_utilities import create_biological_community_info, create_biological_site_display, create_gallery_navigation_callback
@@ -336,9 +335,7 @@ def register_biological_callbacks(app):
                     logger.warning("No fish data found in processed CSV")
                     return dash.no_update
                 
-                # Generate filename with timestamp
-                timestamp = datetime.now().strftime("%d-%m-%Y")
-                filename = f"blue_thumb_fish_data_{timestamp}.csv"
+                filename = f"blue_thumb_fish_data.csv"
                 
                 logger.info(f"Successfully prepared fish data export with {len(data_df)} records")
                 
@@ -353,9 +350,7 @@ def register_biological_callbacks(app):
                     logger.warning("No macro data found in processed CSV")
                     return dash.no_update
                 
-                # Generate filename with timestamp
-                timestamp = datetime.now().strftime("%m-%d-%Y")
-                filename = f"blue_thumb_macro_data_{timestamp}.csv"
+                filename = f"blue_thumb_macro_data.csv"
                 
                 logger.info(f"Successfully prepared macro data export with {len(data_df)} records")
                 
