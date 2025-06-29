@@ -15,7 +15,7 @@ def close_connection(conn):
 
 def execute_query(query, params=None):
     """Execute a SQL query with error handling."""
-    conn = get_connection(db_name)
+    conn = get_connection()
     cursor = conn.cursor()
     try:
         if params:

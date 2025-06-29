@@ -166,11 +166,11 @@ def create_map_legend_html(legend_items=None, count_message=None, total_count=No
             # Legend items for basic map
             html.Div([
                 html.Div([
-                    html.Span("●", style={"color": "#3366CC", "font-size": "16px"}),
+                    html.Span("●", style={"color": "#3366CC", "font-size": "12px"}),
                     html.Span(" Active Sites", className="mr-3")
                 ], style={"display": "inline-block", "margin-right": "15px"}),
                 html.Div([
-                    html.Span("●", style={"color": "#9370DB", "font-size": "12px"}),
+                    html.Span("●", style={"color": "#9370DB", "font-size": "8px"}),
                     html.Span(" Historic Sites", className="mr-3")
                 ], style={"display": "inline-block", "margin-right": "15px"})
             ])
@@ -188,7 +188,7 @@ def create_map_legend_html(legend_items=None, count_message=None, total_count=No
             # Legend items for parameter map
             html.Div([
                 html.Div([
-                    html.Span("● ", style={"color": item["color"], "font-size": "20px"}),
+                    html.Span("● ", style={"color": item["color"], "font-size": "12px"}),
                     html.Span(item["label"], className="mr-3")
                 ], style={"display": "inline-block", "margin-right": "15px"})
                 for item in legend_items
