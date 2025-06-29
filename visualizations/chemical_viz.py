@@ -69,7 +69,7 @@ def _add_threshold_plot(fig, df, parameter, reference_values, marker_size, y_lab
                     name=status_type if row is None else f"{parameter} - {status_type}",
                     showlegend=(row is None),  # Only show legend for individual plots
                     legendgroup=parameter if row is not None else None,
-                    hovertemplate='<b>Date</b>: %{x|%Y-%m-%d}<br>' +
+                    hovertemplate='<b>Date</b>: %{x|%m-%d-%Y}<br>' +
                                 '<b>' + y_label + '</b>: %{y}<br>' +
                                 '<b>Status</b>: ' + status_type +
                                 '<extra></extra>'
@@ -106,7 +106,7 @@ def _add_standard_plot(fig, df, parameter, marker_size, y_label, row=None, col=N
             line=dict(color='blue', width=1),
             name=parameter,
             opacity=0.7 if row is not None else 1.0,
-            hovertemplate='<b>Date</b>: %{x|%Y-%m-%d}<br><b>' + y_label + '</b>: %{y}<extra></extra>'
+            hovertemplate='<b>Date</b>: %{x|%m-%d-%Y}<br><b>' + y_label + '</b>: %{y}<extra></extra>'
         ),
         row=row, col=col
     )

@@ -221,25 +221,25 @@ RECREATION_CARDS = [
 # Community Action cards 
 COMMUNITY_CARDS = [
     {
-        "icon": "cleanups", 
-        "title": "ORGANIZE STREAM CLEANUPS",
-        "why_text": "Trash and debris in waterways harm wildlife, degrade water quality, and can cause blockages that lead to flooding.",
+        "icon": "monitoring", 
+        "title": "VOLUNTEER WITH MONITORING PROGRAMS",
+        "why_text": "Regular monitoring helps track stream health, identify problems early, and measure improvement over time.",
         "tips_list": [
-            "Partner with local conservation groups",
-            "Focus on high-traffic areas like parks and bridges",
-            "Sort collected waste for proper recycling",
-            "Document your findings to track improvements"
+            "Join local stream monitoring programs like Blue Thumb",
+            "Learn proper sampling and assessment techniques",
+            "Consistently monitor the same location over time",
+            "Report unusual conditions or concerns to authorities"
         ]
     },
-    {
-        "icon": "storm-drains", 
-        "title": "MARK STORM DRAINS",
-        "why_text": "Many people don't realize storm drains flow directly to waterways, often without treatment.",
+        {
+        "icon": "restoration", 
+        "title": "PARTICIPATE IN STREAM RESTORATION",
+        "why_text": "Community-based restoration efforts can significantly improve stream health by repairing damaged habitat and addressing pollution sources.",
         "tips_list": [
-            "Contact local authorities about marking programs",
-            "Use approved markers or stencils",
-            "Distribute educational materials to neighbors",
-            "Adopt storm drains in your neighborhood for monitoring"
+            "Join local watershed associations or conservation districts",
+            "Volunteer for tree planting events along streams",
+            "Help with invasive species removal projects",
+            "Assist with bank stabilization and in-stream habitat improvements"
         ]
     },
     {
@@ -254,6 +254,17 @@ COMMUNITY_CARDS = [
         ]
     },
     {
+        "icon": "cleanups", 
+        "title": "ORGANIZE STREAM CLEANUPS",
+        "why_text": "Trash and debris in waterways harm wildlife, degrade water quality, and can cause blockages that lead to flooding.",
+        "tips_list": [
+            "Partner with local conservation groups",
+            "Focus on high-traffic areas like parks and bridges",
+            "Sort collected waste for proper recycling",
+            "Document your findings to track improvements"
+        ]
+    },
+    {
         "icon": "policies", 
         "title": "SUPPORT WATER-FRIENDLY POLICIES",
         "why_text": "Local policies and ordinances can either protect or harm stream health on a community-wide scale.",
@@ -265,25 +276,14 @@ COMMUNITY_CARDS = [
         ]
     },
     {
-        "icon": "monitoring", 
-        "title": "VOLUNTEER WITH MONITORING PROGRAMS",
-        "why_text": "Regular monitoring helps track stream health, identify problems early, and measure improvement over time.",
+        "icon": "storm-drains", 
+        "title": "MARK STORM DRAINS",
+        "why_text": "Many people don't realize storm drains flow directly to waterways, often without treatment.",
         "tips_list": [
-            "Join local stream monitoring programs",
-            "Learn proper sampling and assessment techniques",
-            "Consistently monitor the same location over time",
-            "Report unusual conditions or concerns to authorities"
-        ]
-    },
-    {
-        "icon": "restoration", 
-        "title": "PARTICIPATE IN STREAM RESTORATION",
-        "why_text": "Community-based restoration efforts can significantly improve stream health by repairing damaged habitat and addressing pollution sources.",
-        "tips_list": [
-            "Join local watershed associations or conservation districts",
-            "Volunteer for tree planting events along streams",
-            "Help with invasive species removal projects",
-            "Assist with bank stabilization and in-stream habitat improvements"
+            "Contact local authorities about marking programs",
+            "Use approved markers or stencils",
+            "Distribute educational materials to neighbors",
+            "Adopt storm drains in your neighborhood for monitoring"
         ]
     }
 ]

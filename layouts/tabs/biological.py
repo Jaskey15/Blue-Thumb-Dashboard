@@ -21,7 +21,7 @@ def create_biological_tab():
                 "conditions over extended periods. This provides a more comprehensive view of stream health than "
                 "chemical testing alone, as biological communities integrate all environmental factors throughout "
                 "their lifecycle. Select a community type and site below to begin analysis. You can find site "
-                "names and location on the ",
+                "names and locations on the ",
                 html.A("overview tab", id="biological-overview-link", href="#", style={"text-decoration": "underline"}),
                 "."
             ]),

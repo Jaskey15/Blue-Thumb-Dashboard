@@ -440,7 +440,7 @@ def create_hover_text(df, data_type, config, parameter_name):
     if config['date_column'] in df.columns:
         if data_type == 'chemical':
             # Format date nicely
-            dates = pd.to_datetime(df[config['date_column']]).dt.strftime('%Y-%m-%d')
+            dates = pd.to_datetime(df[config['date_column']]).dt.strftime('%m-%d-%Y')
             hover_texts += "<b>Latest Reading:</b> " + dates + "<br>"
         elif data_type == 'macro':
             # Special handling for macro data to include season

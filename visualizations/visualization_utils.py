@@ -260,7 +260,7 @@ def generate_hover_text(df, hover_fields):
                     
                     # Format dates
                     if 'date' in column_name.lower() and hasattr(value, 'strftime'):
-                        formatted_value = value.strftime('%Y-%m-%d')
+                        formatted_value = value.strftime('%m-%d-%Y')
                     
                     # Format numeric scores
                     elif 'score' in display_name.lower() and isinstance(value, (int, float)):
