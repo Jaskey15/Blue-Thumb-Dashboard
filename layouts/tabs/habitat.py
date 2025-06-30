@@ -22,7 +22,7 @@ def create_habitat_tab():
                 "provides crucial context for interpreting chemical and biological results. Physical habitat "
                 "quality directly influences the biotic community and serves as the foundation for a healthy "
                 "stream ecosystem. Select a site below to begin analysis. You can find site names and locations on the ",
-                html.A("Overview tab", id="habitat-overview-link", href="#", style={"text-decoration": "underline"}),
+                html.A("overview tab", id="habitat-overview-link", href="#", style={"text-decoration": "underline"}),
                 "."
             ])
         ], className="mb-4"),
