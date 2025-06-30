@@ -291,3 +291,46 @@ figcaption {
   line-height: 1.7;
   margin-bottom: 1.25rem;
 }
+
+/* =================================
+   MOBILE QUICK FIXES
+   ================================= */
+
+/* Mobile devices */
+@media (max-width: 768px) {
+  /* Smaller header on mobile */
+  header h1 {
+    font-size: 1.8rem !important;
+    padding: 1rem !important;
+  }
+  
+  /* Reduce container padding */
+  .container-fluid {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+  
+  /* Tab content padding */
+  .dash-tab-content {
+    padding: 10px;
+  }
+  
+  /* Tab labels - allow wrapping */
+  .nav-tabs .nav-link {
+    font-size: 0.85rem;
+    padding: 0.5rem 0.25rem;
+    white-space: normal;
+    line-height: 1.2;
+  }
+  
+  /* Footer - stack vertically */
+  .text-center.mt-4.text-muted.d-flex {
+    flex-direction: column !important;
+    gap: 1rem;
+  }
+  
+  /* Make graphs responsive */
+  .js-plotly-plot {
+    width: 100% !important;
+  }
+}

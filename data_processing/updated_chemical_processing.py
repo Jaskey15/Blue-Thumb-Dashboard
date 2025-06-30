@@ -18,7 +18,7 @@ Usage:
 import os
 import pandas as pd
 from data_processing.chemical_utils import (
-    validate_chemical_data, calculate_soluble_nitrogen, 
+    apply_bdl_conversions, validate_chemical_data, calculate_soluble_nitrogen, 
     remove_empty_chemical_rows, insert_chemical_data
 )
 from data_processing import setup_logging
@@ -333,6 +333,9 @@ def process_updated_chemical_data():
         # Clean and validate 
         formatted_df = remove_empty_chemical_rows(formatted_df)
         formatted_df = validate_chemical_data(formatted_df, remove_invalid=True)
+        
+        # Apply BDL conversions
+        formatted_df = apply_bdl_conversions(formatted_df)
         
         logger.info(f"Complete processing finished: {len(formatted_df)} rows ready for database")
         return formatted_df

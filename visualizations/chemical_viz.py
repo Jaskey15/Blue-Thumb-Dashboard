@@ -43,6 +43,12 @@ MARKER_SIZES = {
     'dashboard': 4
 }
 
+# BDL (Below Detection Limit) footnotes for specific parameters
+BDL_FOOTNOTES = {
+    'Phosphorus': '*Phosphorus values below detection limit (BDL) have been converted to 0.005 mg/L for analysis purposes.',
+    'soluble_nitrogen': '*Soluble nitrogen component values below detection limit (BDL) have been converted (nitrate: 0.3, nitrite: 0.03, ammonia: 0.03) for analysis purposes.'
+}
+
 # Helper functions
 def _add_threshold_plot(fig, df, parameter, reference_values, marker_size, y_label, row=None, col=None):
     """Add threshold-based colored scatter plot with connecting lines and reference lines"""
@@ -282,6 +288,17 @@ def create_time_series_plot(df, parameter, reference_values, title=None, y_label
         )
     )
     
+    # Add parameter-specific footnote if applicable
+    if parameter in BDL_FOOTNOTES:
+        fig.add_annotation(
+            text=BDL_FOOTNOTES[parameter],
+            xref="paper", yref="paper",
+            x=0, y=-0.20,  # Position below the graph with more spacing, left-aligned
+            xanchor='left', yanchor='top',
+            showarrow=False,
+            font=dict(size=10, color="gray", style="italic")
+        )
+    
     # Format date axis better
     fig = _format_date_axes(fig, nticks=10)
     
@@ -378,6 +395,6 @@ def create_all_parameters_view(df=None, parameters=None, reference_values=None, 
             tickfont=dict(size=FONT_SIZES['cell']),
             row=row, col=col
         )
-    
+
     return fig
 

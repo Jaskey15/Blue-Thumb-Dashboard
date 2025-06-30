@@ -232,6 +232,61 @@ def create_species_display(item):
         ], style={'min-height': '80px'})
     ], style={'min-height': '400px'})
 
+def create_macro_dual_display(item):
+    """
+    Create HTML layout for displaying macroinvertebrate larval and adult stages side-by-side.
+    
+    Args:
+        item: Dictionary with species information including larval and adult images/descriptions
+        
+    Returns:
+        Dash HTML component for displaying both life stages
+    """
+    return html.Div([
+        # Image container with side-by-side layout
+        html.Div([
+            # Larval stage (left side)
+            html.Div([
+                html.H6("Larval Stage", className="text-center mb-2", style={'fontSize': '14px', 'fontWeight': 'bold'}),
+                html.Img(
+                    src=item['larval_image'],
+                    style={'max-height': '250px', 'object-fit': 'contain', 'max-width': '100%'}
+                ),
+            ], style={
+                'width': '48%', 
+                'display': 'inline-block', 
+                'vertical-align': 'top',
+                'text-align': 'center'
+            }),
+            
+            # Adult stage (right side)  
+            html.Div([
+                html.H6("Adult Stage", className="text-center mb-2", style={'fontSize': '14px', 'fontWeight': 'bold'}),
+                html.Img(
+                    src=item['adult_image'],
+                    style={'max-height': '250px', 'object-fit': 'contain', 'max-width': '100%'}
+                ),
+            ], style={
+                'width': '48%', 
+                'display': 'inline-block', 
+                'vertical-align': 'top', 
+                'margin-left': '4%',
+                'text-align': 'center'
+            })
+        ], style={
+            'height': '300px', 
+            'display': 'flex', 
+            'align-items': 'center', 
+            'justify-content': 'center'
+        }),
+        
+        # Text container with unified description
+        html.Div([
+            html.H5(item['name'], className="mt-2 text-center"),
+            html.P(item['description'], className="mt-1 text-center")
+        ], style={'min-height': '80px'})
+    ], style={'min-height': '400px'})
+
 def create_gallery_navigation_callback(gallery_type):
     """
     Create a callback function for species gallery navigation.
@@ -261,7 +316,10 @@ def create_gallery_navigation_callback(gallery_type):
         
         # If no buttons clicked yet, show the first item
         if not ctx.triggered:
-            return create_species_display(data[0]), 0
+            if gallery_type == 'macro':
+                return create_macro_dual_display(data[0]), 0
+            else:
+                return create_species_display(data[0]), 0
         
         # Determine which button was clicked
         button_id = ctx.triggered[0]['prop_id'].split('.')[0]
@@ -275,8 +333,11 @@ def create_gallery_navigation_callback(gallery_type):
         # Get the data for the new index
         item = data[new_index]
         
-        # Create the display for the current item
-        return create_species_display(item), new_index
+        # Create the display for the current item based on gallery type
+        if gallery_type == 'macro':
+            return create_macro_dual_display(item), new_index
+        else:
+            return create_species_display(item), new_index
     
     return update_gallery
 
@@ -418,7 +479,7 @@ def create_biological_site_display(selected_community, selected_site):
                 dbc.Col([
                     metrics_accordion
                 ], width=12)
-            ], className="mb-2"),
+            ], className="mb-4"),
         ])
         
         return content

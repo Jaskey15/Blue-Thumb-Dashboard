@@ -14,7 +14,10 @@ from layouts.modals import create_icon_attribution_modal, create_image_credits_m
 # Initialize the Dash app
 app = dash.Dash(__name__, 
                 external_stylesheets=[dbc.themes.SANDSTONE],
-                suppress_callback_exceptions=True)
+                suppress_callback_exceptions=True,
+                meta_tags=[
+                    {"name": "viewport", "content": "width=device-width, initial-scale=1, shrink-to-fit=no"}
+                ])
 server = app.server
 
 # Define header 
@@ -25,7 +28,7 @@ header = dbc.Container([
                 html.H1("Blue Thumb Stream Health Dashboard", 
                        className="text-white text-center p-3",
                        style={
-                           'font-size': '2.5rem',  
+                           'font-size': 'clamp(1.5rem, 4vw, 2.5rem)',  # Responsive font size
                            'font-family': 'Montserrat, sans-serif',  
                            'font-weight': '700', 
                            'text-shadow': '2px 2px 4px rgba(0, 0, 0, 0.5)', 

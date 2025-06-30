@@ -320,31 +320,35 @@ FISH_DATA = [
     }
 ]
 
-# Macroinvertebrate gallery data
+# Macroinvertebrate gallery data with dual life stages
 MACRO_DATA = [
     {
         "id": 0,
         "name": "Caddisfly",
-        "image": "/assets/images/macroinvertebrates/Caddisfly.png",
-        "description": "Caddisflies are sensitive to pollution and build protective cases from materials in their environment."
+        "larval_image": "/assets/images/macroinvertebrates/caddisfly_larval.jpeg",
+        "adult_image": "/assets/images/macroinvertebrates/caddisfly_adult.jpg",
+        "description": "Caddisflies build protective cases from materials in their environment and are sensitive to pollution - making them indicators of good water quality"
     },
     {
         "id": 1,
-        "name": "Non-biting Midge",
-        "image": "/assets/images/macroinvertebrates/Non-biting_Midge.jpg",
-        "description": "Non-biting midges are small, mosquito-like insects whose larvae are an important food source for fish."
+        "name": "Mayfly",
+        "larval_image": "/assets/images/macroinvertebrates/mayfly_larval.jpeg",
+        "adult_image": "/assets/images/macroinvertebrates/mayfly_adult.jpeg",
+        "description": "Mayflies are known for their distinctive multi-tailed nymphs and are excellent indicators of healthy streams"
     },
     {
         "id": 2,
         "name": "Riffle Beetle",
-        "image": "/assets/images/macroinvertebrates/Riffle_Beetle.jpg",
-        "description": "Riffle beetles are small aquatic beetles that indicate good water quality as they require high oxygen levels."
+        "larval_image": "/assets/images/macroinvertebrates/riffle_beetle_larval.jpeg",
+        "adult_image": "/assets/images/macroinvertebrates/riffle_beetle_adult.jpeg",
+        "description": "Riffle beetles are small aquatic beetles that indicate good water quality as they require high oxygen levels"
     },
     {
         "id": 3,
         "name": "Stonefly",
-        "image": "/assets/images/macroinvertebrates/Stonefly.png",
-        "description": "Stoneflies are very sensitive to pollution and are excellent indicators of pristine water conditions."
+        "larval_image": "/assets/images/macroinvertebrates/stonefly_larval.jpg",
+        "adult_image": "/assets/images/macroinvertebrates/stonefly_adult.jpg",
+        "description": "Stoneflies are very sensitive to pollution and are excellent indicators of pristine water conditions"
     }
 ]
 

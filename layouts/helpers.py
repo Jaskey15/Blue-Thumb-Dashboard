@@ -18,9 +18,9 @@ def create_species_gallery(species_type):
     """
     # Determine gallery title based on species type
     title = (
-        "Common fish found in Oklahoma Streams" 
+        "Common Fish Found in Oklahoma Streams" 
         if species_type == 'fish' 
-        else "Common macroinvertebrates found in Oklahoma Streams"
+        else "Common Macroinvertebrates Found in Oklahoma Streams"
     )
     
     # Create ID strings for components
