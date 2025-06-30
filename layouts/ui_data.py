@@ -309,7 +309,7 @@ FISH_DATA = [
     {
         "id": 2,
         "name": "Mosquitofish",
-        "image": "assets/images/fish/mosquitofish.jpg",
+        "image": "assets/images/fish/mosquitofish.JPG",
         "description": "Mosquitofish are small fish that help control mosquito populations by eating their larvae."
     },
     {
