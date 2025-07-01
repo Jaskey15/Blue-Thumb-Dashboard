@@ -1,0 +1,59 @@
+# Version control
+.git
+.gitignore
+
+# Documentation
+README.md
+docs/
+*.md
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+.env
+.venv
+venv/
+env/
+ENV/
+
+# Testing
+tests/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Log files
+logs/*.log
+*.log
+
+# Cache and temporary files
+cache/
+*.pkl
+.cache/
+
+# Database files (we'll use environment-specific paths)
+*.db
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db 
