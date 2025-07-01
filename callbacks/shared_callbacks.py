@@ -69,13 +69,13 @@ def register_shared_callbacks(app):
         [Output("main-tabs", "active_tab"),
          Output("navigation-store", "data")],
         [Input("site-map-graph", "clickData"),
-         Input("parameter-dropdown", "value"),
          Input("chemical-overview-link", "n_clicks"),
          Input("biological-overview-link", "n_clicks"),
          Input("habitat-overview-link", "n_clicks")],
+        [State("parameter-dropdown", "value")],
         prevent_initial_call=True
     )
-    def handle_navigation(click_data, current_parameter, chemical_clicks, biological_clicks, habitat_clicks):
+    def handle_navigation(click_data, chemical_clicks, biological_clicks, habitat_clicks, current_parameter):
         """
         Handle all navigation: map clicks and overview links.
         
