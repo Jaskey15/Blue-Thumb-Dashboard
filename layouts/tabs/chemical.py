@@ -77,21 +77,37 @@ def create_chemical_tab():
                 ], width=12)
             ]),
             
-            # Year range 
+            # Year range - aligned with season/months row below
             dbc.Row([
                 dbc.Col([
-                    html.Label("Select Year Range:", className="form-label mb-2", style={'fontWeight': 'bold', 'fontSize': '1rem'}),
-                    dcc.RangeSlider(
-                        id='year-range-slider',
-                        min=min_year,
-                        max=max_year,
-                        step=1,
-                        marks={year: str(year) for year in range(min_year, max_year + 1)},
-                        value=[min_year, max_year],  # Show full range by default
-                        className="mb-3"
+                    html.Label(
+                        "Start Year:", 
+                        className="form-label mb-2",
+                        style={"display": "inline-block", "vertical-align": "middle", "margin-right": "10px", "fontWeight": "bold", "fontSize": "1rem"}
+                    ),
+                    dcc.Dropdown(
+                        id='start-year-dropdown',
+                        options=[{'label': str(year), 'value': year} for year in range(min_year, max_year + 1)],
+                        value=min_year,
+                        clearable=False,
+                        style={"display": "inline-block", "vertical-align": "middle", "width": "120px"}
                     )
-                ], width=12)  
-            ]),
+                ], width=5),
+                dbc.Col([
+                    html.Label(
+                        "End Year:", 
+                        className="form-label mb-2",
+                        style={"display": "inline-block", "vertical-align": "middle", "margin-right": "10px", "fontWeight": "bold", "fontSize": "1rem"}
+                    ),
+                    dcc.Dropdown(
+                        id='end-year-dropdown',
+                        options=[{'label': str(year), 'value': year} for year in range(min_year, max_year + 1)],
+                        value=max_year,
+                        clearable=False,
+                        style={"display": "inline-block", "vertical-align": "middle", "width": "120px"}
+                    )
+                ], width=7)
+            ], className="mb-3"),
             
             # Season and month selection - UPDATED LAYOUT TO MATCH ORIGINAL
             dbc.Row([

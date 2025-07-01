@@ -25,17 +25,23 @@ def register_chemical_callbacks(app):
         Output('chemical-tab-state', 'data'),
         [Input('chemical-site-dropdown', 'value'),
          Input('chemical-parameter-dropdown', 'value'),
-         Input('year-range-slider', 'value'),
+         Input('start-year-dropdown', 'value'),
+         Input('end-year-dropdown', 'value'),
          Input('month-checklist', 'value'),
          Input('highlight-thresholds-switch', 'value')],
         [State('chemical-tab-state', 'data')],
         prevent_initial_call=True
     )
-    def save_chemical_state(selected_site, selected_parameter, year_range, selected_months, 
+    def save_chemical_state(selected_site, selected_parameter, start_year, end_year, selected_months, 
                            highlight_thresholds, current_state):
         """Save chemical tab state when selections change."""
+        # Convert start_year and end_year to year_range for consistency
+        year_range = None
+        if start_year is not None and end_year is not None:
+            year_range = [start_year, end_year]
+        
         # Only save valid selections, don't overwrite with None
-        if any(val is not None for val in [selected_site, selected_parameter, year_range, selected_months, highlight_thresholds]):
+        if any(val is not None for val in [selected_site, selected_parameter, start_year, end_year, selected_months, highlight_thresholds]):
             # Preserve existing values when only some change
             new_state = current_state.copy() if current_state else {
                 'selected_site': None,
@@ -84,7 +90,8 @@ def register_chemical_callbacks(app):
         [Output('chemical-site-dropdown', 'options'),
          Output('chemical-site-dropdown', 'value', allow_duplicate=True),
          Output('chemical-parameter-dropdown', 'value', allow_duplicate=True),
-         Output('year-range-slider', 'value', allow_duplicate=True),
+         Output('start-year-dropdown', 'value', allow_duplicate=True),
+         Output('end-year-dropdown', 'value', allow_duplicate=True),
          Output('month-checklist', 'value', allow_duplicate=True),
          Output('highlight-thresholds-switch', 'value', allow_duplicate=True)],
         [Input('main-tabs', 'active_tab'),
@@ -95,12 +102,12 @@ def register_chemical_callbacks(app):
     def handle_chemical_navigation_and_state_restoration(active_tab, nav_data, chemical_state):
         """Handle navigation from map, initial tab loading, and state restoration for all chemical controls."""
         if active_tab != 'chemical-tab':
-            return [], dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
+            return [], dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
         
         # Get the trigger to understand what caused this callback
         ctx = dash.callback_context
         if not ctx.triggered:
-            return [], dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
+            return [], dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
             
         trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
         
@@ -110,7 +117,7 @@ def register_chemical_callbacks(app):
             
             if not sites:
                 logger.warning("No sites with chemical data found")
-                return [], dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
+                return [], dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
             
             # Create dropdown options
             options = [{'label': site, 'value': site} for site in sorted(sites)]
@@ -127,7 +134,7 @@ def register_chemical_callbacks(app):
                     # For map navigation, set site + parameter from nav, preserve other filters from state or use defaults
                     restored_year_range = (chemical_state.get('year_range') 
                                          if chemical_state and chemical_state.get('year_range') 
-                                         else dash.no_update)
+                                         else [dash.no_update, dash.no_update])
                     restored_months = (chemical_state.get('selected_months') 
                                      if chemical_state and chemical_state.get('selected_months') 
                                      else dash.no_update)
@@ -139,7 +146,8 @@ def register_chemical_callbacks(app):
                         options,  # Site options
                         target_site,  # Set target site
                         target_parameter or 'do_percent',  # Set target parameter
-                        restored_year_range,  # Preserve year range from state
+                        restored_year_range[0],  # Start year
+                        restored_year_range[1],  # End year
                         restored_months,  # Preserve months from state
                         restored_thresholds  # Preserve thresholds from state
                     )
@@ -159,11 +167,16 @@ def register_chemical_callbacks(app):
                 
                 # Verify saved site is still available
                 if saved_site in sites:
+                    # Convert year_range to individual start/end years
+                    start_year = saved_year_range[0] if saved_year_range else dash.no_update
+                    end_year = saved_year_range[1] if saved_year_range else dash.no_update
+                    
                     return (
                         options,  # Site options
                         saved_site,  # Restore site
                         saved_parameter,  # Restore parameter
-                        saved_year_range,  # Restore year range
+                        start_year,  # Restore start year
+                        end_year,  # Restore end year
                         saved_months,  # Restore months
                         saved_thresholds  # Restore thresholds
                     )
@@ -172,14 +185,14 @@ def register_chemical_callbacks(app):
             
             # Ignore navigation-store clearing events (when nav_data is empty/None)
             if trigger_id == 'navigation-store' and (not nav_data or not nav_data.get('target_tab')):
-                return options, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
+                return options, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
             
             # Default behavior - just populate options
-            return options, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
+            return options, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
             
         except Exception as e:
             logger.error(f"Error in chemical navigation/state restoration: {e}")
-            return [], dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
+            return [], dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
     
     # ===========================
     # 3. SITE SELECTION & CONTROLS
@@ -237,16 +250,44 @@ def register_chemical_callbacks(app):
         return season_months.get(button_id, dash.no_update)
     
     @app.callback(
+        [Output('start-year-dropdown', 'options'),
+         Output('end-year-dropdown', 'options')],
+        [Input('start-year-dropdown', 'value'),
+         Input('end-year-dropdown', 'value')]
+    )
+    def update_year_dropdown_options(start_year, end_year):
+        """Update year dropdown options to ensure end year >= start year."""
+        from data_processing.data_queries import get_chemical_date_range
+        min_year, max_year = get_chemical_date_range()
+        
+        # Create all year options
+        all_years = list(range(min_year, max_year + 1))
+        
+        # For start year dropdown: all years
+        start_options = [{'label': str(year), 'value': year} for year in all_years]
+        
+        # For end year dropdown: only years >= start_year (if start_year is selected)
+        if start_year is not None:
+            valid_end_years = [year for year in all_years if year >= start_year]
+        else:
+            valid_end_years = all_years
+            
+        end_options = [{'label': str(year), 'value': year} for year in valid_end_years]
+        
+        return start_options, end_options
+    
+    @app.callback(
         [Output('chemical-graph-container', 'children'),
          Output('chemical-explanation-container', 'children'),
          Output('chemical-diagram-container', 'children')],
         [Input('chemical-parameter-dropdown', 'value'),
-         Input('year-range-slider', 'value'),
+         Input('start-year-dropdown', 'value'),
+         Input('end-year-dropdown', 'value'),
          Input('month-checklist', 'value'),
          Input('highlight-thresholds-switch', 'value'),
          Input('chemical-site-dropdown', 'value')]
     )
-    def update_chemical_display(selected_parameter, year_range, selected_months, 
+    def update_chemical_display(selected_parameter, start_year, end_year, selected_months, 
                               highlight_thresholds, selected_site):
         """Update chemical parameter visualization based on user selections."""
         
@@ -257,12 +298,16 @@ def register_chemical_callbacks(app):
         if not selected_parameter:
             return create_empty_state("Please select a parameter to visualize."), html.Div(), html.Div()
         
-        # Validate year_range - if None, get default range
-        if year_range is None:
+        # Validate year range - if None, get default range
+        if start_year is None or end_year is None:
             from data_processing.data_queries import get_chemical_date_range
             min_year, max_year = get_chemical_date_range()
-            year_range = [min_year, max_year]
-            logger.info(f"Using default year range: {year_range}")
+            start_year = start_year if start_year is not None else min_year
+            end_year = end_year if end_year is not None else max_year
+            logger.info(f"Using default year range: {start_year} to {end_year}")
+        
+        # Create year_range for filtering
+        year_range = [start_year, end_year]
         
         # Validate selected_months - if None, use all months
         if selected_months is None:
