@@ -110,6 +110,52 @@ app.layout = dbc.Container([
     
 ], fluid=True, className="px-4", style={"max-width": "1200px", "margin": "0 auto"})
 
+# Ensure database exists before starting app
+def ensure_database_exists():
+    """Ensure database exists and is populated, create if necessary."""
+    import os
+    from database.database import get_connection
+    from database.reset_database import reset_database
+    
+    db_path = os.path.join(os.path.dirname(__file__), 'database', 'blue_thumb.db')
+    
+    if not os.path.exists(db_path):
+        print("Database not found. Creating and populating database...")
+        success = reset_database()
+        if success:
+            print("Database created successfully!")
+        else:
+            print("Failed to create database!")
+            return False
+    else:
+        # Check if database has data
+        try:
+            conn = get_connection()
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM sites")
+            site_count = cursor.fetchone()[0]
+            conn.close()
+            
+            if site_count == 0:
+                print("Database exists but is empty. Populating...")
+                success = reset_database()
+                if not success:
+                    print("Failed to populate database!")
+                    return False
+            else:
+                print(f"Database ready with {site_count} sites.")
+        except Exception as e:
+            print(f"Database check failed: {e}. Recreating...")
+            success = reset_database()
+            if not success:
+                print("Failed to recreate database!")
+                return False
+    
+    return True
+
+# Initialize database
+ensure_database_exists()
+
 # Register callbacks
 register_callbacks(app)
 
