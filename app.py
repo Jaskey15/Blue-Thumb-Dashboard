@@ -36,7 +36,7 @@ header = dbc.Container([
                        })
             ], 
             style={
-                'background-image': 'linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url("/assets/images/header_image.png")',  
+                'background-image': 'linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url("/assets/images/header_image.jpg")',  
                 'background-size': 'cover',
                 'background-position': 'center',
                 'border-radius': '5px',

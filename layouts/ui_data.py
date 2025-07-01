@@ -359,10 +359,10 @@ MACRO_DATA = [
 # Chemical parameter diagram mapping
 CHEMICAL_DIAGRAMS = {
     'do_percent': '/assets/images/chemical_diagrams/dissolved_oxygen_graphic.jpg',
-    'pH': '/assets/images/chemical_diagrams/pH_graphic.png',
-    'soluble_nitrogen': '/assets/images/chemical_diagrams/nitrogen_cycle.png',
-    'Phosphorus': '/assets/images/chemical_diagrams/phosphorous_cycle.png',
-    'Chloride': '/assets/images/chemical_diagrams/chloride_graphic.png',
+    'pH': '/assets/images/chemical_diagrams/pH_graphic.jpg',
+    'soluble_nitrogen': '/assets/images/chemical_diagrams/nitrogen_cycle.jpg',
+    'Phosphorus': '/assets/images/chemical_diagrams/phosphorous_cycle.jpg',
+    'Chloride': '/assets/images/chemical_diagrams/chloride_graphic.jpg',
 }
 
 # Dictionary of captions for chemical diagrams
