@@ -22,7 +22,14 @@ app = dash.Dash(__name__,
 server = app.server
 
 # Add WhiteNoise for serving static files on Heroku
-server.wsgi_app = WhiteNoise(server.wsgi_app, root='assets/', prefix='/assets/')
+# Configure WhiteNoise to serve assets from the root with proper URL mapping
+server.wsgi_app = WhiteNoise(
+    server.wsgi_app,
+    root='.',  # Serve from project root
+    prefix=None  # No prefix modification
+)
+# Add specific asset directory mapping
+server.wsgi_app.add_files('assets/', prefix='assets/')
 
 # Define header 
 header = dbc.Container([
