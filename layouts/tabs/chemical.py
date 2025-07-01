@@ -148,10 +148,11 @@ def create_chemical_tab():
                         ],
                         value=list(range(1, 13)),  # Default to all months
                         inline=True,
+                        className="checklist-mobile",
                         style={"display": "inline-block", "vertical-align": "middle"}
                     )
                 ], width=7)
-            ], className="mb-3"),
+            ], className="mb-3 mobile-season-stack"),
             
             # Highlight switch and download buttons row
             dbc.Row([
@@ -200,6 +201,6 @@ def create_chemical_tab():
                 dbc.Col([
                     html.Div(id='chemical-diagram-container')
                 ], width=6, className="d-flex align-items-center")  
-            ], className="h-100 align-items-stretch", style={'minHeight': '400px'})
+            ], className="h-100 align-items-stretch mobile-stack", style={'minHeight': '400px'})
         ], id="chemical-controls-content", style={'display': 'none'}),
     ], className="tab-content-wrapper") 

@@ -273,7 +273,7 @@ def create_macro_dual_display(item):
                 'margin-left': '4%',
                 'text-align': 'center'
             })
-        ], style={
+        ], className="create-macro-dual-display", style={
             'height': '300px', 
             'display': 'flex', 
             'align-items': 'center', 

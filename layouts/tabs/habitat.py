@@ -89,7 +89,7 @@ def create_habitat_tab():
                         )
                     ])
                 ], width=6, className="d-flex align-items-center")  
-            ], className="h-100 align-items-stretch", style={'minHeight': '400px'})
+            ], className="h-100 align-items-stretch mobile-stack", style={'minHeight': '400px'})
         ], id="habitat-controls-content", style={'display': 'none'}),
         
     ], className="tab-content-wrapper") 

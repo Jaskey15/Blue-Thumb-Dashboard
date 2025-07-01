@@ -71,7 +71,7 @@ def create_protect_our_streams_tab():
                         )
                     ], className="d-flex h-100 align-items-center justify-content-center flex-column tab-image-container")
                 ], width=6, className="d-flex align-items-center")
-            ]),
+            ], className="mobile-stack"),
             
             # Second row for "Actions You Can Take" section
             dbc.Row([

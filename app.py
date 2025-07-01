@@ -41,6 +41,7 @@ header = dbc.Container([
                 'background-position': 'center',
                 'border-radius': '5px',
                 'height': '200px',
+                'min-height': '150px',
                 'display': 'flex',
                 'align-items': 'center',
                 'justify-content': 'center'
@@ -99,7 +100,7 @@ app.layout = dbc.Container([
                     html.A("Icons from Flaticon", href="#", id="attribution-link"), " | ",
                     html.A("Image Credits", href="#", id="image-credits-link")
                 ], style={"display": "inline-block", "vertical-align": "middle"})
-            ], className="text-center mt-4 text-muted d-flex align-items-center justify-content-center")
+            ], className="text-center mt-4 text-muted d-flex align-items-center justify-content-center mobile-footer-stack")
         ], width=12)
     ]),
 
