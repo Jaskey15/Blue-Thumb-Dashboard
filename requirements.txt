@@ -27,6 +27,7 @@ typing_extensions==4.13.2
 tzdata==2025.2
 urllib3==2.4.0
 Werkzeug==3.0.6
+whitenoise==6.8.2
 zipp==3.21.0
 
 # Testing dependencies
