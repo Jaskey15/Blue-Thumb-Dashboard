@@ -1,6 +1,5 @@
 import dash
 import dash_bootstrap_components as dbc
-from whitenoise import WhiteNoise
 
 from callbacks import register_callbacks
 from dash import html, dcc
@@ -20,16 +19,6 @@ app = dash.Dash(__name__,
                     {"name": "viewport", "content": "width=device-width, initial-scale=1, shrink-to-fit=no"}
                 ])
 server = app.server
-
-# Add WhiteNoise for serving static files on Heroku
-# Configure WhiteNoise to serve assets from the root with proper URL mapping
-server.wsgi_app = WhiteNoise(
-    server.wsgi_app,
-    root='.',  # Serve from project root
-    prefix=None  # No prefix modification
-)
-# Add specific asset directory mapping
-server.wsgi_app.add_files('assets/', prefix='assets/')
 
 # Define header 
 header = dbc.Container([
