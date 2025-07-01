@@ -15,81 +15,22 @@ build/
 venv/
 env/
 ENV/
-.venv/
 
 # Log files
 *.log
 tenmile_creek.log
 tenmile_creek_setup.log
 
-# Log directories (keep structure but ignore contents)
-logs/*
-!logs/.gitkeep
-
 # Cache files
 cache/
 *.pkl
-*.pkl.bak
 
-# Database files (generated from raw data)
-database/*.db
-database/*.sqlite
-database/*.sqlite3
-*.db.backup
-*.sqlite.backup
-
-# Keep database schema and scripts
-!database/db_schema.py
-!database/database.py
-!database/reset_database.py
+# Database files you don't want to include (uncomment if needed)
+.db
 
 # Environment variables
 .env
-.env.local
-.env.development
-.env.production
 
-# Operating System files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
-# Python testing and coverage
-.pytest_cache/
-.coverage
-htmlcov/
-.tox/
-.nox/
-coverage.xml
-
-# Jupyter Notebook files
-.ipynb_checkpoints/
-*/.ipynb_checkpoints/*
-
-# Data science and analysis temporary files
-*.h5
-*.hdf5
-
-# Editor and IDE files
-*.swp
-*.swo
-*~
-.vscode/settings.json
-.vscode/launch.json
+# IDE specific files
 .vscode/
-.idea/workspace.xml
-.idea/tasks.xml
 .idea/
-
-# Temporary files
-*.tmp
-*.temp
-.tmp/
-temp/
-
-# Data processing interim files (can be regenerated)
-data/interim/
