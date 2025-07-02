@@ -1,0 +1,6 @@
+functions-framework==3.*
+google-cloud-storage==2.10.0
+pandas==2.2.3
+requests==2.32.3
+numpy<2.0
+python-dateutil==2.9.0.post0 
