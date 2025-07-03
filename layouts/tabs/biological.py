@@ -9,10 +9,9 @@ from utils import load_markdown_content
 def create_biological_tab():
     """Create the biological data tab layout with searchable dropdown for site selection."""
     return html.Div([
-        # Download component (hidden, triggered by callback)
         dcc.Download(id="biological-download-component"),
 
-        # Description - always visible
+        # Description section
         html.Div([
             html.H3("Biological Assessment", className="mb-3"),
             html.P([
@@ -27,7 +26,7 @@ def create_biological_tab():
             ]),
         ], className="mb-4"),
         
-        # Community selection - always visible
+        # Community selection
         html.Div([
             html.Label("Select Biological Community:", className="form-label mb-2", style={'fontWeight': 'bold', 'fontSize': '1rem'}),
             dcc.Dropdown(
@@ -42,34 +41,31 @@ def create_biological_tab():
             )
         ], className="mb-2"),
         
-        # Site selection section - simplified with searchable dropdown
+        # Site selection - hidden until community is selected
         html.Div([
             html.Label("Select Site:", className="form-label", style={'fontWeight': 'bold', 'fontSize': '1rem', 'marginBottom': '0.1rem'}),
             
-            # Helper text
             html.Small(
                 "Click the dropdown and start typing to search for monitoring sites",
                 className="text-muted mb-1 d-block"
             ),
 
-            # Searchable dropdown for site selection
             dcc.Dropdown(
                 id='biological-site-dropdown',
-                options=[],  # Will be populated when community is selected
+                options=[],  # Populated dynamically when community is selected
                 placeholder="Search for a site...",
                 searchable=True,
                 clearable=True,
-                disabled=True,  # Start disabled until community is selected
+                disabled=True,  # Disabled until community is selected
                 className="mb-3"
             )
             
         ], id='biological-site-search-section', className="mb-4", style={'display': 'none'}),
         
-        # Content container - split into community-specific and site-specific sections
+        # Content container
         html.Div([
-            # Site-specific content (charts, metrics) - appears first
+            # Site-specific content (charts, metrics)
             html.Div([
-                # Download button container
                 dbc.Row([
                     dbc.Col([
                         dbc.Button(
@@ -81,14 +77,13 @@ def create_biological_tab():
                     ], width=12, className="d-flex justify-content-end")
                 ]),
                 
-                # Site content container
                 html.Div(id='biological-site-content-inner')
             ], id='biological-site-content'),
             
-            # Community-specific content (description, gallery, interpretation) - appears second
+            # Community-specific content (description, gallery, interpretation)
             html.Div(id='biological-community-content', className="mt-4")
         ], id='biological-content-container', className="mt-4"),
         
-        # Legacy controls content section - keeping for compatibility with existing callbacks
+        # Legacy compatibility - keeping for existing callbacks
         html.Div(id="biological-controls-content", style={'display': 'none'})
     ], className="tab-content-wrapper") 
