@@ -1,5 +1,5 @@
 """
-macro_viz.py - Macroinvertebrate Community Assessment Data Visualization
+Macroinvertebrate bioassessment visualization with seasonal analysis and condition thresholds.
 
 This module creates visualizations for macroinvertebrate bioassessment data including 
 seasonal line charts with biological condition reference lines and data tables for 
@@ -33,7 +33,6 @@ from .visualization_utils import (
 
 logger = setup_logging("macro_viz", category="visualization")
 
-# Macroinvertebrate-specific configuration
 CONDITION_THRESHOLDS = {
     'Non-impaired': 0.83,
     'Slightly Impaired': 0.54,
@@ -59,42 +58,28 @@ MACRO_SUMMARY_LABELS = ['Total Score', 'Comparison to Reference', 'Biological Co
 
 def create_macro_viz(site_name=None):
     """
-    Create macroinvertebrate visualization with date-based plotting and seasonal grouping.
-    
-    Args:
-        site_name: Optional site name to filter data for
-    
-    Returns:
-        Plotly figure: Line plot showing bioassessment scores over time by season.
+    Generate seasonal macroinvertebrate visualization with condition thresholds.
     """
     try:
-        # Get macroinvertebrate data from the database
         macro_df = get_macroinvertebrate_dataframe(site_name)
         
         if macro_df.empty:
             return create_empty_figure(site_name, "macroinvertebrate")
 
-        # Handle missing habitat types
         macro_df['habitat'] = macro_df['habitat'].fillna('Unknown')
-        
-        # Parse collection dates
         macro_df['collection_date'] = pd.to_datetime(macro_df['collection_date'])
         
-        # Create figure
         fig = go.Figure()
         
-        # Get unique seasons and sort them
         seasons = sorted(macro_df['season'].unique())
         
-        # Plot each season as separate trace
+        # Create separate traces for summer and winter data
         for season in seasons:
             season_data = macro_df[macro_df['season'] == season].copy()
             season_data = season_data.sort_values('collection_date')
             
-            # Get color for this season using shared constants
             color = DEFAULT_COLORS.get(season, DEFAULT_COLORS.get('default', 'blue'))
             
-            # Define hover fields for macro seasonal data
             hover_fields = {
                 'Collection Date': 'collection_date',
                 'Season': 'season',
@@ -103,10 +88,8 @@ def create_macro_viz(site_name=None):
                 'Biological Condition': 'biological_condition'
             }
             
-            # Create hover text for this season using shared utility
             hover_text = generate_hover_text(season_data, hover_fields)
             
-            # Add trace for this season
             fig.add_trace(go.Scatter(
                 x=season_data['collection_date'],
                 y=season_data['comparison_to_reference'],
@@ -123,10 +106,8 @@ def create_macro_viz(site_name=None):
                 hoverinfo='text'
             ))
         
-        # Set up title
         title = f"Bioassessment Scores Over Time for {site_name}" if site_name else "Bioassessment Scores Over Time"
         
-        # Update layout using shared utility (with legend for seasons)
         fig = update_layout(
             fig,
             macro_df,
@@ -134,10 +115,9 @@ def create_macro_viz(site_name=None):
             y_label='Bioassessment Score<br>(Compared to Reference)',
             y_column='comparison_to_reference',
             tick_format='.2f',
-            has_legend=True  # Macro viz has seasons so needs legend
+            has_legend=True  # Show legend for seasonal differentiation
         )
         
-        # Add condition reference lines using shared utility
         fig = add_reference_lines(fig, macro_df, CONDITION_THRESHOLDS, CONDITION_COLORS)
 
         return fig
@@ -148,39 +128,26 @@ def create_macro_viz(site_name=None):
 
 def create_macro_metrics_table_for_season(metrics_df, summary_df, season):
     """
-    Create a metrics table for a specific season that shows ALL collections 
-    including multiple habitat types per year.
-    
-    Args:
-        metrics_df: DataFrame containing metrics data
-        summary_df: DataFrame containing summary scores
-        season: Season to filter data for ('Summer' or 'Winter')
-    
-    Returns:
-        HTML Div containing Dash DataTable component with footnote
+    Create metrics table for a specific season with habitat type handling.
     """
     try:
-        # Format data for the selected season using macro-specific utilities
         season_metrics, habitat_row, season_summary = format_macro_metrics_table(
             metrics_df, 
             summary_df, 
             season=season
         )
         
-        # Combine all parts: habitat row + metrics + summary
         season_full_table = pd.concat([habitat_row, season_metrics, season_summary], ignore_index=True)
         
-        # Get styling using macro-specific utilities
         styles = create_macro_table_styles(season_metrics, habitat_row)
         
-        # Create the table component using shared utilities
         table = create_data_table(
             season_full_table, 
             f'{season.lower()}-macro-metrics-table', 
             styles
         )
         
-        # Add footnotes for REP notation and habitat suffixes
+        # Add explanatory footnotes for data interpretation
         footnote1 = html.P(
             "*(REP) indicates a replicate sample collected in the same year/season/habitat",
             style={'font-style': 'italic', 'margin-top': '8px', 'margin-bottom': '2px', 'font-size': '12px'}
@@ -202,19 +169,11 @@ def create_macro_metrics_table_for_season(metrics_df, summary_df, season):
 
 def create_macro_metrics_accordion(site_name=None):
     """
-    Create an accordion layout for macroinvertebrate metrics tables.
-    
-    Args:
-        site_name: Optional site name to filter data for
-    
-    Returns:
-        HTML Div containing accordion components for each season's metrics
+    Create collapsible view of seasonal macroinvertebrate metrics.
     """
     try:
-        # Get the data with site filtering
         metrics_df, summary_df = get_macro_metrics_data_for_table()
         
-        # Filter by site if specified
         if site_name:
             metrics_df = metrics_df[metrics_df['site_name'] == site_name] if 'site_name' in metrics_df.columns else metrics_df
             summary_df = summary_df[summary_df['site_name'] == site_name] if 'site_name' in summary_df.columns else summary_df
@@ -222,15 +181,13 @@ def create_macro_metrics_accordion(site_name=None):
         if metrics_df.empty or summary_df.empty:
             return html.Div("No data available")
         
-        # Create the tables for each season
+        # Create separate tables for summer and winter assessments
         summer_table = create_macro_metrics_table_for_season(metrics_df, summary_df, 'Summer')
         winter_table = create_macro_metrics_table_for_season(metrics_df, summary_df, 'Winter')
         
-        # Create the accordion layout using the reusable function
         summer_accordion = create_metrics_accordion(summer_table, "Summer Collection Metrics", "summer-accordion")
         winter_accordion = create_metrics_accordion(winter_table, "Winter Collection Metrics", "winter-accordion")
         
-        # Return both accordions in a div
         return html.Div([summer_accordion, winter_accordion])
     
     except Exception as e:
@@ -239,16 +196,9 @@ def create_macro_metrics_accordion(site_name=None):
 
 def format_macro_metrics_table(metrics_df, summary_df, season=None):
     """
-    Format macroinvertebrate metrics data into a table structure that shows ALL collections
-    including multiple habitat types per year/season.
+    Format metrics data with habitat type differentiation and replicate handling.
     
-    Args:
-        metrics_df: DataFrame containing metrics data
-        summary_df: DataFrame containing summary scores
-        season: Optional season to filter data for ('Summer' or 'Winter')
-    
-    Returns:
-        Tuple of (metrics_table, habitat_row, summary_rows) DataFrames
+    Organizes data by year, season, and habitat type while preserving replicate samples.
     """
     try:
         if metrics_df.empty or summary_df.empty:
@@ -256,54 +206,37 @@ def format_macro_metrics_table(metrics_df, summary_df, season=None):
                    pd.DataFrame({'Metric': ['Habitat Type']}),
                    pd.DataFrame({'Metric': ['No Data']}))
         
-        # Filter by season if specified
         if season:
             if 'season' in metrics_df.columns:
                 metrics_df = metrics_df[metrics_df['season'] == season]
             if 'season' in summary_df.columns:
                 summary_df = summary_df[summary_df['season'] == season]
         
-        # Get unique collections (event_id represents unique year-season-habitat combinations)
         collections = []
-        # Get unique collections from metrics data with all necessary info
         unique_collections = metrics_df.drop_duplicates(subset=['event_id']).copy()
         unique_collections['collection_date'] = pd.to_datetime(unique_collections['collection_date'])
         
-        # Group by year to handle replicates and different habitats
+        # Process collections by year and habitat
         for year, year_group in unique_collections.groupby('year'):
-            # Sort within each year by collection date
             year_group = year_group.sort_values('collection_date')
-            
-            # Group by habitat within the year to identify replicates
             habitat_counts = {}
             
             for _, row in year_group.iterrows():
                 habitat = row.get('habitat', 'Unknown')
                 event_id = row.get('event_id', None)
                 
-                # Track how many samples we've seen for this habitat in this year
                 if habitat not in habitat_counts:
                     habitat_counts[habitat] = 0
                 habitat_counts[habitat] += 1
                 
-                # Create column name based on habitat and whether it's a replicate
-                if habitat_counts[habitat] == 1:
-                    # First sample for this habitat in this year
-                    column_name = str(year)
-                else:
-                    # Replicate sample - add REP notation
-                    column_name = f"{year} (REP)"
+                # Determine column name based on habitat and replicate status
+                column_name = str(year) if habitat_counts[habitat] == 1 else f"{year} (REP)"
                 
-                # Check if there are different habitats in this year
                 unique_habitats_this_year = year_group['habitat'].nunique()
                 
                 if unique_habitats_this_year > 1:
-                    # Multiple habitats in same year - add habitat suffix
-                    habitat_abbrev = habitat[0] if habitat else 'U'  # R for Riffle, V for Vegetation, W for Woody
-                    if habitat_counts[habitat] == 1:
-                        column_name = f"{year}-{habitat_abbrev}"
-                    else:
-                        column_name = f"{year}-{habitat_abbrev} (REP)"
+                    habitat_abbrev = habitat[0] if habitat else 'U'
+                    column_name = f"{year}-{habitat_abbrev}" if habitat_counts[habitat] == 1 else f"{year}-{habitat_abbrev} (REP)"
                 
                 collections.append({
                     'event_id': event_id,
@@ -313,7 +246,6 @@ def format_macro_metrics_table(metrics_df, summary_df, season=None):
                     'collection_date': row['collection_date']
                 })
         
-        # Sort collections by year, then by whether it's REP (original first, then REP)
         collections.sort(key=lambda x: (x['year'], '(REP)' in x['column_name']))
         
         if not collections:
@@ -321,23 +253,19 @@ def format_macro_metrics_table(metrics_df, summary_df, season=None):
                    pd.DataFrame({'Metric': ['Habitat Type']}),
                    pd.DataFrame({'Metric': ['No Data']}))
         
-        # Create table data dictionary starting with metrics
         table_data = {'Metric': MACRO_METRIC_ORDER}
         habitat_data = {'Metric': ['Habitat Type']}
         
-        # Add columns for each collection (year-habitat combination)
+        # Build metrics and habitat data
         for collection in collections:
             column_name = collection['column_name']
             event_id = collection['event_id']
             habitat = collection['habitat']
             
-            # Get metrics for this specific collection using event_id
             collection_metrics = metrics_df[metrics_df['event_id'] == event_id]
             
-            # Add habitat to habitat row
             habitat_data[column_name] = habitat
             
-            # Add scores for this collection
             scores = []
             for metric in MACRO_METRIC_ORDER:
                 metric_row = collection_metrics[collection_metrics['metric_name'] == metric]
@@ -353,11 +281,9 @@ def format_macro_metrics_table(metrics_df, summary_df, season=None):
             
             table_data[column_name] = scores
         
-        # Create metrics and habitat tables
         metrics_table = pd.DataFrame(table_data)
         habitat_row = pd.DataFrame(habitat_data)
         
-        # Create summary rows
         summary_rows = pd.DataFrame({'Metric': MACRO_SUMMARY_LABELS})
         
         # Add summary data for each collection
@@ -391,33 +317,21 @@ def format_macro_metrics_table(metrics_df, summary_df, season=None):
 
 def create_macro_table_styles(metrics_table, habitat_row):
     """
-    Create styling for macro metrics tables that includes the habitat type row.
-    Uses the shared styling but adds special handling for the habitat row.
-    
-    Args:
-        metrics_table: DataFrame with the metrics rows
-        habitat_row: DataFrame with the habitat type row
-    
-    Returns:
-        Dictionary of style configurations for the table
+    Create consistent styling for macro metrics tables with habitat emphasis.
     """
-    # Start with the standard table styles from shared utilities
     from .visualization_utils import create_table_styles
     styles = create_table_styles(metrics_table)
     
-    # Calculate row indices (habitat row is now first, then metrics, then summary)
-    habitat_row_index = 0  # Habitat row is now the first row
-    metrics_start_index = len(habitat_row)  # Metrics start after habitat row
-    summary_start_index = len(habitat_row) + len(metrics_table)  # Summary starts after habitat + metrics
+    habitat_row_index = 0
+    metrics_start_index = len(habitat_row)
+    summary_start_index = len(habitat_row) + len(metrics_table)
     
-    # Update the conditional styling to account for the habitat row
     styles['style_data_conditional'] = [
         {
             'if': {'row_index': habitat_row_index},
             'backgroundColor': 'rgb(245, 245, 245)',
             'fontWeight': 'bold'
         },
-        # Summary rows styling - bold with border (adjusted indices)
         {
             'if': {'row_index': summary_start_index},
             'borderTop': '2px solid black',

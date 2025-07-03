@@ -331,7 +331,7 @@ class TestMapViz(unittest.TestCase):
         self.assertIn('Dissolved Oxygen', hover_text)
         self.assertIn('95.5%', hover_text)  # Formatted value (not rounded)
         self.assertIn('Normal', hover_text)
-        self.assertIn('2023-01-15', hover_text)  # Formatted date
+        self.assertIn('01-15-2023', hover_text)  # Formatted date
 
     def test_create_hover_text_fish(self):
         """Test hover text creation for fish data."""

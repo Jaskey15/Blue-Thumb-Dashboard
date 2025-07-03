@@ -1,17 +1,5 @@
 """
-habitat_viz.py - Habitat Assessment Data Visualization
-
-This module creates visualizations for habitat assessment data including line charts 
-with grade threshold reference lines and data tables for Blue Thumb stream assessments.
-
-Key Functions:
-- create_habitat_viz(): Create line chart with habitat grade threshold lines
-- create_habitat_table(): Create data table for habitat metrics
-- create_habitat_metrics_accordion(): Create accordion layout for habitat metrics
-
-Usage:
-- Import functions for use in the main dashboard
-- Habitat grades: A (90+), B (80-89), C (70-79), D (60-69), F (<60)
+Habitat assessment visualization with grade-based thresholds and metrics display.
 """
 
 import pandas as pd
@@ -34,23 +22,22 @@ from .visualization_utils import (
 
 logger = setup_logging("habitat_viz", category="visualization")
 
-# Habitat-specific configuration
 HABITAT_GRADE_THRESHOLDS = {
     'A': 90,
     'B': 80,
     'C': 70,
     'D': 60
-    # F is anything below 60
 }
 
 HABITAT_GRADE_COLORS = {
-    'A': '#1e8449',    # Green 
-    'B': '#7cb342',    # Light green 
-    'C': '#ff9800',    # Orange 
-    'D': '#e53e3e',    # Red-orange 
-    'F': '#e74c3c'     # Red 
+    'A': '#1e8449',    # Dark green for excellent
+    'B': '#7cb342',    # Light green for good
+    'C': '#ff9800',    # Orange for fair
+    'D': '#e53e3e',    # Red-orange for poor
+    'F': '#e74c3c'     # Red for failing
 }
 
+# Preserve metric order for consistent table display
 HABITAT_METRIC_ORDER = [
     'Instream Cover',
     'Pool Bottom Substrate',
@@ -69,32 +56,22 @@ HABITAT_SUMMARY_LABELS = ['Total Points', 'Habitat Grade']
 
 def create_habitat_viz(site_name=None):
     """
-    Create habitat assessment visualization with date-based plotting and year labels.
-    
-    Args:
-        site_name: Optional site name to filter data for
-    
-    Returns:
-        Plotly figure: Line plot showing habitat scores over time with actual assessment dates.
+    Generate habitat assessment visualization with grade thresholds.
     """
     try:
-        # Get habitat data from the database
         habitat_df = get_habitat_dataframe(site_name)
         
         if habitat_df.empty:
             return create_empty_figure(site_name, "habitat")
 
-        # Create figure
         fig = go.Figure()
         
-        # Define hover fields for habitat data
         hover_fields = {
             'Assessment Date': 'assessment_date',
             'Habitat Score': 'total_score',
             'Grade': 'habitat_grade'
         }
-        
-        # Create trace using shared utility
+
         trace = create_trace(
             habitat_df,
             date_column='assessment_date',
@@ -104,13 +81,10 @@ def create_habitat_viz(site_name=None):
             hover_fields=hover_fields
         )
         
-        # Add trace to figure
         fig.add_trace(trace)
         
-        # Set up title
         title = f"Habitat Scores Over Time for {site_name}" if site_name else "Habitat Scores Over Time"
         
-        # Update layout using shared utility
         fig = update_layout(
             fig,
             habitat_df,
@@ -121,7 +95,6 @@ def create_habitat_viz(site_name=None):
             has_legend=False
         )
         
-        # Add habitat grade reference lines using shared utility
         fig = add_reference_lines(fig, habitat_df, HABITAT_GRADE_THRESHOLDS, HABITAT_GRADE_COLORS)
 
         return fig
@@ -132,17 +105,9 @@ def create_habitat_viz(site_name=None):
 
 def create_habitat_metrics_table(metrics_df, summary_df):
     """
-    Create a metrics table for habitat data.
-    
-    Args:
-        metrics_df: DataFrame containing metrics data
-        summary_df: DataFrame containing summary scores
-    
-    Returns:
-        Dash DataTable component
+    Create metrics table showing habitat assessment details.
     """
     try:
-        # Format the data using shared utilities
         metrics_table, summary_rows = format_metrics_table(
             metrics_df, 
             summary_df, 
@@ -150,7 +115,6 @@ def create_habitat_metrics_table(metrics_df, summary_df):
             HABITAT_SUMMARY_LABELS
         )
         
-        # Combine metrics and summary rows
         full_table = pd.concat([metrics_table, summary_rows], ignore_index=True)
     
         styles = create_table_styles(metrics_table)
@@ -165,25 +129,16 @@ def create_habitat_metrics_table(metrics_df, summary_df):
 
 def create_habitat_metrics_accordion(site_name=None):
     """
-    Create an accordion layout for habitat metrics table.
-    
-    Args:
-        site_name: Optional site name to filter data for
-    
-    Returns:
-        HTML Div containing accordion component with metrics table
+    Create collapsible view of habitat metrics.
     """
     try:
-        # Get the data with site filtering from database
         metrics_df, summary_df = get_habitat_metrics_data_for_table(site_name)
         
         if metrics_df.empty or summary_df.empty:
             return html.Div("No habitat assessment data available")
-        
-        # Get the table component
+
         table = create_habitat_metrics_table(metrics_df, summary_df)
-        
-        # Use the reusable accordion function
+
         return create_metrics_accordion(table, "Habitat Assessment Metrics", "habitat-accordion")
     
     except Exception as e:
