@@ -15,19 +15,32 @@ MAX_TOKENS = 150  # Limit response length
 TEMPERATURE = 0.7  # Balance between creativity and consistency
 
 def format_message(text, is_user=True, timestamp=None):
-    """Format a chat message with appropriate styling"""
+    """Format a chat message with appropriate styling and an avatar."""
     if timestamp is None:
         timestamp = datetime.now().strftime("%I:%M %p")
-        
+
+    # You'll need to add a 'user-icon.png' to your 'assets/icons/' directory.
+    avatar_src = "/assets/icons/user-icon.png" if is_user else "/assets/images/blue_thumb_logo.png"
+    message_class = "user-message-row" if is_user else "assistant-message-row"
+
+    avatar = html.Img(src=avatar_src, className="chat-avatar")
+
+    message_bubble = html.Div(
+        text,
+        className=f"chat-message {'user-message' if is_user else 'assistant-message'}"
+    )
+    
+    if is_user:
+        # For the user, the bubble comes before the avatar
+        content = [message_bubble, avatar]
+    else:
+        # For the assistant, the avatar comes first
+        content = [avatar, message_bubble]
+
+    # The container for the whole row (avatar and bubble)
     return html.Div([
-        html.Div(
-            text,
-            className=f"chat-message {'user-message' if is_user else 'assistant-message'}"
-        ),
-        html.Div(
-            timestamp,
-            className="chat-timestamp"
-        )
+        html.Div(content, className=f"chat-row {message_class}"),
+        html.Div(timestamp, className=f"chat-timestamp {'user-timestamp' if is_user else 'assistant-timestamp'}")
     ])
 
 def load_all_context():
@@ -65,14 +78,15 @@ def register_chatbot_callbacks(app):
     @app.callback(
         [Output({"type": "chat-messages", "tab": "chemical"}, "children"),
          Output({"type": "chat-input", "tab": "chemical"}, "value")],
-        [Input({"type": "chat-submit", "tab": "chemical"}, "n_clicks")],
+        [Input({"type": "chat-submit", "tab": "chemical"}, "n_clicks"),
+         Input({"type": "chat-input", "tab": "chemical"}, "n_submit")],
         [State({"type": "chat-input", "tab": "chemical"}, "value"),
          State({"type": "chat-messages", "tab": "chemical"}, "children")],
         prevent_initial_call=True
     )
-    def handle_chat_message(n_clicks, message, existing_messages):
+    def handle_chat_message(n_clicks, n_submit, message, existing_messages):
         """Handle new chat messages and generate responses"""
-        if n_clicks is None or not message:
+        if (n_clicks is None and n_submit is None) or not message:
             return existing_messages or [], ""
         
         if existing_messages is None:
