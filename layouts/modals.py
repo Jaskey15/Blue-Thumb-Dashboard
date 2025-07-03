@@ -53,6 +53,8 @@ def create_image_credits_modal():
     """
     # Image sources and attributions
     image_sources = [
+        ("Header Image", " Karim Sakhibgareev on Unsplash", 
+         "https://unsplash.com/photos/green-trees-beside-body-of-water-fsc2v3jfxvk"),
         ("Dissolved Oxygen Graphic", "Queen Mary University of London", 
          "https://www.qmul.ac.uk/chesswatch/water-quality-sensors/dissolved-oxygen/"),
         ("pH Scale Graphic", "Water Rangers", 
