@@ -1,18 +1,19 @@
 """
-chemical_viz.py - Water Quality Chemical Data Visualization
+Chemical Parameter Visualization for Water Quality Data
 
-This module creates visualizations for water quality chemical parameters including 
-time series plots with threshold-based color coding and reference lines for 
-Blue Thumb stream monitoring data.
+Creates time series plots for water quality parameters with status-based coloring:
+- Individual parameter plots with threshold reference lines
+- Multi-parameter dashboard view
+- Automatic status coloring (Normal/Caution/Poor)
+- Year-based background shading
+- Interactive hover details
 
-Key Functions:
-- create_time_series_plot(): Individual parameter time series with threshold highlighting
-- create_all_parameters_view(): Multi-parameter subplot dashboard view
-- Helper functions for threshold plotting, reference lines, and status color mapping
-
-Parameters Supported:
-- Dissolved Oxygen, pH, Soluble Nitrogen, Phosphorus, Chloride
-- Status categories: Normal, Caution, Poor, Above/Below Normal for pH
+Parameters:
+- Dissolved Oxygen (%)
+- pH
+- Soluble Nitrogen (mg/L)
+- Phosphorus (mg/L)
+- Chloride (mg/L)
 """
 
 import plotly.express as px
@@ -28,7 +29,7 @@ from utils import setup_logging
 
 logger = setup_logging("chemical_viz", category="visualization")
 
-# Styling constants
+# Status-based color scheme
 COLORS = {
     'Normal': '#1e8449',      # Darker green
     'Caution': '#ff9800',     # Orange
@@ -43,7 +44,7 @@ MARKER_SIZES = {
     'dashboard': 4
 }
 
-# BDL (Below Detection Limit) footnotes for specific parameters
+# Detection limit notes for specific parameters
 BDL_FOOTNOTES = {
     'Phosphorus': '*Phosphorus values below detection limit (BDL) have been converted to 0.005 mg/L for analysis purposes.',
     'soluble_nitrogen': '*Soluble nitrogen component values below detection limit (BDL) have been converted (nitrate: 0.3, nitrite: 0.03, ammonia: 0.03) for analysis purposes.'
@@ -51,7 +52,19 @@ BDL_FOOTNOTES = {
 
 # Helper functions
 def _add_threshold_plot(fig, df, parameter, reference_values, marker_size, y_label, row=None, col=None):
-    """Add threshold-based colored scatter plot with connecting lines and reference lines"""
+    """
+    Adds scatter plot with threshold-based coloring and reference lines.
+    
+    Args:
+        fig: Plotly figure to add traces to
+        df: DataFrame with chemical data
+        parameter: Chemical parameter name
+        reference_values: Dictionary of threshold values
+        marker_size: Point size for scatter plot
+        y_label: Y-axis label text
+        row: Optional subplot row index
+        col: Optional subplot column index
+    """
     plot_df = df.copy()
     status_col = f'{parameter}_status'
     
@@ -60,7 +73,7 @@ def _add_threshold_plot(fig, df, parameter, reference_values, marker_size, y_lab
     else:
         plot_df['status'] = 'Normal'
     
-    # Add points colored by status
+    # Add points with status-based colors
     for status_type, color in COLORS.items():
         if status_type == 'Unknown':
             continue
@@ -83,7 +96,7 @@ def _add_threshold_plot(fig, df, parameter, reference_values, marker_size, y_lab
                 row=row, col=col
             )
     
-    # Add connecting line
+    # Add connecting line between points
     fig.add_trace(
         go.Scatter(
             x=df['Date'],
@@ -98,11 +111,21 @@ def _add_threshold_plot(fig, df, parameter, reference_values, marker_size, y_lab
         row=row, col=col
     )
     
-    # Add reference lines
     return _add_parameter_reference_lines(fig, parameter, df, reference_values, row, col)
 
 def _add_standard_plot(fig, df, parameter, marker_size, y_label, row=None, col=None):
-    """Add standard blue scatter plot with lines"""
+    """
+    Adds basic scatter plot with connecting lines.
+    
+    Args:
+        fig: Plotly figure to add traces to
+        df: DataFrame with chemical data
+        parameter: Chemical parameter name
+        marker_size: Point size for scatter plot
+        y_label: Y-axis label text
+        row: Optional subplot row index
+        col: Optional subplot column index
+    """
     fig.add_trace(
         go.Scatter(
             x=df['Date'],
@@ -119,7 +142,13 @@ def _add_standard_plot(fig, df, parameter, marker_size, y_label, row=None, col=N
     return fig
 
 def _format_date_axes(fig, nticks=10):
-    """Format x-axes to display years properly"""
+    """
+    Formats x-axes to display years consistently.
+    
+    Args:
+        fig: Plotly figure to format
+        nticks: Number of year ticks to display
+    """
     fig.update_xaxes(
         tickformat='%Y',
         tickmode='auto',
@@ -129,20 +158,25 @@ def _format_date_axes(fig, nticks=10):
 
 def _add_parameter_reference_lines(fig, parameter, df, reference_values, row=None, col=None):
     """
-    Add reference lines to the plot based on parameter thresholds.
-    Can be used for both individual plots and subplots.
+    Adds threshold reference lines with labels.
+    
+    Args:
+        fig: Plotly figure to add lines to
+        parameter: Chemical parameter name
+        df: DataFrame with chemical data
+        reference_values: Dictionary of threshold values
+        row: Optional subplot row index
+        col: Optional subplot column index
     """
-    # Get date range for the lines
+    # Get date range for lines
     x0 = df['Date'].min()
     x1 = df['Date'].max()
     
-    # Helper function to add a reference line
     def add_reference_line(y_value, color, label=None, line_style=None):
-        """Add a reference line to the figure."""
+        """Adds a single reference line with optional label."""
         if line_style is None:
             line_style = dict(width=1.5, dash='dash')
             
-        # For subplot or main plot
         if row is not None and col is not None:
             fig.add_shape(
                 type='line',
@@ -153,7 +187,6 @@ def _add_parameter_reference_lines(fig, parameter, df, reference_values, row=Non
                 row=row, col=col
             )
         else:
-            # Add the line
             fig.add_shape(
                 type='line',
                 x0=x0, x1=x1,
@@ -163,7 +196,6 @@ def _add_parameter_reference_lines(fig, parameter, df, reference_values, row=Non
                 name=label
             )
             
-            # Add annotation if requested and not in subplot
             if label:
                 fig.add_annotation(
                     x=x0, y=y_value,
@@ -176,7 +208,7 @@ def _add_parameter_reference_lines(fig, parameter, df, reference_values, row=Non
                     xshift=-5
                 )
     
-    # Add reference lines from the reference values dictionary
+    # Add parameter-specific reference lines
     if parameter in reference_values:
         try:
             ref = reference_values[parameter]
@@ -209,32 +241,46 @@ def _add_parameter_reference_lines(fig, parameter, df, reference_values, row=Non
     return fig
 
 def create_time_series_plot(df, parameter, reference_values, title=None, y_label=None, highlight_thresholds=True, site_name=None):
-    """Generate time series plot for parameter with optional threshold highlighting"""
-    # Check if we have data
+    """
+    Creates time series plot for a single chemical parameter.
+    
+    Args:
+        df: DataFrame with chemical data
+        parameter: Chemical parameter to plot
+        reference_values: Dictionary of threshold values
+        title: Optional custom title
+        y_label: Optional custom y-axis label
+        highlight_thresholds: If True, color points by status
+        site_name: Optional site name for empty plot
+    
+    Returns:
+        Plotly figure with time series plot
+    """
+    # Check for data
     if len(df) == 0:
         return create_empty_figure(site_name, "chemical")
     
-    # Use defaults if no custom values provided
+    # Set default labels
     if title is None:
         parameter_name = get_parameter_name(parameter)
         title = f'{parameter_name} Over Time for {site_name}'
     if y_label is None:
         y_label = get_parameter_label('chem', parameter)
     
-    # Create the base figure
+    # Create base figure
     fig = go.Figure()
     
-    # Add alternating year shading for individual parameter graphs
+    # Add alternating year shading
     years = df['Year'].unique()
     years.sort()
     x0 = df['Date'].min()
     x1 = df['Date'].max()
     
     for i, year in enumerate(years):
-        if i % 2 == 0:  # Only shade alternate years
+        if i % 2 == 0:  # Shade alternate years
             year_start = pd.Timestamp(f"{year}-01-01")
             year_end = pd.Timestamp(f"{year}-12-31")
-            # Ensure within data range
+            # Keep within data range
             if year_start < x0:
                 year_start = x0
             if year_end > x1:
@@ -253,7 +299,7 @@ def create_time_series_plot(df, parameter, reference_values, title=None, y_label
                 line_width=0,
             )
     
-    # Set up color mapping for different threshold categories
+    # Add data points with appropriate styling
     if highlight_thresholds and parameter in reference_values:
         try:
             fig = _add_threshold_plot(fig, df, parameter, reference_values, 
@@ -264,11 +310,11 @@ def create_time_series_plot(df, parameter, reference_values, title=None, y_label
     else:
         fig = _add_standard_plot(fig, df, parameter, MARKER_SIZES['individual'], y_label)
     
-    # Calculate a small amount of padding (e.g., 2% of the date range)
+    # Add date range padding (2%)
     date_range = df['Date'].max() - df['Date'].min()
-    padding = pd.Timedelta(days=int(date_range.days * 0.02))  # 2% padding
+    padding = pd.Timedelta(days=int(date_range.days * 0.02))
     
-    # Update layout for better appearance
+    # Configure layout
     fig.update_layout(
         title=title,
         xaxis_title='Year',
@@ -288,25 +334,37 @@ def create_time_series_plot(df, parameter, reference_values, title=None, y_label
         )
     )
     
-    # Add parameter-specific footnote if applicable
+    # Add BDL footnote if applicable
     if parameter in BDL_FOOTNOTES:
         fig.add_annotation(
             text=BDL_FOOTNOTES[parameter],
             xref="paper", yref="paper",
-            x=0, y=-0.20,  # Position below the graph with more spacing, left-aligned
+            x=0, y=-0.20,
             xanchor='left', yanchor='top',
             showarrow=False,
             font=dict(size=10, color="gray", style="italic")
         )
     
-    # Format date axis better
     fig = _format_date_axes(fig, nticks=10)
     
     return fig
 
 def create_all_parameters_view(df=None, parameters=None, reference_values=None, highlight_thresholds=True, get_param_name=None, site_name=None):
-    """Create a subplot figure for all parameters with optional threshold highlighting"""
-    # If no data is provided, get it from database
+    """
+    Creates dashboard view with subplots for all chemical parameters.
+    
+    Args:
+        df: Optional DataFrame with chemical data
+        parameters: Optional list of parameters to display
+        reference_values: Optional dictionary of threshold values
+        highlight_thresholds: If True, color points by status
+        get_param_name: Optional function to get parameter display names
+        site_name: Optional site name for empty plot
+    
+    Returns:
+        Plotly figure with parameter subplots
+    """
+    # Load data if not provided
     if df is None or parameters is None or reference_values is None:
         try:
             df = get_chemical_data_from_db()
@@ -316,20 +374,20 @@ def create_all_parameters_view(df=None, parameters=None, reference_values=None, 
             print(f"Error loading chemical data: {e}")
             return create_error_figure(str(e))
 
-    # If no parameter name function provided, use the standard function
+    # Use default parameter name function if not provided
     if get_param_name is None:
         get_param_name = get_parameter_name
 
-    # Check if there is data
+    # Check for data
     if len(df) == 0:
         return create_empty_figure(site_name, "chemical")
     
-    # Calculate rows and columns needed
+    # Calculate subplot layout
     n_params = len(parameters)
     n_cols = 2  
     n_rows = (n_params + 1) // 2  
     
-    # Create subplot structure with more spacing
+    # Create subplot grid
     fig = make_subplots(
         rows=n_rows, 
         cols=n_cols,
@@ -338,16 +396,14 @@ def create_all_parameters_view(df=None, parameters=None, reference_values=None, 
         horizontal_spacing=0.08
     )
     
-    # Add each parameter plot to the appropriate subplot
+    # Add parameter plots to subplots
     for i, param in enumerate(parameters):
         row = (i // 2) + 1
         col = (i % 2) + 1
         
-        # Get the proper parameter label for hover text
         param_label = get_parameter_label('chem', param)
         
         try:
-            # Set up color mapping if highlighting is enabled
             if highlight_thresholds and param in reference_values:
                 fig = _add_threshold_plot(fig, df, param, reference_values, 
                                         MARKER_SIZES['dashboard'], param_label, row, col)
@@ -367,7 +423,7 @@ def create_all_parameters_view(df=None, parameters=None, reference_values=None, 
                 col=col
             )
     
-    # Update layout for better appearance
+    # Configure layout
     fig.update_layout(
         height=350 * n_rows,
         title_text=f"Water Quality Parameters Over Time for {site_name}",
@@ -377,18 +433,15 @@ def create_all_parameters_view(df=None, parameters=None, reference_values=None, 
         margin=dict(l=50, r=50, t=100, b=50)
     )
     
-    # Format all x-axes to show years nicely
     fig = _format_date_axes(fig, nticks=5)
     
-    # Add y-axis titles and improve formatting
+    # Add y-axis labels
     for i, param in enumerate(parameters):
         row = (i // 2) + 1
         col = (i % 2) + 1
         
-        # Get appropriate y-axis label
         y_label = get_parameter_label('chem', param)
         
-        # Update y-axis title
         fig.update_yaxes(
             title_text=y_label,
             title_font=dict(size=FONT_SIZES['header']),

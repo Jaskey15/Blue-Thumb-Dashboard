@@ -1,5 +1,5 @@
 """
-visualization_utils.py - Shared utilities for data visualizations
+Shared visualization utilities for consistent styling and data presentation.
 
 This module contains helper functions and constants shared between different 
 visualization modules (fish, macroinvertebrate, habitat) to ensure consistent 
@@ -47,41 +47,36 @@ FONT_SIZES = {
 
 def add_reference_lines(fig, df, thresholds, colors=None):
     """
-    Add reference lines for threshold values to visualizations.
+    Add threshold reference lines with dynamic date ranges.
     
-    Args:
-        fig: Plotly figure to add reference lines to
-        df: DataFrame containing the data with year values
-        thresholds: Dictionary of {label: threshold_value}
-        colors: Dictionary of {label: color} for line colors
-    
-    Returns:
-        Updated figure with reference lines
+    Priority order:
+    1. Use provided colors if specified
+    2. Match threshold label to DEFAULT_COLORS
+    3. Fall back to gray for unmatched labels
     """
     try:
         if df.empty or not thresholds:
             return fig
         
-        # Get min and max year for reference lines
         years = sorted(df['year'].unique()) if 'year' in df.columns else []
         
         if not years:
             logger.warning("No year data found for reference lines")
             return fig
         
-        # Create date bounds
+        # Create bounds for full year range
         x_min = pd.Timestamp(f'{min(years)}-01-01')
         x_max = pd.Timestamp(f'{max(years)}-12-31')
         
         # Add reference lines for each threshold
         for label, threshold in thresholds.items():
+            # Select line color based on priority order
             color = 'gray'
             if colors and label in colors:
                 color = colors[label]
             elif label.lower() in DEFAULT_COLORS:
                 color = DEFAULT_COLORS[label.lower()]
             
-            # Add line
             fig.add_shape(
                 type="line",
                 x0=x_min,
@@ -91,7 +86,6 @@ def add_reference_lines(fig, df, thresholds, colors=None):
                 line=dict(color=color, width=1, dash="dash"),
             )
             
-            # Add annotation
             fig.add_annotation(
                 x=x_min,
                 y=threshold,
@@ -109,36 +103,26 @@ def add_reference_lines(fig, df, thresholds, colors=None):
 
 def update_layout(fig, df, title, y_label, y_column='comparison_to_reference', tick_format='.2f', has_legend=False):
     """
-    Apply standardized layout settings to visualization figures.
-
-    Args:
-        fig: Plotly figure to update
-        df: DataFrame containing the data
-        title: Plot title
-        y_label: Y-axis label
-        y_column: Column name to use for y-range calculation
-        tick_format: Format string for y-axis ticks (default: '.2f')
-        has_legend: Whether to add legend title (for multi-trace plots like macro viz)
+    Apply consistent layout settings across all visualizations.
     
-    Returns:
-        Updated figure with consistent layout
+    Priority order:
+    1. Set dynamic y-range based on data type
+    2. Configure x-axis with year ticks
+    3. Add legend if multi-trace plot
     """
     try:
         if df.empty:
             return fig
         
-        # Calculate y-range using the specified column
         y_min, y_max = calculate_dynamic_y_range(df, column=y_column)
-        
-        # Get unique years for x-axis
         years = sorted(df['year'].unique()) if 'year' in df.columns else []
         
-        # Update layout with x-axis
+        # Standardize layout across all plots
         layout_updates = {
             'title': title,
             'title_x': 0.5,
-            'title_y': 0.95,  # Adjust this value (0.95 to 0.99) to move title closer to plot
-            'margin': dict(t=70),  # Reduce top margin (default is usually 80-100)
+            'title_y': 0.95, 
+            'margin': dict(t=70),  
             'xaxis': dict(
                 title='Year',
                 tickmode='array',
@@ -151,10 +135,10 @@ def update_layout(fig, df, title, y_label, y_column='comparison_to_reference', t
                 tickformat=tick_format
             ),
             'hovermode': 'closest',
-            'template': 'seaborn'  # Add white template to match chemical viz
+            'template': 'seaborn'  
         }
         
-        # Add legend configuration if needed (matching chemical viz style)
+        # Add horizontal legend for multi-trace plots
         if has_legend:
             layout_updates['legend'] = dict(
                 orientation="h",
@@ -175,38 +159,27 @@ def update_layout(fig, df, title, y_label, y_column='comparison_to_reference', t
 
 def create_trace(df, date_column, y_column, name, color=None, hover_fields=None):
     """
-    Create a standardized scatter trace for visualizations.
+    Create standardized scatter trace with consistent styling and hover text.
     
-    Args:
-        df: DataFrame containing the data
-        date_column: Name of the date column (e.g., 'collection_date', 'assessment_date')
-        y_column: Name of the y-axis data column
-        name: Name for the trace
-        color: Color for the trace (uses default if None)
-        hover_fields: Dictionary mapping display names to column names for hover text
-                     e.g., {'Collection Date': 'collection_date', 'Score': 'comparison_to_reference'}
-    
-    Returns:
-        Plotly Scatter trace object
+    Priority order:
+    1. Sort data chronologically
+    2. Apply consistent marker styling
+    3. Generate hover text if fields provided
     """
     try:
         if df.empty:
             return go.Scatter()
         
-        # Parse and sort by date
         df_copy = df.copy()
         df_copy[date_column] = pd.to_datetime(df_copy[date_column])
         df_copy = df_copy.sort_values(date_column)
         
-        # Set color
         trace_color = color if color else DEFAULT_COLORS['default']
         
-        # Create hover text if fields provided
         hover_text = []
         if hover_fields:
             hover_text = generate_hover_text(df_copy, hover_fields)
         
-        # Create trace
         trace = go.Scatter(
             x=df_copy[date_column],
             y=df_copy[y_column],
@@ -231,22 +204,13 @@ def create_trace(df, date_column, y_column, name, color=None, hover_fields=None)
 
 def generate_hover_text(df, hover_fields):
     """
-    Generate hover text for visualizations with flexible field mapping.
+    Generate hover text with consistent formatting across all visualizations.
     
-    Args:
-        df: DataFrame containing the data
-        hover_fields: Dictionary mapping display names to column names
-                     e.g., {'Collection Date': 'collection_date', 'Score': 'comparison_to_reference'}
-                     
-    Special field handling:
-        - Date fields (containing 'date'): Formatted as YYYY-MM-DD
-        - Score fields (containing 'score'): Formatted based on column name
-          - 'total_score': Integer (habitat data)
-          - Other scores: 2 decimal places (biological data)
-        - All other fields: Display as-is
-    
-    Returns:
-        List of hover text strings
+    Format rules:
+    1. Dates: MM-DD-YYYY
+    2. Total scores: Integer
+    3. Other scores: 2 decimal places
+    4. Missing values: 'Unknown'
     """
     try:
         hover_text = []
@@ -258,24 +222,20 @@ def generate_hover_text(df, hover_fields):
                 if column_name in row and pd.notna(row[column_name]):
                     value = row[column_name]
                     
-                    # Format dates
                     if 'date' in column_name.lower() and hasattr(value, 'strftime'):
                         formatted_value = value.strftime('%m-%d-%Y')
                     
-                    # Format numeric scores
                     elif 'score' in display_name.lower() and isinstance(value, (int, float)):
-                        if column_name == 'total_score':  # Habitat scores are integers
+                        if column_name == 'total_score':  # Integer for habitat
                             formatted_value = int(value)
-                        else:  # Biological scores are decimals
+                        else:  # 2 decimals for biological
                             formatted_value = f"{value:.2f}"
                     
-                    # Display other fields as-is
                     else:
                         formatted_value = value
                     
                     text_parts.append(f"<b>{display_name}</b>: {formatted_value}")
                 
-                # Handle missing values gracefully
                 elif column_name in hover_fields.values():
                     text_parts.append(f"<b>{display_name}</b>: Unknown")
             
@@ -293,34 +253,25 @@ def generate_hover_text(df, hover_fields):
 
 def calculate_dynamic_y_range(df, column='comparison_to_reference'):
     """
-    Calculate dynamic y-axis range based on data type and values.
+    Calculate y-axis range with appropriate padding for data type.
     
-    Args:
-        df: DataFrame containing the data
-        column: Column name to calculate range for
-    
-    Returns:
-        Tuple of (y_min, y_max)
-        - For biological data (comparison_to_reference): minimum range 0-1.1, expands if needed
-        - For habitat data (total_score): minimum range 0-110, expands if needed
+    Rules:
+    - Habitat (total_score): 0-110 minimum, expand if > ~90
+    - Biological: 0-1.1 minimum, expand if > ~1.0
     """
     try:
         if df.empty or column not in df.columns:
-            # Return appropriate default based on column type
             if column == 'total_score':
-                return 0, 110  # Habitat default
+                return 0, 110  # Default habitat range
             else:
-                return 0, 1.1  # Biological default
+                return 0, 1.1  # Default biological range
         
         max_value = df[column].max()
         
-        # Use different minimum ranges based on data type
         if column == 'total_score':
-            # Habitat data: minimum range 0-110, expand if data exceeds ~90
-            y_upper_limit = max(110, max_value * 1.1)
+            y_upper_limit = max(110, max_value * 1.1)  # Ensure habitat scores visible
         else:
-            # Biological data: minimum range 0-1.1, expand if data exceeds ~1.0
-            y_upper_limit = max(1.1, max_value * 1.1)
+            y_upper_limit = max(1.1, max_value * 1.1)  # Ensure biological scores visible
         
         return 0, y_upper_limit
     
@@ -331,49 +282,38 @@ def calculate_dynamic_y_range(df, column='comparison_to_reference'):
         else:
             return 0, 1.1
 
-def format_metrics_table(metrics_df, summary_df, metric_order, 
-                        summary_labels=None, season=None):
+def format_metrics_table(metrics_df, summary_df, metric_order, summary_labels=None, season=None):
     """
-    Format metrics data into a standardized table structure.
+    Format metrics into standardized table with summary statistics.
     
-    Args:
-        metrics_df: DataFrame containing metrics data
-        summary_df: DataFrame containing summary scores
-        metric_order: List of metrics in display order
-        summary_labels: List of summary row labels
-        season: Optional season to filter data for
-    
-    Returns:
-        Tuple of (metrics_table, summary_rows) DataFrames
+    Priority order:
+    1. Filter by season if specified
+    2. Format metrics by year
+    3. Add summary rows with appropriate precision
     """
     try:
         if metrics_df.empty or summary_df.empty:
             return pd.DataFrame({'Metric': metric_order}), pd.DataFrame({'Metric': ['No Data']})
         
-        # Filter by season if specified
         if season:
             if 'season' in metrics_df.columns:
                 metrics_df = metrics_df[metrics_df['season'] == season]
             if 'season' in summary_df.columns:
                 summary_df = summary_df[summary_df['season'] == season]
         
-        # Get unique years
         years = sorted(metrics_df['year'].unique()) if not metrics_df.empty else []
         
-        # Create table data dictionary
+        # Build metrics table
         table_data = {'Metric': metric_order}
         
-        # Add columns for each year
         for year in years:
             year_metrics = metrics_df[metrics_df['year'] == year]
-            
-            # Add scores for this year
             scores = []
+            
             for metric in metric_order:
                 metric_row = year_metrics[year_metrics['metric_name'] == metric]
                 if not metric_row.empty:
                     try:
-                        # Handle different column names for score values
                         if 'metric_score' in metric_row.columns:
                             score_value = metric_row['metric_score'].values[0]
                         elif 'score' in metric_row.columns:
@@ -383,7 +323,7 @@ def format_metrics_table(metrics_df, summary_df, metric_order,
                             scores.append('-')
                             continue
                         
-                        # Round to 1 decimal place for habitat scores, int for others
+                        # Format with appropriate precision
                         if isinstance(score_value, float) and score_value != int(score_value):
                             scores.append(round(score_value, 1))
                         else:
@@ -396,30 +336,24 @@ def format_metrics_table(metrics_df, summary_df, metric_order,
             
             table_data[str(year)] = scores
         
-        # Create metrics table
         metrics_table = pd.DataFrame(table_data)
         
-        # Create summary rows
+        # Build summary rows
         default_summary_labels = ['Total Score', 'Comparison to Reference', 'Condition']
         summary_labels = summary_labels or default_summary_labels
         summary_rows = pd.DataFrame({'Metric': summary_labels})
         
-        # Add summary data for each year
         for year in years:
             year_summary = summary_df[summary_df['year'] == year]
             if not year_summary.empty:
                 try:
                     total_score = int(year_summary['total_score'].values[0])
-                    
-                    # Create summary row data based on available columns
                     summary_data = [total_score]
                     
-                    # Add comparison to reference if available (fish/macro data)
                     if 'comparison_to_reference' in year_summary.columns:
                         comparison = f"{year_summary['comparison_to_reference'].values[0]:.2f}"
                         summary_data.append(comparison)
                         
-                        # Get condition/integrity class
                         condition = 'Unknown'
                         if 'biological_condition' in year_summary.columns:
                             condition = year_summary['biological_condition'].values[0]
@@ -427,12 +361,10 @@ def format_metrics_table(metrics_df, summary_df, metric_order,
                             condition = year_summary['integrity_class'].values[0]
                         summary_data.append(condition)
                     
-                    # Handle habitat data (has habitat_grade instead of comparison)
                     elif 'habitat_grade' in year_summary.columns:
                         habitat_grade = year_summary['habitat_grade'].values[0]
                         summary_data.append(habitat_grade)
                     
-                    # Fill remaining positions if summary_labels has more items
                     while len(summary_data) < len(summary_labels):
                         summary_data.append('-')
                     
@@ -455,13 +387,12 @@ def format_metrics_table(metrics_df, summary_df, metric_order,
 
 def create_table_styles(metrics_table):
     """
-    Create consistent styling for metrics tables.
+    Create consistent table styling across all data views.
     
-    Args:
-        metrics_table: DataFrame with the metrics rows (used for row indexing)
-    
-    Returns:
-        Dictionary of style configurations for the table
+    Style rules:
+    1. Bold headers and first column
+    2. Center-align numeric data
+    3. Bold summary rows with top border
     """
     return {
         'style_table': {
@@ -507,17 +438,7 @@ def create_table_styles(metrics_table):
     }
 
 def create_data_table(full_table, table_id, styles):
-    """
-    Create a standardized DataTable component for data.
-    
-    Args:
-        full_table: DataFrame containing the table data
-        table_id: Unique ID for the table
-        styles: Style dictionary from create_table_styles()
-    
-    Returns:
-        Dash DataTable component
-    """
+    """Create standardized data table with consistent styling."""
     try:
         return dash_table.DataTable(
             id=table_id,
@@ -534,16 +455,7 @@ def create_data_table(full_table, table_id, styles):
 # =============================================================================
 
 def create_empty_figure(site_name=None, data_type="data"):
-    """
-    Create an empty figure with appropriate "no data" message.
-    
-    Args:
-        site_name: Optional site name
-        data_type: Type of data (e.g., "habitat", "fish", "macroinvertebrate")
-    
-    Returns:
-        Empty Plotly figure with message
-    """
+    """Create empty figure with informative message when no data available."""
     fig = go.Figure()
     site_msg = f" for {site_name}" if site_name else ""
     fig.update_layout(
@@ -560,15 +472,7 @@ def create_empty_figure(site_name=None, data_type="data"):
     return fig
 
 def create_error_figure(error_message):
-    """
-    Create an error figure with error message.
-    
-    Args:
-        error_message: Error message to display
-    
-    Returns:
-        Plotly figure with error message
-    """
+    """Create error figure with clear error message for troubleshooting."""
     fig = go.Figure()
     fig.update_layout(
         title="Error creating visualization",

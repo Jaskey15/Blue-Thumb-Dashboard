@@ -1,16 +1,15 @@
 """
-Optimized database queries specifically for map visualization.
+Database queries optimized for map visualization performance.
 
-This module contains SQL queries optimized for loading the latest data per site
-for map visualization purposes. These queries use window functions and database
-indexes to minimize data transfer and processing time.
+Provides efficient SQL queries to fetch latest site data for map rendering:
+- Uses window functions to get latest readings per site
+- Leverages database indexes for fast retrieval
+- Minimizes data transfer with targeted column selection
+- Handles missing data gracefully with pandas operations
 
-Functions:
-- get_latest_chemical_data_for_maps(): Latest chemical data per site
-- get_latest_fish_data_for_maps(): Latest fish data per site  
-- get_latest_macro_data_for_maps(): Latest macroinvertebrate data per site
-- get_latest_habitat_data_for_maps(): Latest habitat data per site
-- get_sites_for_maps(): Optimized site information for map visualization
+Key Functions:
+- get_sites_for_maps(): Basic site info with coordinates
+- get_latest_*_data_for_maps(): Latest readings for chemical/biological/habitat data
 """
 
 import pandas as pd
@@ -23,20 +22,19 @@ logger = setup_logging("map_queries", category="visualization")
 
 def get_sites_for_maps(active_only=False):
     """
-    Optimized query to get site information for map visualization.
-    Returns data in a format optimized for map rendering with minimal database overhead.
+    Fetches site information optimized for map display.
     
     Args:
-        active_only: Boolean - if True, only return active sites
+        active_only: If True, returns only active sites
         
     Returns:
-        DataFrame with site information optimized for map visualization
+        DataFrame with site coordinates and metadata
     """
     conn = None
     try:
         conn = get_connection()
         
-        # Optimized query with optional active filter
+        # Base query with essential columns
         query = """
         SELECT 
             site_name,
@@ -57,14 +55,14 @@ def get_sites_for_maps(active_only=False):
             
         query += " ORDER BY site_name"
         
-        # Execute query and return as DataFrame (more efficient for map processing)
+        # Load data efficiently into DataFrame
         sites_df = pd.read_sql_query(query, conn, params=params)
         
         if sites_df.empty:
             logger.warning("No sites found in database")
             return pd.DataFrame()
         
-        # Handle missing metadata efficiently with pandas vectorized operations
+        # Handle missing metadata with vectorized operations
         sites_df['county'] = sites_df['county'].fillna('Unknown')
         sites_df['river_basin'] = sites_df['river_basin'].fillna('Unknown')
         sites_df['ecoregion'] = sites_df['ecoregion'].fillna('Unknown')
@@ -85,19 +83,19 @@ def get_sites_for_maps(active_only=False):
             
 def get_latest_chemical_data_for_maps(site_name=None):
     """
-    Optimized query to get only the latest chemical data per site for map visualization.
-    Uses database indexes efficiently by filtering for latest dates in SQL.
+    Fetches latest chemical readings per site using window functions.
     
     Args:
-        site_name: Optional site name to filter data for
+        site_name: Optional site name to filter results
         
     Returns:
-        DataFrame with latest chemical data per site including status columns
+        DataFrame with pivoted chemical parameters and their statuses
     """
     from data_processing.chemical_utils import KEY_PARAMETERS
     
     conn = get_connection()
     try:
+        # Get latest measurements per parameter using window function
         query = """
         WITH latest_measurements AS (
             SELECT 
@@ -129,23 +127,21 @@ def get_latest_chemical_data_for_maps(site_name=None):
         WHERE rn = 1
         """
         
-        # Add site filter if needed
+        # Add site filter if specified
         params = []
         if site_name:
             query = query.replace("WHERE rn = 1", "WHERE rn = 1 AND Site_Name = ?")
             params.append(site_name)
             
-        # Execute query
         df = pd.read_sql_query(query, conn, params=params)
         
         if df.empty:
             logger.info(f"No chemical data found in database")
             return pd.DataFrame()
             
-        # Convert date column to datetime
         df['Date'] = pd.to_datetime(df['Date'])
         
-        # Create pivots using only Site_Name as index (not date, since dates differ per parameter)
+        # Create value and status pivots by site
         value_pivot = df.pivot_table(
             index='Site_Name',
             columns='parameter_code',
@@ -160,17 +156,16 @@ def get_latest_chemical_data_for_maps(site_name=None):
             aggfunc='first'
         ).reset_index()
         
-        # Add the most recent overall date and year/month info for each site
+        # Add latest date info per site
         site_dates = df.groupby('Site_Name')['Date'].max().reset_index()
         site_years = df.groupby('Site_Name')['Year'].max().reset_index()
         site_months = df.groupby('Site_Name')['Month'].max().reset_index()
         
-        # Merge date info
         value_pivot = value_pivot.merge(site_dates, on='Site_Name', how='left')
         value_pivot = value_pivot.merge(site_years, on='Site_Name', how='left')
         value_pivot = value_pivot.merge(site_months, on='Site_Name', how='left')
         
-        # Add status columns with '_status' suffix
+        # Add status columns for each parameter
         for param in KEY_PARAMETERS:
             if param in status_pivot.columns:
                 value_pivot[f'{param}_status'] = status_pivot[param]
@@ -186,18 +181,19 @@ def get_latest_chemical_data_for_maps(site_name=None):
 
 def get_latest_fish_data_for_maps(site_name=None):
     """
-    Optimized query to get only the latest fish data per site for map visualization.
+    Fetches latest fish survey data per site.
     
     Args:
-        site_name: Optional site name to filter data for
+        site_name: Optional site name to filter results
     
     Returns:
-        DataFrame with latest fish data per site
+        DataFrame with IBI scores and integrity classifications
     """
     conn = None
     try:
         conn = get_connection()
         
+        # Get latest fish survey per site using window function
         query = '''
         WITH latest_fish AS (
             SELECT 
@@ -226,16 +222,14 @@ def get_latest_fish_data_for_maps(site_name=None):
         WHERE rn = 1
         '''
         
-        # Add filter for site if provided
+        # Add site filter if specified
         params = []
         if site_name:
             query = query.replace("WHERE rn = 1", "WHERE rn = 1 AND site_name = ?")
             params.append(site_name)
             
-        # Add ordering
         query += " ORDER BY site_name"
         
-        # Execute query
         fish_df = pd.read_sql_query(query, conn, params=params)
         
         if fish_df.empty:
@@ -259,18 +253,19 @@ def get_latest_fish_data_for_maps(site_name=None):
 
 def get_latest_macro_data_for_maps(site_name=None):
     """
-    Optimized query to get only the latest macroinvertebrate data per site for map visualization.
+    Fetches latest macroinvertebrate survey data per site.
     
     Args:
-        site_name: Optional site name to filter data for
+        site_name: Optional site name to filter results
     
     Returns:
-        DataFrame with latest macro data per site
+        DataFrame with bioassessment scores and conditions
     """
     conn = None
     try:
         conn = get_connection()
         
+        # Get latest macro survey per site using window function
         query = '''
         WITH latest_macro AS (
             SELECT 
@@ -305,19 +300,17 @@ def get_latest_macro_data_for_maps(site_name=None):
         WHERE rn = 1
         '''
         
-        # Add filter for site if provided
+        # Add site filter if specified
         params = []
         if site_name:
             query = query.replace("WHERE rn = 1", "WHERE rn = 1 AND site_name = ?")
             params.append(site_name)
             
-        # Add ordering
         query += " ORDER BY site_name"
         
-        # Execute query
         macro_df = pd.read_sql_query(query, conn, params=params)
         
-        # Convert collection_date to datetime for better handling
+        # Convert dates to datetime for consistent handling
         if 'collection_date' in macro_df.columns and not macro_df.empty:
             macro_df['collection_date'] = pd.to_datetime(macro_df['collection_date'])
         
@@ -342,18 +335,19 @@ def get_latest_macro_data_for_maps(site_name=None):
 
 def get_latest_habitat_data_for_maps(site_name=None):
     """
-    Optimized query to get only the latest habitat data per site for map visualization.
+    Fetches latest habitat assessment data per site.
     
     Args:
-        site_name: Optional site name to filter data for
+        site_name: Optional site name to filter results
     
     Returns:
-        DataFrame with latest habitat data per site
+        DataFrame with habitat scores and grades
     """
     conn = None
     try:
         conn = get_connection()
         
+        # Get latest habitat assessment per site using window function
         query = '''
         WITH latest_habitat AS (
             SELECT 
@@ -382,16 +376,14 @@ def get_latest_habitat_data_for_maps(site_name=None):
         WHERE rn = 1
         '''
         
-        # Add filter for site if provided
+        # Add site filter if specified
         params = []
         if site_name:
             query = query.replace("WHERE rn = 1", "WHERE rn = 1 AND site_name = ?")
             params.append(site_name)
             
-        # Add ordering
         query += " ORDER BY site_name"
         
-        # Execute query
         habitat_df = pd.read_sql_query(query, conn, params=params)
         
         if habitat_df.empty:
