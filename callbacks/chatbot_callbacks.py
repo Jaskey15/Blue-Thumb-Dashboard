@@ -9,8 +9,8 @@ import openai
 import os
 import json
 
-# Cost-effective model configuration
-CHAT_MODEL = "gpt-3.5-turbo-0125"  # Newest, most efficient 3.5 version
+# model configuration
+CHAT_MODEL = "gpt-4.1-nano"
 MAX_TOKENS = 150  # Limit response length
 TEMPERATURE = 0.7  # Balance between creativity and consistency
 
@@ -30,21 +30,23 @@ def format_message(text, is_user=True, timestamp=None):
         )
     ])
 
-def load_tab_context(tab_name):
-    """Load relevant context based on the current tab"""
-    context_map = {
-        "chemical": "text/chemical/chemical_intro.md",
-        # Add other tab contexts as needed
-    }
-    
-    if tab_name in context_map:
-        try:
-            with open(context_map[tab_name], 'r') as f:
-                return f.read()
-        except Exception as e:
-            print(f"Error loading context for {tab_name}: {e}")
-            return ""
-    return ""
+def load_all_context():
+    """Load and combine all .md files from the /text directory."""
+    full_context = []
+    text_dir = 'text'
+    for root, _, files in os.walk(text_dir):
+        for file in files:
+            if file.endswith('.md'):
+                try:
+                    with open(os.path.join(root, file), 'r', encoding='utf-8') as f:
+                        # Add a separator to distinguish between file contents
+                        full_context.append(f"--- START OF {file} ---\n{f.read()}\n--- END OF {file} ---\n")
+                except Exception as e:
+                    print(f"Error loading context from {file}: {e}")
+    return "\n".join(full_context)
+
+# Load context once when the app starts
+FULL_CONTEXT = load_all_context()
 
 def register_chatbot_callbacks(app):
     @app.callback(
@@ -80,13 +82,11 @@ def register_chatbot_callbacks(app):
         existing_messages.append(format_message(message, is_user=True))
         
         try:
-            # Load relevant context
-            context = load_tab_context("chemical")
-            
-            # Prepare conversation for OpenAI
+            # Prepare conversation for OpenAI using the pre-loaded full context
+            # NOTE: The 'responses' API uses a different input structure
             messages = [
                 {"role": "system", "content": f"""You are a helpful stream health expert assistant. 
-                Use this context to answer questions: {context}
+                Use this context to answer questions: {FULL_CONTEXT}
                 Keep responses concise and focused on stream health topics."""},
                 {"role": "user", "content": message}
             ]
@@ -98,11 +98,10 @@ def register_chatbot_callbacks(app):
                 messages=messages,
                 temperature=TEMPERATURE,
                 max_tokens=MAX_TOKENS,
-                presence_penalty=0,  # Reduce token usage
-                frequency_penalty=0   # Reduce token usage
             )
             
             # Add assistant response
+            # NOTE: The response object has a different structure
             assistant_message = response.choices[0].message.content
             existing_messages.append(format_message(assistant_message, is_user=False))
             
