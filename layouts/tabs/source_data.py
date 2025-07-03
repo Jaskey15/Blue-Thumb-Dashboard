@@ -1,5 +1,5 @@
 """
-Source Data tab layout for the Tenmile Creek Water Quality Dashboard.
+Source Data tab layout for the dash
 """
 
 import dash_bootstrap_components as dbc
@@ -15,7 +15,7 @@ def create_source_data_tab():
         HTML layout for the Source Data tab
     """
     try:
-        # Create data source cards
+        # Data source cards
         data_source_cards = [
             # Historical Data Card
             dbc.Card([
@@ -91,7 +91,6 @@ def create_source_data_tab():
         ]
         
         tab_content = html.Div([
-            # Main title
             dbc.Row([
                 dbc.Col([
                     html.H3("Source Data", className="mb-4")

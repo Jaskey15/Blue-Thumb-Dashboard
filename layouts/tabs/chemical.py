@@ -1,5 +1,5 @@
 """
-Chemical tab layout for the Tenmile Creek Water Quality Dashboard.
+Chemical tab layout for the dashboard
 """
 
 import dash_bootstrap_components as dbc
@@ -13,10 +13,9 @@ def create_chemical_tab():
     min_year, max_year = get_chemical_date_range()
     
     return html.Div([
-        # Download component (hidden, triggered by callback)
         dcc.Download(id="chemical-download-component"),
 
-        # Description - always visible
+        # Description section
         html.Div([
             html.H3("Chemical Water Quality", className="mb-3"),
             html.P([
@@ -33,20 +32,18 @@ def create_chemical_tab():
             ])
         ], className="mb-4"),
         
-        # Site selection section - simplified with searchable dropdown
+        # Site selection
         html.Div([
             html.Label("Select Site:", className="form-label", style={'fontWeight': 'bold', 'fontSize': '1rem', 'marginBottom': '0.1rem'}),
             
-            # Helper text
             html.Small(
                 "Click the dropdown and start typing to search for monitoring sites",
                 className="text-muted mb-1 d-block"
             ),
 
-            # Searchable dropdown for site selection
             dcc.Dropdown(
                 id='chemical-site-dropdown',
-                options=[],  # Will be populated when tab loads
+                options=[],  # Populated when tab loads
                 placeholder="Search for a site...",
                 searchable=True,
                 clearable=True,
@@ -55,9 +52,9 @@ def create_chemical_tab():
             
         ], style={'marginBottom': '20px'}),
         
-        # Controls and content - hidden until site is selected
+        # Controls - hidden until site is selected
         html.Div([
-            # Parameter selection - full row
+            # Parameter selection
             dbc.Row([
                 dbc.Col([
                     html.Label("Select Chemical Parameter:", className="form-label mb-2", style={'fontWeight': 'bold', 'fontSize': '1rem'}),
@@ -77,7 +74,7 @@ def create_chemical_tab():
                 ], width=12)
             ]),
             
-            # Year range - aligned with season/months row below
+            # Year range selection
             dbc.Row([
                 dbc.Col([
                     html.Label(
@@ -109,7 +106,7 @@ def create_chemical_tab():
                 ], width=7)
             ], className="mb-3"),
             
-            # Season and month selection - UPDATED LAYOUT TO MATCH ORIGINAL
+            # Season and month selection
             dbc.Row([
                 dbc.Col([
                     html.Label(
@@ -129,7 +126,6 @@ def create_chemical_tab():
                     )
                 ], width=5),
 
-                # Month selection 
                 dbc.Col([
                     html.Label(
                         "Select Months:", 
@@ -154,7 +150,7 @@ def create_chemical_tab():
                 ], width=7)
             ], className="mb-3 mobile-season-stack"),
             
-            # Highlight switch and download buttons row
+            # Threshold highlighting and download buttons
             dbc.Row([
                 dbc.Col([
                     html.Label(
@@ -174,7 +170,7 @@ def create_chemical_tab():
                         id="chemical-download-site-btn",
                         color="success",
                         size="sm",
-                        style={'display': 'none', 'marginRight': '10px'}  # Initially hidden with right margin
+                        style={'display': 'none', 'marginRight': '10px'}  # Initially hidden
                     ),
                     dbc.Button(
                         [html.I(className="fas fa-download me-2"), "Download All Chemical Data"],
@@ -186,7 +182,7 @@ def create_chemical_tab():
                 ], width=6, className="d-flex justify-content-end align-items-center")
             ], className="mb-3"),
             
-            # Graph 
+            # Visualization container
             dbc.Row([
                 dbc.Col([
                     html.Div(id='chemical-graph-container')
@@ -197,7 +193,7 @@ def create_chemical_tab():
             dbc.Row([
                 dbc.Col([
                     html.Div(id='chemical-explanation-container')
-                ], width=6, className="d-flex"),  
+                ], width=6, className="d-flex"),
                 dbc.Col([
                     html.Div(id='chemical-diagram-container')
                 ], width=6, className="d-flex align-items-center")  

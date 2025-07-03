@@ -1,5 +1,5 @@
 """
-Protect Our Streams tab layout for the Tenmile Creek Water Quality Dashboard.
+Protect Our Streams tab layout for the dashboard
 """
 
 import dash_bootstrap_components as dbc
@@ -16,16 +16,15 @@ def create_protect_our_streams_tab():
         HTML layout for the Protect Our Streams tab
     """
     try:
-        # Import the card data
         from ..ui_data import HOME_YARD_CARDS, RURAL_CARDS, RECREATION_CARDS, COMMUNITY_CARDS
         
-        # Create cards using the imported data
+        # Create action cards for each category
         home_yard_cards = [create_action_card(**card) for card in HOME_YARD_CARDS]
         rural_cards = [create_action_card(**card) for card in RURAL_CARDS]
         recreation_cards = [create_action_card(**card) for card in RECREATION_CARDS]
         community_cards = [create_action_card(**card) for card in COMMUNITY_CARDS]
         
-        # Create main tabs with all cards displayed for each category
+        # Create tabbed interface for action categories
         main_tabs = dbc.Tabs([
             dbc.Tab(
                 dbc.Row([
@@ -53,16 +52,13 @@ def create_protect_our_streams_tab():
             )
         ], className="mt-4")
             
-        # Put everything together in the tab layout
         tab_content = html.Div([
-            # First row with text and image side by side
+            # Introduction section with text and watershed diagram
             dbc.Row([
-                # Left column for text 
                 dbc.Col([
                     load_markdown_content('protect_our_streams_intro.md', link_target="_blank")
                 ], width=6),
                 
-                # Right column for image 
                 dbc.Col([
                     html.Div([
                         create_image_with_caption(
@@ -73,7 +69,7 @@ def create_protect_our_streams_tab():
                 ], width=6, className="d-flex align-items-center")
             ], className="mobile-stack"),
             
-            # Second row for "Actions You Can Take" section
+            # Action cards section
             dbc.Row([
                 dbc.Col([
                     html.H3("Actions You Can Take"),

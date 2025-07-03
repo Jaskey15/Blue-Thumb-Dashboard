@@ -1,5 +1,5 @@
 """
-Overview tab layout for the Tenmile Creek Water Quality Dashboard.
+Overview tab layout for the dashboard
 """
 
 import dash_bootstrap_components as dbc
@@ -15,16 +15,15 @@ def create_overview_tab():
         HTML layout for the Overview tab
     """
     try:
-        # Create the layout WITHOUT creating the map
         tab_content = html.Div([
-            # First row: Monitoring Site Locations section
+            # Monitoring site locations section
             dbc.Row([
                 dbc.Col([
                     load_markdown_content('monitoring_sites.md')
                 ], width=12)
             ]),
             
-            # Second row: Parameter selection dropdown
+            # Parameter selection
             dbc.Row([
                 dbc.Col([
                     html.Label(
@@ -47,7 +46,7 @@ def create_overview_tab():
                 ], width=12)
             ], className="mt-3 mb-3"),
 
-            # Third row: Active sites toggle - UPDATED TO MATCH CHEMICAL TAB STYLING
+            # Active sites toggle
             dbc.Row([
                 dbc.Col([
                     html.Label(
@@ -67,12 +66,12 @@ def create_overview_tab():
                 ], width=12)
             ], className="mb-3"),
             
-            # Fourth row: Map (empty initially, filled by callback)
+            # Map visualization
             dbc.Row([
                 dbc.Col([
                     dcc.Graph(
                         id='site-map-graph',
-                        figure={},  # Empty figure - callback will populate
+                        figure={},  # Empty figure - populated by callback
                         config={
                             'scrollZoom': True,
                             'displayModeBar': True,
@@ -82,7 +81,7 @@ def create_overview_tab():
                 ], width=12)
             ]),
             
-            # Fifth row: Dynamic Legend Container
+            # Dynamic legend container
             dbc.Row([
                 dbc.Col([
                     html.Div(id='map-legend-container', className="text-center mt-2 mb-4")

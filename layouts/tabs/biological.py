@@ -1,5 +1,5 @@
 """
-Biological tab layout for the Tenmile Creek Water Quality Dashboard.
+Biological tab layout for the dashboard
 """
 
 import dash_bootstrap_components as dbc
