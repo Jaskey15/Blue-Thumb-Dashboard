@@ -163,30 +163,51 @@ def test_complete_habitat_navigation_flow(self):
 
 ## Running Tests
 
-### Run All Callback Tests
+### Common Test Commands
+
 ```bash
-pytest tests/callbacks/ -v
+# Run all callback tests with verbose output
+pytest tests/callbacks -v
+
+# Run with coverage report
+pytest tests/callbacks --cov=callbacks --cov-report=term-missing --cov-report=html
+
+# Run specific test file
+pytest tests/callbacks/test_shared_callbacks.py -v
+
+# Run specific test class
+pytest tests/callbacks/test_shared_callbacks.py::TestNavigationLogic -v
+
+# Run single test
+pytest tests/callbacks/test_shared_callbacks.py::TestNavigationLogic::test_site_name_extraction_from_click_data -v
+
+# Stop on first failure
+pytest tests/calls -x
+
+# Run only failed tests from last run
+pytest tests/callbacks --lf
+
+# Run tests in parallel (if pytest-xdist installed)
+pytest tests/callbacks -n auto
+
+# Show local variables in tracebacks
+pytest tests/callbacks -v --showlocals
 ```
 
-### Run Specific Test File
-```bash
-pytest tests/callbacks/test_shared_callbacks_simple.py -v
-```
+### Working Directory
+Always run tests from the project root directory (where `callbacks/` folder exists).
 
-### Run Specific Test Class
-```bash
-pytest tests/callbacks/test_shared_callbacks_simple.py::TestNavigationLogic -v
-```
+### Test Output
+- Use `-v` for verbose output showing each test
+- Use `-q` for minimal output
+- Use `--tb=short` for shorter tracebacks
+- Use `--showlocals` to see local variables in failures
 
-### Run Single Test
-```bash
-pytest tests/callbacks/test_shared_callbacks_simple.py::TestNavigationLogic::test_site_name_extraction_from_click_data -v
-```
-
-### Run with Coverage
-```bash
-pytest tests/callbacks/ --cov=callbacks --cov-report=html
-```
+### Coverage Reports
+Running with coverage (`--cov`) will:
+1. Show terminal report of missed lines
+2. Generate HTML report in htmlcov/index.html
+3. Help identify untested code paths
 
 ## Test Organization
 

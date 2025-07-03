@@ -133,6 +133,11 @@ This project demonstrates:
 - **Scientific communication** - Translating complex statewide data for public understanding
 - **Production deployment** - Robust architecture suitable for public use
 
+### Code Standards
+
+- **Comment Style Guide** - See [`docs/COMMENT_STYLE_GUIDE.md`](docs/COMMENT_STYLE_GUIDE.md) for consistent commenting standards across the codebase
+- **Testing Framework** - Comprehensive test suite with 456+ tests ensuring reliability across all components
+
 ## Future Enhancements
 
 - [ ] Automated data updates from new monitoring events

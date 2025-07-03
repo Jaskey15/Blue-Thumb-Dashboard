@@ -1,6 +1,5 @@
 """
-Biological callbacks for the Tenmile Creek Water Quality Dashboard.
-This file contains callbacks specific to the biological data tab.
+Callbacks for biological data visualization and interaction.
 """
 
 import dash
@@ -10,16 +9,13 @@ from utils import setup_logging
 from .tab_utilities import create_biological_community_info, create_biological_site_display, create_gallery_navigation_callback
 from .helper_functions import create_empty_state, create_error_state
 
-# Configure logging
+# Initialize callback logging
 logger = setup_logging("biological_callbacks", category="callbacks")
 
 def register_biological_callbacks(app):
-    """Register all biological-related callbacks in logical workflow order."""
+    """Register callbacks for biological data exploration and visualization."""
     
-    # ===========================
-    # 1. STATE MANAGEMENT
-    # ===========================
-    
+    # State persistence
     @app.callback(
         Output('biological-tab-state', 'data'),
         [Input('biological-community-dropdown', 'value'),
@@ -28,10 +24,9 @@ def register_biological_callbacks(app):
         prevent_initial_call=True
     )
     def save_biological_state(selected_community, selected_site, current_state):
-        """Save biological tab state when selections change."""
-        # Only save valid selections, don't overwrite with None
+        """Preserve user selections between tab switches."""
         if selected_community is not None or selected_site is not None:
-            # Preserve existing values when only one changes
+            # Keep existing values when only one selection changes
             new_state = current_state.copy() if current_state else {'selected_community': None, 'selected_site': None}
             
             if selected_community is not None:
@@ -44,13 +39,10 @@ def register_biological_callbacks(app):
             
             return new_state
         else:
-            # Keep existing state when both dropdowns are cleared
+            # Maintain state when dropdowns cleared
             return current_state or {'selected_community': None, 'selected_site': None}
     
-    # ==================================================
-    # 2. NAVIGATION AND DROPDOWN POPULATION  
-    # ==================================================
-    
+    # Navigation handling
     @app.callback(
         [Output('biological-community-dropdown', 'value', allow_duplicate=True),
          Output('biological-site-dropdown', 'options', allow_duplicate=True),
@@ -63,18 +55,24 @@ def register_biological_callbacks(app):
         prevent_initial_call=True
     )
     def handle_biological_navigation_and_initial_load(active_tab, nav_data, biological_state):
-        """Handle navigation from map, initial tab loading, and state restoration."""
+        """
+        Handle navigation from map clicks and restore saved state.
+        
+        Priority order:
+        1. Map click navigation
+        2. Saved state restoration
+        3. Default state
+        """
         if active_tab != 'biological-tab':
             return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
         
-        # Get the trigger to understand what caused this callback
         ctx = dash.callback_context
         if not ctx.triggered:
             return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
             
         trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
         
-        # Priority 1: Handle navigation from map (highest priority)
+        # Handle map navigation
         if (nav_data and nav_data.get('target_tab') == 'biological-tab' and 
             nav_data.get('target_community') and nav_data.get('target_site')):
             
@@ -82,53 +80,52 @@ def register_biological_callbacks(app):
             target_site = nav_data.get('target_site')
             
             try:
-                # Get sites for the target community type
+                # Validate available sites
                 from utils import get_sites_with_data
                 available_sites = get_sites_with_data(target_community)
                 
                 if not available_sites:
                     logger.warning(f"No sites found for community type: {target_community}")
                     return (
-                        target_community,  # Set community
-                        [],  # No site options
-                        None,  # No site value
-                        {'display': 'block', 'marginBottom': '20px'},  # Show section
-                        False  # Enable dropdown
+                        target_community,
+                        [],
+                        None,
+                        {'display': 'block', 'marginBottom': '20px'},
+                        False
                     )
                 
-                # Create dropdown options
                 options = [{'label': site, 'value': site} for site in sorted(available_sites)]
                 
-                # Verify target site is available for this community
+                # Verify target site exists
                 if target_site in available_sites:
                     return (
-                        target_community,  # Set community
-                        options,  # Site options
-                        target_site,  # Set target site
-                        {'display': 'block', 'marginBottom': '20px'},  # Show section
-                        False  # Enable dropdown
+                        target_community,
+                        options,
+                        target_site,
+                        {'display': 'block', 'marginBottom': '20px'},
+                        False
                     )
                 else:
                     logger.warning(f"Target site '{target_site}' not found in available sites for {target_community}")
                     return (
-                        target_community,  # Set community
-                        options,  # Site options
-                        None,  # No site value
-                        {'display': 'block', 'marginBottom': '20px'},  # Show section
-                        False  # Enable dropdown
+                        target_community,
+                        options,
+                        None,
+                        {'display': 'block', 'marginBottom': '20px'},
+                        False
                     )
                     
             except Exception as e:
                 logger.error(f"Error handling navigation for {target_community}: {e}")
                 return (
-                    target_community,  # Set community
-                    [],  # No options
-                    None,  # No site value
-                    {'display': 'none'},  # Hide section
-                    True  # Disable dropdown
+                    target_community,
+                    [],
+                    None,
+                    {'display': 'none'},
+                    True
                 )
         
-        # Priority 2: Restore from saved state if tab was just activated AND no active navigation
+        # Restore previous state
         if (trigger_id == 'main-tabs' and biological_state and 
             biological_state.get('selected_community') and
             (not nav_data or not nav_data.get('target_tab'))):
@@ -137,7 +134,7 @@ def register_biological_callbacks(app):
             saved_site = biological_state.get('selected_site')
             
             try:
-                # Get sites for the saved community type
+                # Validate saved selections
                 from utils import get_sites_with_data
                 available_sites = get_sites_with_data(saved_community)
                 
@@ -145,36 +142,32 @@ def register_biological_callbacks(app):
                     logger.warning(f"Saved community '{saved_community}' no longer has available sites")
                     return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
                 
-                # Create dropdown options
                 options = [{'label': site, 'value': site} for site in sorted(available_sites)]
                 
-                # Check if saved site is still valid for this community
+                # Restore site if still valid
                 site_value_to_restore = None
                 if saved_site and saved_site in available_sites:
                     site_value_to_restore = saved_site
                 
                 return (
-                    saved_community,  # Restore community
-                    options,  # Site options
-                    site_value_to_restore,  # Restore site if available
-                    {'display': 'block', 'marginBottom': '20px'},  # Show section
-                    False  # Enable dropdown
+                    saved_community,
+                    options,
+                    site_value_to_restore,
+                    {'display': 'block', 'marginBottom': '20px'},
+                    False
                 )
                 
             except Exception as e:
                 logger.error(f"Error restoring state for {saved_community}: {e}")
                 return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
         
-        # Ignore navigation-store clearing events (when nav_data is empty/None)
+        # Ignore navigation store clearing
         if trigger_id == 'navigation-store' and (not nav_data or not nav_data.get('target_tab')):
             return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
         
         return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
 
-    # ==================================================
-    # 3. COMMUNITY SELECTION & SITE DROPDOWN POPULATION
-    # ==================================================
-    
+    # Site selection
     @app.callback(
         [Output('biological-site-search-section', 'style'),
          Output('biological-site-dropdown', 'disabled'),
@@ -185,66 +178,61 @@ def register_biological_callbacks(app):
         prevent_initial_call=True
     )
     def update_biological_site_dropdown(selected_community, current_site_value):
-        """Show site dropdown and populate options when community is selected."""
+        """Update available sites when community type changes."""
         if selected_community:
             try:
-                # Get sites for the selected community type
                 from utils import get_sites_with_data
                 available_sites = get_sites_with_data(selected_community)
                 
                 if not available_sites:
                     logger.warning(f"No sites found for community type: {selected_community}")
                     return (
-                        {'display': 'block', 'marginBottom': '20px'},  # Show section
-                        False,  # Enable dropdown
-                        [],     # No options
-                        None    # Clear value
+                        {'display': 'block', 'marginBottom': '20px'},
+                        False,
+                        [],
+                        None
                     )
                 
-                # Create dropdown options
                 options = [{'label': site, 'value': site} for site in sorted(available_sites)]
                 logger.info(f"Populated {selected_community} dropdown with {len(options)} sites")
                 
-                # Preserve existing site value if it's valid for this community (from navigation)
+                # Keep current site if valid
                 site_value_to_set = None
                 if current_site_value and current_site_value in available_sites:
                     site_value_to_set = current_site_value
                     logger.info(f"Preserving existing site selection: {current_site_value}")
                 
                 return (
-                    {'display': 'block', 'marginBottom': '20px'},  # Show section
-                    False,  # Enable dropdown
-                    options,  # Site options
-                    site_value_to_set    # Preserve existing selection or clear
+                    {'display': 'block', 'marginBottom': '20px'},
+                    False,
+                    options,
+                    site_value_to_set
                 )
                 
             except Exception as e:
                 logger.error(f"Error populating {selected_community} sites: {e}")
                 return (
-                    {'display': 'block', 'marginBottom': '20px'},  # Show section
-                    False,  # Enable dropdown
-                    [],     # No options
-                    None    # Clear value
+                    {'display': 'block', 'marginBottom': '20px'},
+                    False,
+                    [],
+                    None
                 )
         else:
-            # Hide section and disable dropdown when no community selected
+            # Hide site selection until community chosen
             return (
-                {'display': 'none'},  # Hide section
-                True,   # Disable dropdown
-                [],     # Clear options
-                None    # Clear value
+                {'display': 'none'},
+                True,
+                [],
+                None
             )
     
-    # ===========================
-    # 4. SEPARATED CONTENT DISPLAY
-    # ===========================
-    
+    # Content display
     @app.callback(
         Output('biological-community-content', 'children'),
         [Input('biological-community-dropdown', 'value')]
     )
     def update_biological_community_content(selected_community):
-        """Update community-specific content (description, gallery, interpretation)."""
+        """Display community information and species gallery."""
         if not selected_community:
             return html.Div()
         
@@ -265,7 +253,7 @@ def register_biological_callbacks(app):
          Input('biological-site-dropdown', 'value')]
     )
     def update_biological_site_content(selected_community, selected_site):
-        """Update site-specific content (charts, metrics)."""
+        """Display site-specific biological metrics and visualizations."""
         if not selected_community or not selected_site:
             return create_empty_state("Please select a community type and site to view biological data.")
         
@@ -280,10 +268,7 @@ def register_biological_callbacks(app):
                 str(e)
             )
 
-    # ===========================
-    # 5. GALLERY NAVIGATION
-    # ===========================
-    
+    # Gallery navigation
     @app.callback(
         [Output('fish-gallery-container', 'children'),
          Output('current-fish-index', 'data')],
@@ -292,7 +277,7 @@ def register_biological_callbacks(app):
         [State('current-fish-index', 'data')]
     )
     def update_fish_gallery(prev_clicks, next_clicks, current_index):
-        """Handle fish gallery navigation."""
+        """Navigate through fish species gallery."""
         update_gallery = create_gallery_navigation_callback('fish')
         return update_gallery(prev_clicks, next_clicks, current_index)
     
@@ -304,14 +289,11 @@ def register_biological_callbacks(app):
         [State('current-macro-index', 'data')]
     )
     def update_macro_gallery(prev_clicks, next_clicks, current_index):
-        """Handle macroinvertebrate gallery navigation."""
+        """Navigate through macroinvertebrate species gallery."""
         update_gallery = create_gallery_navigation_callback('macro')
         return update_gallery(prev_clicks, next_clicks, current_index)
 
-    # ===========================
-    # 6. DATA DOWNLOAD
-    # ===========================
-    
+    # Data export
     @app.callback(
         Output('biological-download-component', 'data'),
         Input('biological-download-btn', 'n_clicks'),
@@ -319,15 +301,13 @@ def register_biological_callbacks(app):
         prevent_initial_call=True
     )
     def download_biological_data(n_clicks, selected_community):
-        """Download biological data CSV file with timestamp based on selected community type."""
+        """Export biological data as CSV based on selected community."""
         if not n_clicks or not selected_community:
             return dash.no_update
         
         try:
             if selected_community == 'fish':
                 logger.info("Downloading fish data CSV")
-                
-                # Read the processed fish data CSV
                 processed_data_path = 'data/processed/processed_fish_data.csv'
                 data_df = pd.read_csv(processed_data_path)
                 
@@ -336,13 +316,10 @@ def register_biological_callbacks(app):
                     return dash.no_update
                 
                 filename = f"blue_thumb_fish_data.csv"
-                
                 logger.info(f"Successfully prepared fish data export with {len(data_df)} records")
                 
             elif selected_community == 'macro':
                 logger.info("Downloading macro data CSV")
-                
-                # Read the processed macro data CSV
                 processed_data_path = 'data/processed/processed_macro_data.csv'
                 data_df = pd.read_csv(processed_data_path)
                 
@@ -351,7 +328,6 @@ def register_biological_callbacks(app):
                     return dash.no_update
                 
                 filename = f"blue_thumb_macro_data.csv"
-                
                 logger.info(f"Successfully prepared macro data export with {len(data_df)} records")
                 
             else:

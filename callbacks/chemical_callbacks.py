@@ -17,10 +17,7 @@ logger = setup_logging("chemical_callbacks", category="callbacks")
 def register_chemical_callbacks(app):
     """Register all chemical-related callbacks in logical workflow order."""
     
-    # ===========================
-    # 1. STATE MANAGEMENT
-    # ===========================
-    
+    # STATE MANAGEMENT
     @app.callback(
         Output('chemical-tab-state', 'data'),
         [Input('chemical-site-dropdown', 'value'),
@@ -82,10 +79,7 @@ def register_chemical_callbacks(app):
                 'highlight_thresholds': None
             }
     
-    # ===========================
-    # 2. NAVIGATION AND DROPDOWN POPULATION
-    # ===========================
-    
+    # NAVIGATION AND DROPDOWN POPULATION
     @app.callback(
         [Output('chemical-site-dropdown', 'options'),
          Output('chemical-site-dropdown', 'value', allow_duplicate=True),
@@ -194,10 +188,8 @@ def register_chemical_callbacks(app):
             logger.error(f"Error in chemical navigation/state restoration: {e}")
             return [], dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
     
-    # ===========================
-    # 3. SITE SELECTION & CONTROLS
-    # ===========================
-    
+    # SITE SELECTION & CONTROLS
+
     @app.callback(
         [Output('chemical-controls-content', 'style'),
          Output('chemical-download-btn', 'style'),
@@ -215,10 +207,7 @@ def register_chemical_callbacks(app):
             return {'display': 'block'}, {'display': 'none'}, {'display': 'none'}
         return {'display': 'none'}, {'display': 'none'}, {'display': 'none'}
     
-    # ================================
-    # 4. DATA VISUALIZATION & FILTERS
-    # ================================
-    
+    # DATA VISUALIZATION & FILTERS
     @app.callback(
         Output('month-checklist', 'value'),
         [Input('select-all-months', 'n_clicks'),
@@ -358,10 +347,7 @@ def register_chemical_callbacks(app):
             )
             return error_state, html.Div(), html.Div()
 
-    # ===========================
-    # 5. DATA DOWNLOAD
-    # ===========================
-    
+    # DATA DOWNLOAD
     @app.callback(
         Output('chemical-download-component', 'data'),
         [Input('chemical-download-btn', 'n_clicks'),
