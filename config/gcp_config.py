@@ -1,8 +1,8 @@
 """
 GCP-specific configuration for the Blue Thumb Dashboard.
 
-This module handles configuration differences between local development,
-Heroku deployment, and Google Cloud Platform deployment.
+This module handles configuration differences between local development
+and Google Cloud Platform deployment.
 """
 
 import os
@@ -18,16 +18,10 @@ def is_gcp_environment():
                 os.environ.get('GAE_APPLICATION') or
                 os.environ.get('K_SERVICE'))  # Cloud Run service name
 
-def is_heroku_environment():
-    """Check if running in Heroku environment."""
-    return bool(os.environ.get('DYNO'))
-
 def get_environment():
     """Get the current deployment environment."""
     if is_gcp_environment():
         return 'gcp'
-    elif is_heroku_environment():
-        return 'heroku'
     else:
         return 'local'
 
@@ -50,7 +44,7 @@ def get_asset_base_url():
             logger.warning("GCS_ASSET_BUCKET not set, falling back to local assets")
             return "/assets"
     else:
-        # Use local assets for Heroku and local development
+        # Use local assets for local development
         return "/assets"
 
 # Database configuration
@@ -68,7 +62,7 @@ def get_database_path():
         # Store in /tmp for Cloud Run (ephemeral storage)
         return '/tmp/blue_thumb.db'
     else:
-        # Use relative path for Heroku and local development
+        # Use relative path for local development
         return os.path.join(os.path.dirname(os.path.dirname(__file__)), 'database', 'blue_thumb.db')
 
 # Logging configuration
@@ -77,8 +71,6 @@ def get_log_level():
     environment = get_environment()
     
     if environment == 'gcp':
-        return os.environ.get('LOG_LEVEL', 'INFO')
-    elif environment == 'heroku':
         return os.environ.get('LOG_LEVEL', 'INFO')
     else:
         return 'DEBUG'

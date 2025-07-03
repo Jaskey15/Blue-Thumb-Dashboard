@@ -99,25 +99,6 @@ This document outlines the complete test structure for the Blue Thumb Dashboard 
 - **TestNavigationPerformance** - Navigation response time benchmarks
 - **TestNavigationAccessibility** - Keyboard navigation and screen reader support
 
-### Performance Tests (`tests/performance/`)
-
-#### test_database_queries.py
-- **TestQueryExecutionTime** - Database query performance benchmarks
-- **TestLargeDatasetHandling** - Performance with large datasets
-- **TestMemoryUsage** - Memory usage monitoring during operations
-- **TestQueryOptimization** - Index effectiveness and query plan analysis
-- **TestConcurrentOperations** - Performance under concurrent load
-- **TestPerformanceRegression** - Performance regression detection
-
-#### test_visualization_rendering.py
-- **TestChartGenerationSpeed** - Chart generation performance benchmarks
-- **TestLargeDatasetVisualization** - Visualization with large datasets
-- **TestRenderingMemoryUsage** - Memory usage during visualization rendering
-- **TestInteractiveResponsiveness** - Interactive component response times
-- **TestVisualizationScalability** - Scalability with increasing data
-- **TestVisualizationOptimization** - Optimization technique effectiveness
-- **TestVisualizationRegression** - Rendering performance regression
-
 ### Callback Helpers Tests (`tests/callback_helpers/`)
 
 #### test_callback_decorators.py

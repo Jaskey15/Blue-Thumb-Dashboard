@@ -1,3 +1,10 @@
+"""
+Main application entry point and layout definition.
+
+Configures core app settings and builds responsive layout structure
+with tab-based navigation and state management.
+"""
+
 import dash
 import dash_bootstrap_components as dbc
 
@@ -11,7 +18,7 @@ from layouts.tabs.protect_streams import create_protect_our_streams_tab
 from layouts.tabs.source_data import create_source_data_tab
 from layouts.modals import create_icon_attribution_modal, create_image_credits_modal
 
-# Initialize the Dash app
+# Core app configuration
 app = dash.Dash(__name__, 
                 external_stylesheets=[dbc.themes.SANDSTONE],
                 suppress_callback_exceptions=True,
@@ -20,7 +27,7 @@ app = dash.Dash(__name__,
                 ])
 server = app.server
 
-# Define header 
+# Responsive header with background image overlay
 header = dbc.Container([
     dbc.Row([
         dbc.Col(
@@ -28,7 +35,7 @@ header = dbc.Container([
                 html.H1("Blue Thumb Stream Health Dashboard", 
                        className="text-white text-center p-3",
                        style={
-                           'font-size': 'clamp(1.5rem, 4vw, 2.5rem)',  # Responsive font size
+                           'font-size': 'clamp(1.5rem, 4vw, 2.5rem)',  # Scale font with viewport
                            'font-family': 'Montserrat, sans-serif',  
                            'font-weight': '700', 
                            'text-shadow': '2px 2px 4px rgba(0, 0, 0, 0.5)', 
@@ -51,12 +58,11 @@ header = dbc.Container([
     ])
 ])
 
-# Define the layout with tabs
+# Main application layout
 app.layout = dbc.Container([
-    # Include the header
     header,
     
-    # Tabs with modular layout functions
+    # Tab-based navigation structure
     dbc.Tabs([
         dbc.Tab(label="Overview", children=create_overview_tab(), tab_id="overview-tab"),
         dbc.Tab(label="Chemical Data", children=create_chemical_tab(), tab_id="chemical-tab"),
@@ -66,11 +72,12 @@ app.layout = dbc.Container([
         dbc.Tab(label="Source Data", children=create_source_data_tab(), tab_id="source-tab"),
     ], id="main-tabs", active_tab="overview-tab"),
 
-   
+    # State management containers
     html.Div([
-         # Navigation store for map-to-tab navigation
+        # Enable cross-tab navigation from map interactions
         dcc.Store(id='navigation-store', storage_type='memory', data={'target_tab': None, 'target_site': None}),
-        # Tab state stores for preserving user selections
+        
+        # Preserve user selections across sessions
         dcc.Store(id='overview-tab-state', storage_type='session', data={'selected_parameter': None, 'active_sites_only': False}),
         dcc.Store(id='habitat-tab-state', storage_type='session', data={'selected_site': None}),
         dcc.Store(id='biological-tab-state', storage_type='session', data={'selected_community': None, 'selected_site': None}),
@@ -83,17 +90,15 @@ app.layout = dbc.Container([
         })
     ], style={'display': 'none'}),
 
-    # Footer with improved credits and logo
+    # Responsive footer with attribution links
     dbc.Row([
         dbc.Col([
             html.Div([
-                # Blue Thumb logo on the left
                 html.Img(
                     src="/assets/images/blue_thumb_logo.png",
-                    height="60px",  # Adjust height as needed
+                    height="60px",
                     style={"margin-right": "15px", "vertical-align": "middle"}
                 ),
-                # Text credits on the right
                 html.Span([
                     "Data source: Blue Thumb Volunteer Monitoring Program | ",
                     "Map data © Esri | ",  
@@ -104,17 +109,15 @@ app.layout = dbc.Container([
         ], width=12)
     ]),
 
-    # Attribution modals
     create_icon_attribution_modal(),
     create_image_credits_modal()
     
 ], fluid=True, className="px-4", style={"max-width": "1200px", "margin": "0 auto"})
 
-# Register callbacks
+# Initialize application callbacks
 register_callbacks(app)
 
-# Run the app
 if __name__ == '__main__':
     import os
-    port = int(os.environ.get('PORT', 8050))  # Default to 8050 if not provided
+    port = int(os.environ.get('PORT', 8050))  # Fallback to default port if not specified
     app.run(host='0.0.0.0', port=port, debug=False)
