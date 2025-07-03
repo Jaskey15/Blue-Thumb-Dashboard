@@ -34,3 +34,10 @@ cache/
 # IDE specific files
 .vscode/
 .idea/
+
+# Environments
+.env
+.venv
+env/
+venv/
+venv.bak/

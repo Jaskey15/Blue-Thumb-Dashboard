@@ -7,6 +7,7 @@ with tab-based navigation and state management.
 
 import dash
 import dash_bootstrap_components as dbc
+from dotenv import load_dotenv
 
 from callbacks import register_callbacks
 from dash import html, dcc
@@ -17,6 +18,9 @@ from layouts.tabs.habitat import create_habitat_tab
 from layouts.tabs.protect_streams import create_protect_our_streams_tab
 from layouts.tabs.source_data import create_source_data_tab
 from layouts.modals import create_icon_attribution_modal, create_image_credits_modal
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Core app configuration
 app = dash.Dash(__name__, 

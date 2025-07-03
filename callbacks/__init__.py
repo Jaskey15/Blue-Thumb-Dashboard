@@ -8,6 +8,7 @@ from .chemical_callbacks import register_chemical_callbacks
 from .biological_callbacks import register_biological_callbacks
 from .habitat_callbacks import register_habitat_callbacks
 from .shared_callbacks import register_shared_callbacks
+from .chatbot_callbacks import register_chatbot_callbacks
 
 def register_callbacks(app):
     """Register all callbacks for the dashboard."""
@@ -16,3 +17,4 @@ def register_callbacks(app):
     register_biological_callbacks(app)
     register_habitat_callbacks(app)
     register_shared_callbacks(app)
+    register_chatbot_callbacks(app)

@@ -456,3 +456,47 @@ figcaption {
     font-size: 1rem !important;
   }
 }
+
+/* =================================
+   CHATBOT STYLING
+   ================================= */
+.chat-message {
+  padding: 10px 15px;
+  margin: 5px 0;
+  border-radius: 15px;
+  max-width: 85%;
+  word-wrap: break-word;
+}
+
+.user-message {
+  background-color: var(--color-bg-light);
+  margin-left: auto;
+  border-top-right-radius: 5px;
+}
+
+.assistant-message {
+  background-color: var(--color-primary);
+  color: white;
+  margin-right: auto;
+  border-top-left-radius: 5px;
+}
+
+.chat-timestamp {
+  font-size: 0.7rem;
+  color: var(--color-muted);
+  margin-top: 2px;
+  text-align: right;
+}
+
+/* Mobile responsiveness for chat */
+@media (max-width: 768px) {
+  #chat-collapse {
+    width: 90% !important;
+    right: 5% !important;
+    bottom: 70px !important;
+  }
+  
+  #chat-toggle {
+    right: 10px !important;
+  }
+}

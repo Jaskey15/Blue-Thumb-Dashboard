@@ -120,17 +120,14 @@ def reset_database():
     """Perform complete database reset and reload."""
     logger.info("Starting database reset process...")
     
-    # Delete existing database
     if not delete_database_file():
         logger.error("Database deletion failed. Aborting reset.")
         return False
     
-    # Recreate schema
     if not recreate_schema():
         logger.error("Schema recreation failed. Aborting reset.")
         return False
-    
-    # Reload all data
+
     if not reload_all_data():
         logger.error("Data reloading failed. Reset process incomplete.")
         return False
@@ -139,7 +136,6 @@ def reset_database():
     return True
 
 if __name__ == "__main__":
-    # If run directly, perform reset
     success = reset_database()
     if success:
         print("Database has been successfully reset and all data reloaded.")
