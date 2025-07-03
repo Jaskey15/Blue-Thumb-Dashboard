@@ -1,5 +1,5 @@
 """
-Helper functions for the Dashboard
+Helper functions for the dashboard
 """
 
 import dash_bootstrap_components as dbc
@@ -16,24 +16,20 @@ def create_species_gallery(species_type):
     Returns:
         HTML layout for the species gallery
     """
-    # Determine gallery title based on species type
     title = (
         "Common Fish Found in Oklahoma Streams" 
         if species_type == 'fish' 
         else "Common Macroinvertebrates Found in Oklahoma Streams"
     )
     
-    # Create ID strings for components
     container_id = f"{species_type}-gallery-container"
     prev_button_id = f"prev-{species_type}-button"
     next_button_id = f"next-{species_type}-button"
     index_store_id = f"current-{species_type}-index"
     
     return html.Div([
-        # Gallery title
         html.H5(title, className="text-center mt-4"),
         
-        # Container for the gallery with fixed height
         html.Div(
             id=container_id,
             className="text-center",
@@ -52,7 +48,6 @@ def create_species_gallery(species_type):
             ),
         ], className="mt-3"),
         
-        # Hidden store for current index
         dcc.Store(id=index_store_id, data=0),
     ])
 
@@ -71,14 +66,12 @@ def create_action_card(icon, title, why_text, tips_list, category=None):
         A Card component for the action
     """
     return dbc.Card([
-        # Card header with icon and title
         dbc.CardHeader([
             html.Div([
                 html.Img(src=f"/assets/icons/{icon}.png", className="action-icon"),
                 html.H5(title, className="action-title"),
             ], className="action-header-content"),
         ]),
-        # Card body with explanatory text and tips
         dbc.CardBody([
             html.Div([
                 html.H6("WHY IT MATTERS", className="text-muted mb-2"),
@@ -129,7 +122,7 @@ def create_season_month_selectors():
         A Row component with season buttons and month checklist
     """
     return dbc.Row([
-        # Season Selection (left side)
+        # Season selection
         dbc.Col([
             html.Label(
                 "Select Season:", 
@@ -147,7 +140,7 @@ def create_season_month_selectors():
             )
         ], width=5),
 
-        # Month selection (right side)
+        # Month selection
         dbc.Col([
             html.Label(
                 "Select Months:", 

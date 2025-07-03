@@ -1,5 +1,5 @@
 """
-Modal creation functions for the Tenmile Creek Water Quality Dashboard.
+Modal creation functions for the dashboard
 """
 
 import dash_bootstrap_components as dbc
@@ -71,7 +71,6 @@ def create_image_credits_modal():
          "https://snohomishcd.org/whats-a-watershed")
     ]
     
-    # Create list items for each image source
     image_credits_list = [
         html.Li([
             f"{name}: ", 

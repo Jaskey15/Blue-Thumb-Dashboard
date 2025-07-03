@@ -1,12 +1,10 @@
 """
-UI content data for the Tenmile Creek Water Quality Dashboard.
+UI content data for the dashboard
 This file contains static content used for layout display including action cards,
 gallery items, and diagram information.
 """
 
-# ===========================================================================================
-# ACTION CARDS DATA
-# ===========================================================================================
+# Action cards data
 
 # Home & Yard cards 
 HOME_YARD_CARDS = [
@@ -288,9 +286,7 @@ COMMUNITY_CARDS = [
     }
 ]
 
-# ===========================================================================================
-# SPECIES GALLERY DATA
-# ===========================================================================================
+# Species gallery data
 
 # Fish gallery data
 FISH_DATA = [
@@ -352,9 +348,7 @@ MACRO_DATA = [
     }
 ]
 
-# ===========================================================================================
-# CHEMICAL DIAGRAM DATA
-# ===========================================================================================
+# Chemical diagram data
 
 # Chemical parameter diagram mapping
 CHEMICAL_DIAGRAMS = {
@@ -374,9 +368,7 @@ CHEMICAL_DIAGRAM_CAPTIONS = {
     'Chloride': 'Sources of chloride in streams include road salt, water softeners, and agricultural inputs. Excessive concentrations have a negative impact on stream health.'
 }
 
-# ===========================================================================================
-# HABITAT DIAGRAM DATA
-# ===========================================================================================
+# Habitat diagram data
 
 # Habitat diagram mapping
 HABITAT_DIAGRAMS = {
