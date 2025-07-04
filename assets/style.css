@@ -461,6 +461,25 @@ figcaption {
    CHATBOT STYLING
    ================================= */
 
+.chat-panel {
+  border: 1px solid var(--color-border-medium);
+  box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+}
+
+.chat-panel-header {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+.chat-panel-header h5 {
+  color: white;
+  font-weight: 600;
+}
+
+.chat-panel-header .btn-close {
+  filter: invert(1) grayscale(100%) brightness(200%);
+}
+
 /* General container for each chat row (avatar + bubble) */
 .chat-row {
   display: flex;

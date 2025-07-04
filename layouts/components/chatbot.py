@@ -56,14 +56,13 @@ def create_floating_chatbot(tab_name):
             dbc.Card([
                 # Header
                 dbc.CardHeader([
-                    html.H5("Stream Health Assistant", className="mb-0 d-inline"),
+                    html.H5("Stream Health Assistant", className="m-0"),
                     dbc.Button(
                         html.I(className="fas fa-minus"),
                         id={"type": "chat-close", "tab": tab_name},
                         size="sm",
-                        className="float-end",
                     )
-                ], className="d-flex justify-content-between align-items-center"),
+                ], className="d-flex justify-content-between align-items-center chat-panel-header"),
                 
                 # Chat messages container
                 dbc.CardBody([
@@ -106,7 +105,7 @@ def create_floating_chatbot(tab_name):
                     color="primary",
                     spinner_style={"width": "1.5rem", "height": "1.5rem"}
                 )
-            ]),
+            ], className="chat-panel"),
             id={"type": "chat-collapse", "tab": tab_name},
             is_open=False,
             style={
