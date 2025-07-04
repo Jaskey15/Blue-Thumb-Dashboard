@@ -20,7 +20,7 @@ def format_message(text, is_user=True, timestamp=None, is_typing=False):
         timestamp = datetime.now().strftime("%I:%M %p")
 
     # You'll need to add a 'user-icon.png' to your 'assets/icons/' directory.
-    avatar_src = "/assets/icons/user-icon.png" if is_user else "/assets/images/blue_thumb_logo.png"
+    avatar_src = "/assets/icons/user_icon.png" if is_user else "/assets/images/blue_thumb_logo.png"
     message_class = "user-message-row" if is_user else "assistant-message-row"
 
     avatar = html.Img(src=avatar_src, className="chat-avatar")
@@ -28,8 +28,7 @@ def format_message(text, is_user=True, timestamp=None, is_typing=False):
     if is_typing:
         message_bubble = html.Div(
             dbc.Spinner(size="sm", color="secondary"),
-            className="chat-message assistant-message typing-indicator",
-            id={"type": "typing-indicator", "tab": "placeholder"} # ID will be updated
+            className="chat-message assistant-message typing-indicator"
         )
     else:
         message_bubble = html.Div(
@@ -123,7 +122,7 @@ def register_chatbot_callbacks(app):
         return existing_messages, "", request_data
 
     @app.callback(
-        Output({"type": "chat-messages", "tab": MATCH}, "children"),
+        Output({"type": "chat-messages", "tab": MATCH}, "children", allow_duplicate=True),
         Input({'type': 'chat-request-store', 'tab': MATCH}, 'data'),
         State({"type": "chat-messages", "tab": MATCH}, "children"),
         prevent_initial_call=True
@@ -185,7 +184,7 @@ def register_chatbot_callbacks(app):
         }
         """,
         # A dummy output is required for clientside callbacks
-        Output({'type': 'chat-messages', 'tab': MATCH}, 'className'),
+        Output({'type': 'chat-scroll-store', 'tab': MATCH}, 'data'),
         Input({'type': 'chat-messages', 'tab': MATCH}, 'children'),
         State({'type': 'chat-messages', 'tab': MATCH}, 'id'),
         prevent_initial_call=True

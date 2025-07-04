@@ -116,5 +116,6 @@ def create_floating_chatbot(tab_name):
                 "zIndex": "1040"
             }
         ),
-        dcc.Store(id={'type': 'chat-request-store', 'tab': tab_name})
+        dcc.Store(id={'type': 'chat-request-store', 'tab': tab_name}),
+        dcc.Store(id={'type': 'chat-scroll-store', 'tab': tab_name})
     ]) 
