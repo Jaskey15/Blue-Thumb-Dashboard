@@ -168,14 +168,18 @@ def register_chatbot_callbacks(app):
     app.clientside_callback(
         """
         function(children) {
-            // Give a brief moment for the DOM to update after a new message
+            // Give a brief moment for the DOM to update
             setTimeout(function() {
                 try {
-                    // Find the container based on its class name.
-                    // This assumes only one chat window is active and in the DOM at a time.
-                    const element = document.querySelector('.chat-messages-container');
-                    if (element) {
-                        element.scrollTop = element.scrollHeight;
+                    const elements = document.querySelectorAll('.chat-messages-container');
+                    // Find the one visible element and scroll it
+                    for (let i = 0; i < elements.length; i++) {
+                        const element = elements[i];
+                        // offsetParent is null for hidden elements
+                        if (element.offsetParent !== null) {
+                            element.scrollTop = element.scrollHeight;
+                            break; // Exit after scrolling the first visible one
+                        }
                     }
                 } catch (e) {
                     console.error("Error scrolling chat:", e);
