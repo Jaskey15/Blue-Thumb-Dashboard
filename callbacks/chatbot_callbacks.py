@@ -167,12 +167,13 @@ def register_chatbot_callbacks(app):
     # This clientside callback handles auto-scrolling
     app.clientside_callback(
         """
-        function(children, id) {
+        function(children) {
             // Give a brief moment for the DOM to update after a new message
             setTimeout(function() {
                 try {
-                    // When using MATCH, Dash provides the id as an object
-                    const element = document.getElementById(JSON.stringify(id));
+                    // Find the container based on its class name.
+                    // This assumes only one chat window is active and in the DOM at a time.
+                    const element = document.querySelector('.chat-messages-container');
                     if (element) {
                         element.scrollTop = element.scrollHeight;
                     }
@@ -186,6 +187,5 @@ def register_chatbot_callbacks(app):
         # A dummy output is required for clientside callbacks
         Output({'type': 'chat-scroll-store', 'tab': MATCH}, 'data'),
         Input({'type': 'chat-messages', 'tab': MATCH}, 'children'),
-        State({'type': 'chat-messages', 'tab': MATCH}, 'id'),
         prevent_initial_call=True
     ) 

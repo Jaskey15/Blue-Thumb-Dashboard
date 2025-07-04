@@ -69,6 +69,7 @@ def create_floating_chatbot(tab_name):
                 dbc.CardBody([
                     html.Div(
                         id={"type": "chat-messages", "tab": tab_name},
+                        className="chat-messages-container",
                         style={
                             "height": "300px",
                             "overflowY": "auto",
