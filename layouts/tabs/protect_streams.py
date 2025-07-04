@@ -7,6 +7,7 @@ from dash import html
 from utils import load_markdown_content, create_image_with_caption
 from ..constants import TAB_STYLES
 from ..helpers import create_action_card
+from ..components.chatbot import create_floating_chatbot
 
 def create_protect_our_streams_tab():
     """
@@ -78,7 +79,10 @@ def create_protect_our_streams_tab():
             ])
         ], className="tab-content-wrapper")
         
-        return tab_content
+        return html.Div([
+            tab_content,
+            create_floating_chatbot('protect_streams')
+        ])
         
     except Exception as e:
         print(f"Error creating protect our streams tab: {e}")

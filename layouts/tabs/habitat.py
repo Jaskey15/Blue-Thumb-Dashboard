@@ -6,10 +6,11 @@ import dash_bootstrap_components as dbc
 from dash import dcc, html
 from utils import load_markdown_content, create_image_with_caption
 from layouts.ui_data import HABITAT_DIAGRAMS, HABITAT_DIAGRAM_CAPTIONS
+from ..components.chatbot import create_floating_chatbot
 
 def create_habitat_tab():
     """Create the habitat assessment tab with searchable dropdown for site selection."""
-    return html.Div([
+    tab_content = html.Div([
         dcc.Download(id="habitat-download-component"),
         
         # Description section
@@ -87,4 +88,9 @@ def create_habitat_tab():
             ], className="h-100 align-items-stretch mobile-stack", style={'minHeight': '400px'})
         ], id="habitat-controls-content", style={'display': 'none'}),
         
-    ], className="tab-content-wrapper") 
+    ], className="tab-content-wrapper")
+
+    return html.Div([
+        tab_content,
+        create_floating_chatbot('habitat')
+    ]) 
