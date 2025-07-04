@@ -24,7 +24,10 @@ load_dotenv()
 
 # Core app configuration
 app = dash.Dash(__name__, 
-                external_stylesheets=[dbc.themes.SANDSTONE],
+                external_stylesheets=[
+                    dbc.themes.SANDSTONE,
+                    "https://use.fontawesome.com/releases/v5.15.4/css/all.css"
+                ],
                 suppress_callback_exceptions=True,
                 meta_tags=[
                     {"name": "viewport", "content": "width=device-width, initial-scale=1, shrink-to-fit=no"}

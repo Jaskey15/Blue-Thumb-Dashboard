@@ -16,18 +16,37 @@ def create_floating_chatbot(tab_name):
         dash component: A collapsible chat widget
     """
     return html.Div([
+        # Interval to hide callout after a delay
+        dcc.Interval(
+            id={'type': 'chat-callout-interval', 'tab': tab_name},
+            interval=8 * 1000,  # 8 seconds
+            n_intervals=0,
+            max_intervals=1,
+        ),
+
+        # Callout bubble
+        html.Div(
+            [
+                "Have questions? Ask me here!",
+                html.Div(className="callout-arrow"),
+            ],
+            id={'type': 'chat-callout', 'tab': tab_name},
+            className="chat-callout",
+            style={"display": "block"} # Start visible
+        ),
+
         # Chat toggle button
         dbc.Button(
             [html.I(className="fas fa-comments me-2"), "Ask about Stream Health"],
             id={"type": "chat-toggle", "tab": tab_name},
             color="primary",
-            size="sm",
+            size="lg",
             className="position-fixed",
             style={
                 "bottom": "20px",
                 "right": "20px",
                 "zIndex": "1050",
-                "borderRadius": "25px",
+                "borderRadius": "30px",
                 "boxShadow": "0 2px 5px rgba(0,0,0,0.2)"
             }
         ),
@@ -39,11 +58,10 @@ def create_floating_chatbot(tab_name):
                 dbc.CardHeader([
                     html.H5("Stream Health Assistant", className="mb-0 d-inline"),
                     dbc.Button(
-                        html.I(className="fas fa-times"),
+                        html.I(className="fas fa-minus"),
                         id={"type": "chat-close", "tab": tab_name},
-                        color="link",
                         size="sm",
-                        className="float-end p-0",
+                        className="float-end",
                     )
                 ], className="d-flex justify-content-between align-items-center"),
                 

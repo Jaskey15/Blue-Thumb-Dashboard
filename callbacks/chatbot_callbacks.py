@@ -2,7 +2,7 @@
 Callbacks for the chatbot functionality
 """
 
-from dash import Input, Output, State, callback, html
+from dash import Input, Output, State, callback, html, MATCH
 import dash_bootstrap_components as dbc
 from datetime import datetime
 import openai
@@ -63,10 +63,10 @@ FULL_CONTEXT = load_all_context()
 
 def register_chatbot_callbacks(app):
     @app.callback(
-        Output({"type": "chat-collapse", "tab": "chemical"}, "is_open"),
-        [Input({"type": "chat-toggle", "tab": "chemical"}, "n_clicks"),
-         Input({"type": "chat-close", "tab": "chemical"}, "n_clicks")],
-        [State({"type": "chat-collapse", "tab": "chemical"}, "is_open")],
+        Output({"type": "chat-collapse", "tab": MATCH}, "is_open"),
+        [Input({"type": "chat-toggle", "tab": MATCH}, "n_clicks"),
+         Input({"type": "chat-close", "tab": MATCH}, "n_clicks")],
+        [State({"type": "chat-collapse", "tab": MATCH}, "is_open")],
         prevent_initial_call=True
     )
     def toggle_chat_collapse(toggle_clicks, close_clicks, is_open):
@@ -76,12 +76,22 @@ def register_chatbot_callbacks(app):
         return not is_open
 
     @app.callback(
-        [Output({"type": "chat-messages", "tab": "chemical"}, "children"),
-         Output({"type": "chat-input", "tab": "chemical"}, "value")],
-        [Input({"type": "chat-submit", "tab": "chemical"}, "n_clicks"),
-         Input({"type": "chat-input", "tab": "chemical"}, "n_submit")],
-        [State({"type": "chat-input", "tab": "chemical"}, "value"),
-         State({"type": "chat-messages", "tab": "chemical"}, "children")],
+        Output({'type': 'chat-callout', 'tab': MATCH}, 'style'),
+        [Input({'type': 'chat-callout-interval', 'tab': MATCH}, 'n_intervals'),
+         Input({"type": "chat-toggle", "tab": MATCH}, "n_clicks")],
+        prevent_initial_call=True
+    )
+    def hide_chat_callout(n_intervals, n_clicks):
+        """Hide the chat callout after a delay or on click."""
+        return {'display': 'none'}
+
+    @app.callback(
+        [Output({"type": "chat-messages", "tab": MATCH}, "children"),
+         Output({"type": "chat-input", "tab": MATCH}, "value")],
+        [Input({"type": "chat-submit", "tab": MATCH}, "n_clicks"),
+         Input({"type": "chat-input", "tab": MATCH}, "n_submit")],
+        [State({"type": "chat-input", "tab": MATCH}, "value"),
+         State({"type": "chat-messages", "tab": MATCH}, "children")],
         prevent_initial_call=True
     )
     def handle_chat_message(n_clicks, n_submit, message, existing_messages):

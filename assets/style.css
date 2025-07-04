@@ -531,11 +531,57 @@ figcaption {
 @media (max-width: 768px) {
   #chat-collapse {
     width: 90% !important;
+    left: 5% !important;
     right: 5% !important;
-    bottom: 70px !important;
   }
-  
   #chat-toggle {
+    bottom: 10px !important;
     right: 10px !important;
+  }
+}
+
+/* =================================
+   ANIMATIONS
+   ================================= */
+.chat-callout {
+  position: fixed;
+  right: 280px; /* Positioned to the left of the button */
+  bottom: 25px;
+  background-color: #ffffff;
+  padding: 10px 15px;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+  z-index: 1051;
+  font-weight: 600;
+  color: var(--color-text);
+  opacity: 0;
+  transform: translateY(10px);
+  animation: fadeIn-callout 0.5s forwards, fadeOut-callout 0.5s 7s forwards;
+}
+
+.callout-arrow {
+  position: absolute;
+  top: 50%;
+  right: -10px;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-top: 10px solid transparent;
+  border-bottom: 10px solid transparent;
+  border-left: 10px solid #ffffff;
+}
+
+@keyframes fadeIn-callout {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeOut-callout {
+  to {
+    opacity: 0;
+    transform: translateY(10px);
+    display: none;
   }
 }

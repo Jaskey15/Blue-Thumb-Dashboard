@@ -6,6 +6,7 @@ import dash_bootstrap_components as dbc
 from dash import dcc, html
 from utils import load_markdown_content, create_image_with_caption
 from ..constants import PARAMETER_OPTIONS, TAB_STYLES
+from ..components.chatbot import create_floating_chatbot
 
 def create_overview_tab():
     """
@@ -89,7 +90,10 @@ def create_overview_tab():
             ])
         ], className="tab-content-wrapper")
         
-        return tab_content
+        return html.Div([
+            tab_content,
+            create_floating_chatbot('overview')
+        ])
         
     except Exception as e:
         print(f"Error creating overview tab: {e}")
