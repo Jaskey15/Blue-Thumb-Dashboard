@@ -119,7 +119,7 @@ def reload_all_data():
 def reset_database():
     """Perform complete database reset and reload."""
     logger.info("Starting database reset process...")
-    
+
     if not delete_database_file():
         logger.error("Database deletion failed. Aborting reset.")
         return False
@@ -127,7 +127,7 @@ def reset_database():
     if not recreate_schema():
         logger.error("Schema recreation failed. Aborting reset.")
         return False
-
+    
     if not reload_all_data():
         logger.error("Data reloading failed. Reset process incomplete.")
         return False
