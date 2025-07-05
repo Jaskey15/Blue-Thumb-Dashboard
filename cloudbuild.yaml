@@ -22,7 +22,7 @@ steps:
       - 'managed'
       - '--allow-unauthenticated'
       - '--set-env-vars'
-      - 'GOOGLE_CLOUD_PROJECT=$PROJECT_ID,GCS_ASSET_BUCKET=blue-thumb-assets-1751399887'
+      - 'GOOGLE_CLOUD_PROJECT=$PROJECT_ID,GCS_ASSET_BUCKET=blue-thumb-assets'
 
 # Store images in Google Container Registry
 images:

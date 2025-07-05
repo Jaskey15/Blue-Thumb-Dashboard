@@ -19,7 +19,6 @@ def format_message(text, is_user=True, timestamp=None, is_typing=False):
     if timestamp is None:
         timestamp = datetime.now().strftime("%I:%M %p")
 
-    # You'll need to add a 'user-icon.png' to your 'assets/icons/' directory.
     avatar_src = "/assets/icons/user_icon.png" if is_user else "/assets/images/blue_thumb_logo.png"
     message_class = "user-message-row" if is_user else "assistant-message-row"
 
@@ -37,13 +36,10 @@ def format_message(text, is_user=True, timestamp=None, is_typing=False):
         )
     
     if is_user:
-        # For the user, the bubble comes before the avatar
         content = [message_bubble, avatar]
     else:
-        # For the assistant, the avatar comes first
         content = [avatar, message_bubble]
 
-    # The container for the whole row (avatar and bubble)
     return html.Div([
         html.Div(content, className=f"chat-row {message_class}"),
         html.Div(timestamp, className=f"chat-timestamp {'user-timestamp' if is_user else 'assistant-timestamp'}")
@@ -64,7 +60,6 @@ def load_all_context():
                     print(f"Error loading context from {file}: {e}")
     return "\n".join(full_context)
 
-# Load context once when the app starts
 FULL_CONTEXT = load_all_context()
 
 def register_chatbot_callbacks(app):
