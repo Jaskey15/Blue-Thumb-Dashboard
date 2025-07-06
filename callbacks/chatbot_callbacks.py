@@ -9,7 +9,7 @@ import os
 import json
 
 import vertexai
-from vertexai.generative_models import GenerativeModel
+from vertexai.generative_models import GenerativeModel, Tool
 
 # model configuration
 PROJECT_ID = os.environ.get('GOOGLE_CLOUD_PROJECT')
@@ -133,51 +133,49 @@ def register_chatbot_callbacks(app):
         """
         Fetch the AI response and update the chat, replacing the indicator.
         """
-        print("--- CHATBOT_DEBUG: Starting fetch_assistant_response. ---")
         if not request_data or 'message' not in request_data:
-            print("--- CHATBOT_DEBUG: No request data, exiting. ---")
             return dash.no_update
 
         message = request_data['message']
-        print(f"--- CHATBOT_DEBUG: Processing message: '{message}' ---")
 
         try:
-            print("--- CHATBOT_DEBUG: Entering TRY block. ---")
-            system_prompt = [f"""You are a helpful stream health expert assistant. 
-                Use this context to answer questions: {FULL_CONTEXT}
-                Keep responses concise and focused on stream health topics."""]
+            system_prompt = [f"""You are a helpful stream health expert. Your main goal is to answer 
+                                questions about water quality and aquatic ecosystems.
+                                Base your answers on the provided context documents. You may supplement 
+                                this information with web searches to provide more detail or for topics not covered 
+                                in the documents. All answers should be framed through the lens of stream health.
+                                Context:
+                                {FULL_CONTEXT}
+                            """]
 
-            print("--- CHATBOT_DEBUG: Initializing GenerativeModel... ---")
             model = GenerativeModel(
                 CHAT_MODEL_NAME,
                 system_instruction=system_prompt
             )
+            
+            google_search_tool = Tool.from_google_search_retrieval()
 
-            print("--- CHATBOT_DEBUG: Calling generate_content... ---")
             response = model.generate_content(
                 message,
+                tools=[google_search_tool],
                 generation_config={
                     "max_output_tokens": MAX_TOKENS,
-                    "temperature": TEMPERATURE,
+                    "temperature": TEMPERATURE
                 }
             )
-            print("--- CHATBOT_DEBUG: Received response from model. ---")
             
             assistant_message = response.text
             
         except Exception as e:
-            print("--- CHATBOT_DEBUG: Entering EXCEPT block. ---")
             assistant_message = "I apologize, but I'm having trouble responding right now. Please try again."
             # Use a more robust logger to ensure the message is captured
             import logging
             logging.error(f"Error in chat response: {e}", exc_info=True)
-            print("--- CHATBOT_DEBUG: Finished EXCEPT block. ---")
         
         # Replace the typing indicator with the actual response
         if existing_messages and len(existing_messages) > 0:
             existing_messages[-1] = format_message(assistant_message, is_user=False)
         
-        print("--- CHATBOT_DEBUG: Returning updated messages. ---")
         return existing_messages
 
     # This clientside callback handles auto-scrolling
