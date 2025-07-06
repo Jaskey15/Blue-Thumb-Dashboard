@@ -5,13 +5,17 @@ Callbacks for the chatbot functionality
 from dash import Input, Output, State, callback, html, MATCH
 import dash_bootstrap_components as dbc
 from datetime import datetime
-import openai
 import os
 import json
 
+import vertexai
+from vertexai.generative_models import GenerativeModel
+
 # model configuration
-CHAT_MODEL = "gpt-4.1-nano"
-MAX_TOKENS = 150  # Limit response length
+PROJECT_ID = os.environ.get('GOOGLE_CLOUD_PROJECT')
+LOCATION = "us-central1" # Or any other supported region
+CHAT_MODEL_NAME = "gemini-2.0-flash-lite-001"
+MAX_TOKENS = 250  # Limit response length
 TEMPERATURE = 0.7  # Balance between creativity and consistency
 
 def format_message(text, is_user=True, timestamp=None, is_typing=False):
@@ -61,6 +65,9 @@ def load_all_context():
     return "\n".join(full_context)
 
 FULL_CONTEXT = load_all_context()
+
+# Initialize Vertex AI
+vertexai.init(project=PROJECT_ID, location=LOCATION)
 
 def register_chatbot_callbacks(app):
     @app.callback(
@@ -126,37 +133,51 @@ def register_chatbot_callbacks(app):
         """
         Fetch the AI response and update the chat, replacing the indicator.
         """
+        print("--- CHATBOT_DEBUG: Starting fetch_assistant_response. ---")
         if not request_data or 'message' not in request_data:
+            print("--- CHATBOT_DEBUG: No request data, exiting. ---")
             return dash.no_update
 
         message = request_data['message']
+        print(f"--- CHATBOT_DEBUG: Processing message: '{message}' ---")
 
         try:
-            messages = [
-                {"role": "system", "content": f"""You are a helpful stream health expert assistant. 
+            print("--- CHATBOT_DEBUG: Entering TRY block. ---")
+            system_prompt = [f"""You are a helpful stream health expert assistant. 
                 Use this context to answer questions: {FULL_CONTEXT}
-                Keep responses concise and focused on stream health topics."""},
-                {"role": "user", "content": message}
-            ]
-            
-            client = openai.OpenAI()
-            response = client.chat.completions.create(
-                model=CHAT_MODEL,
-                messages=messages,
-                temperature=TEMPERATURE,
-                max_tokens=MAX_TOKENS,
+                Keep responses concise and focused on stream health topics."""]
+
+            print("--- CHATBOT_DEBUG: Initializing GenerativeModel... ---")
+            model = GenerativeModel(
+                CHAT_MODEL_NAME,
+                system_instruction=system_prompt
             )
+
+            print("--- CHATBOT_DEBUG: Calling generate_content... ---")
+            response = model.generate_content(
+                message,
+                generation_config={
+                    "max_output_tokens": MAX_TOKENS,
+                    "temperature": TEMPERATURE,
+                }
+            )
+            print("--- CHATBOT_DEBUG: Received response from model. ---")
             
-            assistant_message = response.choices[0].message.content
+            assistant_message = response.text
             
         except Exception as e:
+            print("--- CHATBOT_DEBUG: Entering EXCEPT block. ---")
             assistant_message = "I apologize, but I'm having trouble responding right now. Please try again."
-            print(f"Error in chat response: {e}")
+            # Use a more robust logger to ensure the message is captured
+            import logging
+            logging.error(f"Error in chat response: {e}", exc_info=True)
+            print("--- CHATBOT_DEBUG: Finished EXCEPT block. ---")
         
         # Replace the typing indicator with the actual response
         if existing_messages and len(existing_messages) > 0:
             existing_messages[-1] = format_message(assistant_message, is_user=False)
         
+        print("--- CHATBOT_DEBUG: Returning updated messages. ---")
         return existing_messages
 
     # This clientside callback handles auto-scrolling

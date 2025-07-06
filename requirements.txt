@@ -31,13 +31,11 @@ zipp==3.21.0
 
 # Google Cloud dependencies
 google-cloud-storage==2.10.0
+google-cloud-aiplatform
 
 # Testing dependencies
 pytest==7.4.0
 pytest-mock==3.11.1
-
-# OpenAI dependencies
-openai>=1.0.0
 
 # New dependency
 python-dotenv
