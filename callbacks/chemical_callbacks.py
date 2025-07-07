@@ -379,7 +379,6 @@ def register_chemical_callbacks(app):
                     logger.warning(f"No chemical data found for site: {selected_site}")
                     return dash.no_update
                 
-                # Remove status columns from export (keep only core data)
                 core_data_columns = [col for col in site_df.columns if not col.endswith('_status')]
                 site_df_export = site_df[core_data_columns].copy()
                 
@@ -404,7 +403,6 @@ def register_chemical_callbacks(app):
                     logger.warning("No chemical data found in database")
                     return dash.no_update
                 
-                # Remove status columns from export
                 core_data_columns = [col for col in chemical_df.columns if not col.endswith('_status')]
                 chemical_df_export = chemical_df[core_data_columns].copy()
                 

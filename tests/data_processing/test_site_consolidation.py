@@ -519,14 +519,18 @@ class TestSiteManagement(unittest.TestCase):
         mock_exists.return_value = True
         mock_read_csv.return_value = self.sample_master_sites
         
-        result = load_site_data()
-        
-        self.assertFalse(result.empty)
-        self.assertEqual(len(result), 2)
-        # Should have database schema columns
-        expected_columns = ['site_name', 'latitude', 'longitude', 'county', 'river_basin', 'ecoregion']
-        for col in expected_columns:
-            self.assertIn(col, result.columns)
+        with patch('data_processing.site_processing.pd.DataFrame.to_csv') as mock_to_csv:
+            result = load_site_data()
+            
+            self.assertFalse(result.empty)
+            self.assertEqual(len(result), 2)
+            # Should have database schema columns
+            expected_columns = ['site_name', 'latitude', 'longitude', 'county', 'river_basin', 'ecoregion']
+            for col in expected_columns:
+                self.assertIn(col, result.columns)
+            
+            # Ensure that the save to sites_for_db.csv was mocked and not actually called
+            mock_to_csv.assert_called_once()
 
     @patch('data_processing.site_processing.os.path.exists')
     def test_load_site_data_file_not_found(self, mock_exists):

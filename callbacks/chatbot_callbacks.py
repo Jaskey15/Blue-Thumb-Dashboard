@@ -181,13 +181,11 @@ def register_chatbot_callbacks(app):
                 config=generation_config,
             )
 
-            # Log grounding information
             if response.candidates and response.candidates[0].grounding_metadata:
                 logger.info("Response was grounded.")
             else:
                 logger.info("Response was not grounded.")
 
-            # Extract the response text
             assistant_message = response.text
 
             # Check for truncation
@@ -195,7 +193,6 @@ def register_chatbot_callbacks(app):
                 assistant_message += "\n\n[Response truncated due to length. Ask me for more specific details if needed.]"
 
         except ValueError:
-            # This occurs when the response text cannot be extracted.
             assistant_message = "I received your question but I'm having trouble formatting my response. Could you try rephrasing your question?"
             logger.warning(
                 f"Response object exists but couldn't extract text content."
@@ -203,8 +200,7 @@ def register_chatbot_callbacks(app):
         except Exception as e:
             assistant_message = "I apologize, but I'm having trouble responding right now. Please try again."
             logger.error(f"Error in chat response: {e}", exc_info=True)
-
-        # Log the final response before sending
+            
         logger.info(f"Sending assistant response: {assistant_message}")
 
         # Replace the typing indicator with the actual response
