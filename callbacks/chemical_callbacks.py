@@ -360,7 +360,6 @@ def register_chemical_callbacks(app):
         if not all_clicks and not site_clicks:
             return dash.no_update
         
-        # Determine which button was clicked
         ctx = dash.callback_context
         if not ctx.triggered:
             return dash.no_update
@@ -374,7 +373,6 @@ def register_chemical_callbacks(app):
                     logger.warning("No site selected for site-specific download")
                     return dash.no_update
                 
-                # Get data from database (same source as dropdown and visualization)
                 site_df = get_chemical_data_from_db(selected_site)
                 
                 if site_df.empty:
@@ -382,12 +380,9 @@ def register_chemical_callbacks(app):
                     return dash.no_update
                 
                 # Remove status columns from export (keep only core data)
-                status_columns = [col for col in site_df.columns if col.endswith('_status')]
                 core_data_columns = [col for col in site_df.columns if not col.endswith('_status')]
                 site_df_export = site_df[core_data_columns].copy()
                 
-                # Generate site-specific filename
-                # Sanitize site name for filename (replace spaces and special chars with underscores)
                 site_name = selected_site.replace(' ', '_').replace(':', '').replace('(', '').replace(')', '').replace(',', '')
                 filename = f"{site_name}_chemical_data.csv"
                 
@@ -401,22 +396,24 @@ def register_chemical_callbacks(app):
             
             # Handle all data download
             elif button_id == 'chemical-download-btn':
-                logger.info("Downloading all chemical data from CSV")
+                logger.info("Downloading all chemical data from database")
                 
-                # Read the processed chemical data CSV for all data download
-                processed_chemical_path = 'data/processed/processed_chemical_data.csv'
-                chemical_df = pd.read_csv(processed_chemical_path)
+                chemical_df = get_chemical_data_from_db()
                 
                 if chemical_df.empty:
-                    logger.warning("No chemical data found in processed CSV")
+                    logger.warning("No chemical data found in database")
                     return dash.no_update
+                
+                # Remove status columns from export
+                core_data_columns = [col for col in chemical_df.columns if not col.endswith('_status')]
+                chemical_df_export = chemical_df[core_data_columns].copy()
                 
                 filename = f"blue_thumb_chemical_data.csv"
                 
-                logger.info(f"Successfully prepared chemical data export with {len(chemical_df)} records")
+                logger.info(f"Successfully prepared chemical data export with {len(chemical_df_export)} records")
                 
                 return dcc.send_data_frame(
-                    chemical_df.to_csv,
+                    chemical_df_export.to_csv,
                     filename,
                     index=False
                 )

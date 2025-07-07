@@ -20,7 +20,7 @@ LOCATION = "global"
 CHAT_MODEL_NAME = "gemini-2.0-flash-001"
 DATA_STORE_ID = "blue-thumb-context-docs-ds_1751833049776"
 DATA_STORE_LOCATION = "us"
-MAX_TOKENS = 4096
+MAX_TOKENS = 1024
 TEMPERATURE = 0.3
 
 # --- Client Initialization ---
@@ -37,8 +37,8 @@ google_search_tool = types.Tool(google_search=types.GoogleSearch())
 
 system_instruction = """You are a helpful stream health expert. Your main goal is to answer questions about water quality and aquatic ecosystems. 
                         Base your answers on the provided documents from the data store first. If you cannot find the answer in the documents, use Google Search. 
-                        All answers should be framed through the lens of stream health. IMPORTANT: Keep responses concise and to the point, ideally 2-4 sentences. Avoid unnecessary detail unless asked. 
-                        Always end with complete sentences - never cut off mid-thought."""
+                        All answers should be framed through the lens of stream health. IMPORTANT: Keep responses concise and to the point, ideally 2-4 sentences. 
+                        Avoid unnecessary detail unless asked. Always end with complete sentences - never cut off mid-thought."""
 
 def format_message(text, is_user=True, timestamp=None, is_typing=False):
     """Format a chat message with appropriate styling and an avatar."""
