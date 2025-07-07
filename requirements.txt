@@ -31,7 +31,8 @@ zipp==3.21.0
 
 # Google Cloud dependencies
 google-cloud-storage==2.10.0
-google-cloud-aiplatform
+google-cloud-aiplatform==1.71.1
+vertexai==1.71.1
 
 # Testing dependencies
 pytest==7.4.0
@@ -39,5 +40,13 @@ pytest-mock==3.11.1
 
 # New dependency
 python-dotenv
+
+# Google Generative AI dependencies
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib
+google-generativeai
+gunicorn
+ipython
 
 

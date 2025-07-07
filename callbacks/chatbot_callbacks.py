@@ -2,21 +2,43 @@
 Callbacks for the chatbot functionality
 """
 
+import dash
 from dash import Input, Output, State, callback, html, MATCH
 import dash_bootstrap_components as dbc
 from datetime import datetime
 import os
-import json
+from google import genai
+from google.genai import types
+from utils import setup_logging
 
-import vertexai
-from vertexai.generative_models import GenerativeModel, Tool
+# Initialize callback logging
+logger = setup_logging("chatbot_callbacks", category="callbacks")
 
-# model configuration
+# --- Model Configuration ---
 PROJECT_ID = os.environ.get('GOOGLE_CLOUD_PROJECT')
-LOCATION = "us-central1" # Or any other supported region
-CHAT_MODEL_NAME = "gemini-2.0-flash-lite-001"
-MAX_TOKENS = 250  # Limit response length
-TEMPERATURE = 0.7  # Balance between creativity and consistency
+LOCATION = "global" 
+CHAT_MODEL_NAME = "gemini-2.0-flash-001"
+DATA_STORE_ID = "blue-thumb-context-docs-ds_1751833049776"
+DATA_STORE_LOCATION = "us"
+MAX_TOKENS = 4096
+TEMPERATURE = 0.3
+
+# --- Client Initialization ---
+client = genai.Client(
+    vertexai=True,
+    project=PROJECT_ID,
+    location=LOCATION,
+)
+
+# --- Tool and System Instruction Configuration ---
+data_store_path = ("projects/blue-thumb-dashboard/locations/us/collections/default_collection/dataStores/blue-thumb-context-docs-ds_1751833049776")
+grounding_tool = types.Tool(retrieval=types.Retrieval(vertex_ai_search=types.VertexAISearch(datastore=data_store_path)))
+google_search_tool = types.Tool(google_search=types.GoogleSearch())
+
+system_instruction = """You are a helpful stream health expert. Your main goal is to answer questions about water quality and aquatic ecosystems. 
+                        Base your answers on the provided documents from the data store first. If you cannot find the answer in the documents, use Google Search. 
+                        All answers should be framed through the lens of stream health. IMPORTANT: Keep responses concise and to the point, ideally 2-4 sentences. Avoid unnecessary detail unless asked. 
+                        Always end with complete sentences - never cut off mid-thought."""
 
 def format_message(text, is_user=True, timestamp=None, is_typing=False):
     """Format a chat message with appropriate styling and an avatar."""
@@ -46,28 +68,11 @@ def format_message(text, is_user=True, timestamp=None, is_typing=False):
 
     return html.Div([
         html.Div(content, className=f"chat-row {message_class}"),
-        html.Div(timestamp, className=f"chat-timestamp {'user-timestamp' if is_user else 'assistant-timestamp'}")
+        html.Div(
+            timestamp,
+            className=f"chat-timestamp {'user-timestamp' if is_user else 'assistant-timestamp'}"
+        )
     ])
-
-def load_all_context():
-    """Load and combine all .md files from the /text directory."""
-    full_context = []
-    text_dir = 'text'
-    for root, _, files in os.walk(text_dir):
-        for file in files:
-            if file.endswith('.md'):
-                try:
-                    with open(os.path.join(root, file), 'r', encoding='utf-8') as f:
-                        # Add a separator to distinguish between file contents
-                        full_context.append(f"--- START OF {file} ---\n{f.read()}\n--- END OF {file} ---\n")
-                except Exception as e:
-                    print(f"Error loading context from {file}: {e}")
-    return "\n".join(full_context)
-
-FULL_CONTEXT = load_all_context()
-
-# Initialize Vertex AI
-vertexai.init(project=PROJECT_ID, location=LOCATION)
 
 def register_chatbot_callbacks(app):
     @app.callback(
@@ -103,7 +108,9 @@ def register_chatbot_callbacks(app):
          State({"type": "chat-messages", "tab": MATCH}, "children")],
         prevent_initial_call=True
     )
-    def display_user_message_and_trigger_response(n_clicks, n_submit, message, existing_messages):
+    def display_user_message_and_trigger_response(
+        n_clicks, n_submit, message, existing_messages
+    ):
         """
         Display the user's message immediately and trigger the AI response.
         """
@@ -137,45 +144,75 @@ def register_chatbot_callbacks(app):
             return dash.no_update
 
         message = request_data['message']
+        logger.info(f"Received user query: {message}")
 
         try:
-            system_prompt = [f"""You are a helpful stream health expert. Your main goal is to answer 
-                                questions about water quality and aquatic ecosystems.
-                                Base your answers on the provided context documents. You may supplement 
-                                this information with web searches to provide more detail or for topics not covered 
-                                in the documents. All answers should be framed through the lens of stream health.
-                                Context:
-                                {FULL_CONTEXT}
-                            """]
-
-            model = GenerativeModel(
-                CHAT_MODEL_NAME,
-                system_instruction=system_prompt
+            # Configure generation settings
+            generation_config = types.GenerateContentConfig(
+                temperature=TEMPERATURE,
+                top_p=1,
+                max_output_tokens=MAX_TOKENS,
+                safety_settings=[
+                    types.SafetySetting(
+                        category="HARM_CATEGORY_HATE_SPEECH",
+                        threshold="BLOCK_ONLY_HIGH"
+                    ),
+                    types.SafetySetting(
+                        category="HARM_CATEGORY_DANGEROUS_CONTENT",
+                        threshold="BLOCK_ONLY_HIGH"
+                    ),
+                    types.SafetySetting(
+                        category="HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                        threshold="BLOCK_ONLY_HIGH"
+                    ),
+                    types.SafetySetting(
+                        category="HARM_CATEGORY_HARASSMENT",
+                        threshold="BLOCK_ONLY_HIGH"
+                    )
+                ],
+                tools=[grounding_tool, google_search_tool],
+                system_instruction=[types.Part.from_text(text=system_instruction)],
             )
-            
-            google_search_tool = Tool.from_google_search_retrieval()
 
-            response = model.generate_content(
-                message,
-                tools=[google_search_tool],
-                generation_config={
-                    "max_output_tokens": MAX_TOKENS,
-                    "temperature": TEMPERATURE
-                }
+            # Generate content using the new client
+            response = client.models.generate_content(
+                model=CHAT_MODEL_NAME,
+                contents=[message],
+                config=generation_config,
             )
-            
+
+            # Log grounding information
+            if response.candidates and response.candidates[0].grounding_metadata:
+                logger.info("Response was grounded.")
+            else:
+                logger.info("Response was not grounded.")
+
+            # Extract the response text
             assistant_message = response.text
-            
+
+            # Check for truncation
+            if response.candidates and response.candidates[0].finish_reason.name == "MAX_TOKENS":
+                assistant_message += "\n\n[Response truncated due to length. Ask me for more specific details if needed.]"
+
+        except ValueError:
+            # This occurs when the response text cannot be extracted.
+            assistant_message = "I received your question but I'm having trouble formatting my response. Could you try rephrasing your question?"
+            logger.warning(
+                f"Response object exists but couldn't extract text content."
+            )
         except Exception as e:
             assistant_message = "I apologize, but I'm having trouble responding right now. Please try again."
-            # Use a more robust logger to ensure the message is captured
-            import logging
-            logging.error(f"Error in chat response: {e}", exc_info=True)
-        
+            logger.error(f"Error in chat response: {e}", exc_info=True)
+
+        # Log the final response before sending
+        logger.info(f"Sending assistant response: {assistant_message}")
+
         # Replace the typing indicator with the actual response
         if existing_messages and len(existing_messages) > 0:
-            existing_messages[-1] = format_message(assistant_message, is_user=False)
-        
+            existing_messages[-1] = format_message(
+                assistant_message, is_user=False
+            )
+
         return existing_messages
 
     # This clientside callback handles auto-scrolling
