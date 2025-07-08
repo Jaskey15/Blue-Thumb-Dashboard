@@ -4,7 +4,6 @@ import shutil
 import sys
 import re
 
-# Add project root to sys.path to allow importing from layouts
 PROJECT_ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.append(str(PROJECT_ROOT))
 
@@ -14,7 +13,6 @@ from layouts.ui_data import (
     CHEMICAL_DIAGRAM_CAPTIONS, HABITAT_DIAGRAM_CAPTIONS
 )
 
-# Define paths
 TEXT_DIR = PROJECT_ROOT / "text"
 OUTPUT_DIR = PROJECT_ROOT / "data" / "processed" / "chatbot_data"
 
@@ -70,7 +68,6 @@ def process_species_data():
     print("Processing species data...")
     species_count = 0
     
-    # Fish Data
     for item in FISH_DATA:
         name = item.get("name")
         description = item.get("description")
@@ -83,7 +80,6 @@ def process_species_data():
                 f.write(content)
             species_count += 1
 
-    # Macroinvertebrate Data
     for item in MACRO_DATA:
         name = item.get("name")
         description = item.get("description")

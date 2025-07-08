@@ -1,30 +1,9 @@
 """
-habitat_processing.py - Habitat Assessment Data Processing
+Processes and loads habitat assessment data into the database.
 
-This module processes habitat assessment data from cleaned CSV files and loads it into the database.
-Handles habitat metric validation, duplicate resolution through averaging, and calculates 
-habitat grades based on total scores for Blue Thumb stream assessments.
-
-Key Functions:
-- load_habitat_data(): Main pipeline to process and load habitat data
-- process_habitat_csv_data(): Process habitat data from cleaned CSV
-- insert_habitat_assessments(): Insert assessment records into database
-- insert_metrics_data(): Insert individual metrics and summary scores
-
-Helper Functions:
-- resolve_habitat_duplicates(): Average duplicate assessments for same site/date
-- calculate_habitat_grade(): Convert total scores to letter grades (A-F)
-
-Habitat Metrics:
-- 11 habitat parameters scored 1-20 each (total 0-200 scale, converted to 0-100)
-- Grades: A (90+), B (80-89), C (70-79), D (60-69), F (<60)
-
-Usage:
-- Run directly to test habitat data processing
-- Import functions for use in the main data pipeline
-
-Note: Query functions (get_habitat_dataframe, get_habitat_metrics_data_for_table) 
-are available in data_processing.data_queries module.
+This module handles the full pipeline for habitat data, including resolving
+duplicate entries by averaging, calculating habitat grades from total scores,
+and inserting the final data into the database.
 """
 
 import pandas as pd
@@ -33,25 +12,23 @@ from database.database import get_connection, close_connection
 from data_processing.data_loader import load_csv_data, clean_column_names, save_processed_data
 from data_processing import setup_logging
 
-# Set up component-specific logging
 logger = setup_logging("habitat_processing", category="processing")
 
-# =============================================================================
-# Helper Functions
-# =============================================================================
+# Helper functions
 
 def resolve_habitat_duplicates(habitat_df):
     """
-    Resolve habitat duplicate assessments by averaging all numeric metrics and scores.
+    Resolves duplicate habitat assessments by averaging their numeric metrics and scores.
+    
+    A duplicate is defined as an assessment for the same site on the same date.
     
     Args:
-        habitat_df: DataFrame with habitat data (after column mapping)
+        habitat_df: A DataFrame containing habitat data, with standardized column names.
         
     Returns:
-        DataFrame with duplicates resolved through averaging
+        A DataFrame with duplicate assessments resolved through averaging.
     """
     try:
-        # Define columns to average (after column mapping)
         metric_columns = [
             'instream_cover',
             'pool_bottom_substrate', 
@@ -66,17 +43,14 @@ def resolve_habitat_duplicates(habitat_df):
             'streamside_cover'
         ]
         
-        # Filter to only columns that exist in the DataFrame
         existing_metric_columns = [col for col in metric_columns if col in habitat_df.columns]
         
         if not existing_metric_columns and 'total_score' not in habitat_df.columns:
             logger.warning("No habitat metric columns found for averaging")
             return habitat_df
         
-        # Group by site and date to find duplicates
         grouped = habitat_df.groupby(['site_name', 'assessment_date'])
         
-        # Separate duplicates from unique records
         duplicate_groups = []
         unique_records = []
         
@@ -89,14 +63,12 @@ def resolve_habitat_duplicates(habitat_df):
         if not duplicate_groups:
             return habitat_df
         
-        # Process each duplicate group
         averaged_records = []
         
         for site_name, date_str, group in duplicate_groups:
-            # Calculate averages for specified columns
-            averaged_record = group.iloc[0].copy()  # Start with first record as template
+            # Use the first record as a template for the averaged entry.
+            averaged_record = group.iloc[0].copy()
             
-            # Average individual metrics (round to 1 decimal place)
             for col in existing_metric_columns:
                 values = group[col].dropna()
                 
@@ -106,7 +78,6 @@ def resolve_habitat_duplicates(habitat_df):
                 else:
                     averaged_record[col] = None
             
-            # Average total score (round to nearest integer)
             if 'total_score' in habitat_df.columns:
                 total_values = group['total_score'].dropna()
                 
@@ -116,7 +87,7 @@ def resolve_habitat_duplicates(habitat_df):
                 else:
                     averaged_record['total_score'] = None
             
-            # Calculate new habitat grade based on averaged total score (1-100 scale)
+            # Recalculate the habitat grade based on the new averaged score.
             if pd.notna(averaged_record['total_score']):
                 averaged_record['habitat_grade'] = calculate_habitat_grade(averaged_record['total_score'])
             else:
@@ -124,7 +95,6 @@ def resolve_habitat_duplicates(habitat_df):
             
             averaged_records.append(averaged_record)
         
-        # Combine unique records with averaged records
         if unique_records:
             unique_df = pd.concat(unique_records, ignore_index=True)
         else:
@@ -139,7 +109,6 @@ def resolve_habitat_duplicates(habitat_df):
         else:
             result_df = unique_df
         
-        # Log concise summary
         original_count = len(habitat_df)
         final_count = len(result_df)
         duplicates_resolved = original_count - final_count
@@ -154,13 +123,15 @@ def resolve_habitat_duplicates(habitat_df):
 
 def calculate_habitat_grade(total_score):
     """
-    Calculate habitat grade based on total score (1-100 scale).
+    Calculates a letter grade (A-F) from a total habitat score.
+    
+    The score is expected to be on a 1-100 scale.
     
     Args:
-        total_score: Numeric total score (1-100 scale)
+        total_score: A numeric total score.
         
     Returns:
-        str: Letter grade (A, B, C, D, F)
+        A string representing the letter grade ('A', 'B', 'C', 'D', 'F').
     """
     if pd.isna(total_score):
         return "Unknown"
@@ -176,40 +147,35 @@ def calculate_habitat_grade(total_score):
     else:
         return "F"
 
-# =============================================================================
-# Main Processing Functions
-# =============================================================================
+# Main processing functions
 
 def load_habitat_data(site_name=None):
     """
-    Load habitat data from CSV into the database.
+    Executes the full pipeline to process and load habitat data into the database.
     
     Args:
-        site_name: Optional site name to filter data for (default: None, loads all sites)
+        site_name: An optional site name to filter the data for.
     
     Returns:
-        DataFrame with processed habitat data
+        A DataFrame containing the processed habitat data from the database.
     """
     conn = get_connection()
     cursor = conn.cursor()
   
     try: 
-        # Check if data already exists
+        # To prevent re-processing, check if data already exists in the target table.
         cursor.execute('SELECT COUNT(*) FROM habitat_summary_scores')
         data_exists = cursor.fetchone()[0] > 0
 
         if not data_exists:
-            # Load habitat data from CSV
             habitat_df = process_habitat_csv_data(site_name)
             
             if habitat_df.empty:
                 logger.warning(f"No habitat data found for processing.")
                 return pd.DataFrame()
                 
-            # Insert assessments and get mapping
             assessment_id_map = insert_habitat_assessments(cursor, habitat_df)
             
-            # Insert metrics and summary scores
             insert_metrics_data(cursor, habitat_df, assessment_id_map)
             
             conn.commit()
@@ -228,7 +194,7 @@ def load_habitat_data(site_name=None):
     finally:
         close_connection(conn)
 
-    # Always return current data state
+    # Always return the current state of the data from the database.
     from data_processing.data_queries import get_habitat_dataframe
     if site_name:
         return get_habitat_dataframe(site_name)
@@ -237,26 +203,23 @@ def load_habitat_data(site_name=None):
 
 def process_habitat_csv_data(site_name=None):
     """
-    Process habitat data from cleaned CSV file.
+    Processes habitat data from a cleaned CSV file, resolving duplicates along the way.
     
     Args:
-        site_name: Optional site name to filter data for
+        site_name: An optional site name to filter the data for.
     
     Returns:
-        DataFrame with processed habitat data
+        A DataFrame with the processed habitat data.
     """
     try:
-        # Load raw habitat data from CLEANED CSV
         habitat_df = load_csv_data('habitat')
         
         if habitat_df.empty:
             logger.error("Failed to load habitat data from cleaned CSV.")
             return pd.DataFrame()
         
-        # Clean column names 
         habitat_df = clean_column_names(habitat_df)
         
-        # Map to standardized column names 
         column_mapping = {
             'sitename': 'site_name',
             'sampleid': 'sample_id',
@@ -277,7 +240,7 @@ def process_habitat_csv_data(site_name=None):
             'habitatgrade': 'habitat_grade'
         }
         
-        # Create a mapping with only columns that exist in the dataframe
+        # Create a mapping that only includes columns present in the DataFrame to avoid errors.
         valid_mapping = {}
         for k, v in column_mapping.items():
             matching_cols = [col for col in habitat_df.columns if col.lower() == k.lower()]
@@ -286,15 +249,12 @@ def process_habitat_csv_data(site_name=None):
                 
         habitat_df = habitat_df.rename(columns=valid_mapping)
         
-        # RESOLVE DUPLICATES
         habitat_df = resolve_habitat_duplicates(habitat_df)
         
-        # Filter by site name if provided
         if site_name:
             habitat_df = habitat_df[habitat_df['site_name'] == site_name]
             logger.info(f"Filtered to {len(habitat_df)} rows for site: {site_name}")
         
-        # Handle date formatting 
         if 'assessment_date' in habitat_df.columns:
             try:
                 habitat_df['assessment_date'] = pd.to_datetime(habitat_df['assessment_date'])
@@ -303,7 +263,7 @@ def process_habitat_csv_data(site_name=None):
             except Exception as e:
                 logger.error(f"Error processing dates: {e}")
         elif 'year' not in habitat_df.columns:
-            # If no date or year column, add a placeholder year
+            # If no date or year is available, use the current year as a fallback.
             logger.warning("No assessment_date or year column found, using current year as placeholder")
             from datetime import datetime
             habitat_df['year'] = datetime.now().year
@@ -318,28 +278,25 @@ def process_habitat_csv_data(site_name=None):
 
 def insert_habitat_assessments(cursor, habitat_df):
     """
-    Insert habitat assessments into the database.
+    Inserts unique habitat assessments into the database.
     
     Args:
-        cursor: Database cursor
-        habitat_df: DataFrame with habitat data
+        cursor: A database cursor.
+        habitat_df: A DataFrame with the processed habitat data.
     
     Returns:
-        dict: Dictionary mapping sample_ids to assessment_ids
+        A dictionary mapping sample_ids to their new assessment_ids.
     """
     try:
-        assessment_id_map = {}  # Map sample_id to assessment_id
+        assessment_id_map = {}
         
-        # Check for required columns
         if 'site_name' not in habitat_df.columns or 'sample_id' not in habitat_df.columns:
             logger.error("Missing required columns site_name or sample_id")
             return assessment_id_map
             
-        # Get unique assessments by site_name and sample_id
         unique_assessments = habitat_df.drop_duplicates(subset=['site_name', 'sample_id']).copy()
         
         for _, assessment in unique_assessments.iterrows():
-            # Get site_id (assumes site already exists)
             cursor.execute("SELECT site_id FROM sites WHERE site_name = ?", (assessment['site_name'],))
             site_result = cursor.fetchone()
 
@@ -347,9 +304,8 @@ def insert_habitat_assessments(cursor, habitat_df):
                 site_id = site_result[0]
             else:
                 logger.error(f"Site '{assessment['site_name']}' not found in database. Run site processing first.")
-                continue  # Skip this assessment
+                continue
             
-            # Format date if available
             assessment_date = assessment.get('assessment_date_str', None)
             if assessment_date is None and 'assessment_date' in assessment:
                 try:
@@ -357,10 +313,8 @@ def insert_habitat_assessments(cursor, habitat_df):
                 except:
                     assessment_date = None
             
-            # Get year
             year = assessment.get('year')
             
-            # Insert habitat assessment
             cursor.execute('''
                 INSERT INTO habitat_assessments 
                 (site_id, assessment_date, year)
@@ -373,7 +327,6 @@ def insert_habitat_assessments(cursor, habitat_df):
             
             assessment_id = cursor.lastrowid
             
-            # Store mapping using sample_id
             assessment_id_map[assessment['sample_id']] = assessment_id
         
         logger.info(f"Inserted {len(assessment_id_map)} habitat assessments")
@@ -385,18 +338,17 @@ def insert_habitat_assessments(cursor, habitat_df):
 
 def insert_metrics_data(cursor, habitat_df, assessment_id_map):
     """
-    Insert habitat metrics and summary scores into the database.
+    Inserts habitat metrics and summary scores into the database for each assessment.
     
     Args:
-        cursor: Database cursor
-        habitat_df: DataFrame with habitat data
-        assessment_id_map: Dictionary mapping sample_id to assessment_id
+        cursor: A database cursor.
+        habitat_df: A DataFrame with the processed habitat data.
+        assessment_id_map: A dictionary mapping sample_ids to assessment_ids.
     
     Returns:
-        int: Number of metrics records inserted
+        The total number of metrics records inserted.
     """
     try:
-        # Define the metrics we expect to find
         expected_metrics = [
             'instream_cover',
             'pool_bottom_substrate',
@@ -411,20 +363,17 @@ def insert_metrics_data(cursor, habitat_df, assessment_id_map):
             'streamside_cover'
         ]
         
-        # Find which metrics are available in the data
+        # Determine which metrics are actually available in the DataFrame.
         available_metrics = [col for col in expected_metrics if col in habitat_df.columns]
         
         if not available_metrics:
             logger.error("No habitat metrics columns found in data")
             return 0
             
-        # Track counts
         metrics_count = 0
         summary_count = 0
         
-        # For each unique sample, insert metrics and summary
         for sample_id, sample_df in habitat_df.groupby('sample_id'):
-            # Skip if no sample_id or not in assessment_id_map
             if pd.isna(sample_id) or sample_id not in assessment_id_map:
                 if not pd.isna(sample_id):
                     logger.warning(f"No assessment_id found for sample_id={sample_id}")
@@ -432,21 +381,19 @@ def insert_metrics_data(cursor, habitat_df, assessment_id_map):
                 
             assessment_id = assessment_id_map[sample_id]
             
-            # Clear existing data for this assessment (to handle updates)
+            # Clear existing data to prevent duplicates and handle updates.
             cursor.execute('DELETE FROM habitat_metrics WHERE assessment_id = ?', (assessment_id,))
             cursor.execute('DELETE FROM habitat_summary_scores WHERE assessment_id = ?', (assessment_id,))
             
-            # Get the data (first row in case of duplicates)
+            # Use the first row in case duplicates still exist after processing.
             row = sample_df.iloc[0]
             
-            # Insert metrics for this assessment
             for metric_name in available_metrics:
                 if pd.notna(row.get(metric_name)):
                     try:
-                        # Format metric name for display
+                        # Format the metric name for display purposes (e.g., 'instream_cover' -> 'Instream Cover').
                         display_name = metric_name.replace('_', ' ').title()
                         
-                        # Round individual metrics to 1 decimal place for database storage
                         metric_value = round(float(row[metric_name]), 1)
                         
                         cursor.execute('''
@@ -462,19 +409,17 @@ def insert_metrics_data(cursor, habitat_df, assessment_id_map):
                     except Exception as e:
                         logger.error(f"Error inserting metric {metric_name}: {e}")
             
-            # Use the habitat grade from our duplicate resolution (which may be newly calculated)
+            # Use the habitat grade from duplicate resolution, which may have been recalculated.
             habitat_grade = row.get('habitat_grade', "Unknown")
             
-            # Validate the habitat grade value
+            # Ensure the habitat grade is a valid, expected value.
             valid_grades = ["A", "B", "C", "D", "F"]
             if habitat_grade not in valid_grades:
                 logger.warning(f"Invalid habitat_grade '{habitat_grade}' for sample_id={sample_id}, setting to Unknown")
                 habitat_grade = "Unknown"
             
-            # Insert summary score
             if 'total_score' in row and pd.notna(row['total_score']) and habitat_grade != "Unknown":
                 try:
-                    # Round total score to nearest integer for database storage
                     total_score = round(float(row['total_score']))
                     
                     cursor.execute('''

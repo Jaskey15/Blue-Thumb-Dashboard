@@ -1,25 +1,9 @@
 """
-fish_processing.py - Fish Community Data Processing
+Processes and loads fish community assessment data into the database.
 
-This module processes fish community assessment data with advanced replicate handling for 
-Blue Thumb monitoring. Uses bt_fieldwork_validator module to distinguish between true 
-replicates (separate collection events) and duplicate data entries.
-
-Key Functions:
-- process_fish_csv_data(): Process fish data with replicate handling via bt_fieldwork_validator
-- validate_ibi_scores(): Validate Index of Biotic Integrity calculations
-- insert_fish_collection_events(): Insert collection events into database
-- insert_metrics_data(): Insert fish metrics into database
-- load_fish_data(): Main pipeline to process and load fish data
-
-Fish Metrics:
-- 7 IBI metrics: species counts, tolerances, feeding guilds, spawning types
-- Integrity classes: Excellent, Good, Fair, Poor, Very Poor
-
-Usage:
-- Run directly to test fish data processing  
-- Import functions for use in the main data pipeline
-- Use data_queries.py for retrieving fish data from database
+This module handles the full pipeline for fish data, including distinguishing
+between true replicates and data entry errors using the `bt_fieldwork_validator`.
+It validates IBI scores, inserts collection events, and loads detailed metrics.
 """
 
 import pandas as pd
@@ -39,30 +23,26 @@ from data_processing import setup_logging
 
 logger = setup_logging("fish_processing", category="processing")
 
-# =============================================================================
-# Helper Functions
-# =============================================================================
+# Helper functions
 
 def validate_ibi_scores(fish_df):
     """
-    Validate that total_score equals the sum of IBI component scores.
+    Validates that the total_score is the sum of its IBI component scores.
     
     Args:
-        fish_df: DataFrame with fish metrics data
+        fish_df: A DataFrame containing the fish metrics data.
     
     Returns:
-        DataFrame with validated data
+        The DataFrame with a 'score_validated' column indicating validation status.
     """
     try:
         df = fish_df.copy()
         
-        # Calculate sum of component scores
         score_columns = ['total_species_score', 'sensitive_benthic_score', 
                          'sunfish_species_score', 'intolerant_species_score',
                          'tolerant_score', 'insectivorous_score', 
                          'lithophilic_score']
         
-        # Check which columns exist
         existing_columns = [col for col in score_columns if col in df.columns]
         
         if len(existing_columns) < len(score_columns):
@@ -72,7 +52,6 @@ def validate_ibi_scores(fish_df):
         if existing_columns and 'total_score' in df.columns:
             df['calculated_score'] = df[existing_columns].sum(axis=1)
             
-            # Find mismatches
             mismatch_mask = df['calculated_score'] != df['total_score']
             mismatches = df[mismatch_mask]
             
@@ -83,7 +62,6 @@ def validate_ibi_scores(fish_df):
                 logger.info("All total_score values match sum of components.")
                 df['score_validated'] = True
             
-            # Drop the calculated column
             df = df.drop(columns=['calculated_score'])
         
         return df
@@ -92,34 +70,29 @@ def validate_ibi_scores(fish_df):
         logger.error(f"Error validating IBI scores: {e}")
         return fish_df
 
-# =============================================================================
-# Main Processing and Insertion Functions
-# =============================================================================
+# Main processing and insertion functions
 
 def process_fish_csv_data(site_name=None):
     """
-    Process fish data from cleaned CSV file with replicate handling.
+    Processes fish data from a cleaned CSV file, including advanced replicate handling.
     
     Args:
-        site_name: Optional site name to filter data for
+        site_name: An optional site name to filter the data for.
     
     Returns:
-        DataFrame with processed fish data
+        A DataFrame with the processed fish data.
     """
     try:
         logger.info("Starting fish data processing with replicate handling")
         
-        # Load raw fish data from CLEANED CSV
         fish_df = load_csv_data('fish', parse_dates=['Date'])
         
         if fish_df.empty:
             logger.error("Failed to load fish data from cleaned CSV.")
             return pd.DataFrame()
         
-        # Clean column names
         fish_df = clean_column_names(fish_df)
         
-        # Map to standardized column names
         column_mapping = {
             'sitename': 'site_name',
             'sampleid': 'sample_id',
@@ -144,7 +117,6 @@ def process_fish_csv_data(site_name=None):
             'fishscore': 'integrity_class'
         }
         
-        # Apply column mapping
         valid_mapping = {}
         for k, v in column_mapping.items():
             matching_cols = [col for col in fish_df.columns if col.lower() == k.lower()]
@@ -153,12 +125,10 @@ def process_fish_csv_data(site_name=None):
                 
         fish_df = fish_df.rename(columns=valid_mapping)
         
-        # Filter by site name if provided
         if site_name:
             fish_df = fish_df[fish_df['site_name'] == site_name]
             logger.info(f"Filtered to {len(fish_df)} rows for site: {site_name}")
         
-        # Handle date formatting
         if 'collection_date' in fish_df.columns:
             try:
                 fish_df['collection_date'] = pd.to_datetime(fish_df['collection_date'])
@@ -166,15 +136,12 @@ def process_fish_csv_data(site_name=None):
             except Exception as e:
                 logger.error(f"Error processing dates: {e}")
         
-        # Comprehensive date correction using BT data as authoritative source
+        # Use BT field data as the authoritative source for date correction and replicate handling.
         from data_processing.bt_fieldwork_validator import correct_collection_dates, categorize_and_process_duplicates
         bt_df = load_bt_field_work_dates()
         fish_df = correct_collection_dates(fish_df, bt_df)
-        
-        # Process replicates and duplicates (legacy REP handling)
         fish_df = categorize_and_process_duplicates(fish_df, bt_df)
         
-        # Continue with standard processing
         fish_df = remove_invalid_biological_values(fish_df, invalid_values=[-999, -99])
         fish_df = convert_columns_to_numeric(fish_df)
         fish_df = validate_ibi_scores(fish_df)
@@ -190,27 +157,25 @@ def process_fish_csv_data(site_name=None):
 
 def insert_fish_collection_events(cursor, fish_df):
     """
-    Insert fish collection events using the shared biological utility.
+    Inserts fish collection events into the database using a shared utility function.
     
     Args:
-        cursor: Database cursor
-        fish_df: DataFrame with fish data
+        cursor: A database cursor.
+        fish_df: A DataFrame with the processed fish data.
     
     Returns:
-        dict: Dictionary mapping sample_id to event_id
+        A dictionary mapping each sample_id to its new event_id.
     """
     try:
-        # Define parameters for fish collection events
         table_name = 'fish_collection_events'
         grouping_columns = ['site_name', 'sample_id']
         column_mapping = {
-            'site_id': 'site_name',  # Will be looked up automatically
+            'site_id': 'site_name',
             'sample_id': 'sample_id',
             'collection_date': 'collection_date_str',
             'year': 'year'
         }
         
-        # Use shared utility function
         event_id_map = insert_collection_events(
             cursor=cursor,
             df=fish_df,
@@ -227,18 +192,17 @@ def insert_fish_collection_events(cursor, fish_df):
 
 def insert_metrics_data(cursor, fish_df, event_id_map):
     """
-    Insert fish metrics and summary scores into the database.
+    Inserts fish metrics and summary scores into the database for each collection event.
     
     Args:
-        cursor: Database cursor
-        fish_df: DataFrame with fish data
-        event_id_map: Dictionary mapping sample_id to event_id
+        cursor: A database cursor.
+        fish_df: A DataFrame with the processed fish data.
+        event_id_map: A dictionary mapping sample_ids to event_ids.
     
     Returns:
-        int: Number of metrics records inserted
+        The total number of metrics records inserted.
     """
     try:
-        # Define metric mappings
         metric_mappings = [
             ('Total No. of species', 'total_species', 'total_species_score'),
             ('No. of sensitive benthic species', 'sensitive_benthic_species', 'sensitive_benthic_score'),
@@ -249,11 +213,10 @@ def insert_metrics_data(cursor, fish_df, event_id_map):
             ('Proportion lithophilic spawners', 'proportion_lithophilic', 'lithophilic_score')
         ]
         
-        # Track counts
         metrics_count = 0
         summary_count = 0
         
-        # Check which metrics are available
+        # Determine which metrics are actually available in the DataFrame to avoid errors.
         available_metrics = []
         for metric_name, raw_col, score_col in metric_mappings:
             if raw_col in fish_df.columns and score_col in fish_df.columns:
@@ -263,9 +226,7 @@ def insert_metrics_data(cursor, fish_df, event_id_map):
             logger.error("No metric data available in CSV")
             return 0
             
-        # For each unique sample, insert metrics and summary
         for sample_id, sample_df in fish_df.groupby('sample_id'):
-            # Skip if no sample_id or not in event_id_map
             if pd.isna(sample_id) or sample_id not in event_id_map:
                 if not pd.isna(sample_id):
                     logger.warning(f"No event_id found for sample_id={sample_id}")
@@ -273,17 +234,16 @@ def insert_metrics_data(cursor, fish_df, event_id_map):
                 
             event_id = event_id_map[sample_id]
             
-            # Clear existing data for this event (to handle updates)
+            # Clear existing data for this event to handle updates and prevent duplicates.
             cursor.execute('DELETE FROM fish_metrics WHERE event_id = ?', (event_id,))
             cursor.execute('DELETE FROM fish_summary_scores WHERE event_id = ?', (event_id,))
             
-            # Get the data (first row in case of duplicates)
+            # Use the first row in case duplicates still exist after processing.
             row = sample_df.iloc[0]
             
-            # Insert metrics for this event (only if scores are not None)
             for metric_name, raw_col, score_col in available_metrics:
                 if pd.notna(row.get(raw_col)) and pd.notna(row.get(score_col)):
-                    # For proportion metrics, use raw value as result
+                    # For proportion-based metrics, the raw value is stored as the result.
                     metric_result = row[raw_col] if metric_name.startswith('Proportion') else None
                     
                     cursor.execute('''
@@ -299,16 +259,15 @@ def insert_metrics_data(cursor, fish_df, event_id_map):
                     ))
                     metrics_count += 1
             
-            # Determine integrity class - use CSV value first, calculate as fallback
+            # Determine integrity class, prioritizing the pre-calculated value from the CSV.
             integrity_class = "Unknown"
 
-            # Primary: Use pre-calculated integrity_class from CSV
             if 'integrity_class' in row and pd.notna(row['integrity_class']) and str(row['integrity_class']).strip():
                 integrity_class = str(row['integrity_class']).strip()
             else:
-                # Fallback: Calculate using simplified cutoffs
+                # Fallback to calculating the class if it's not provided.
                 if 'comparison_to_reference' in row and pd.notna(row['comparison_to_reference']):
-                    comparison_value = float(row['comparison_to_reference']) * 100  # Convert to percentage
+                    comparison_value = float(row['comparison_to_reference']) * 100
                     
                     if comparison_value >= 97:
                         integrity_class = "Excellent"
@@ -321,13 +280,12 @@ def insert_metrics_data(cursor, fish_df, event_id_map):
                     else:
                         integrity_class = "Very Poor"
 
-            # Validate the integrity class value
+            # Ensure the integrity class is a valid, expected value before insertion.
             valid_classes = ["Excellent", "Good", "Fair", "Poor", "Very Poor"]
             if integrity_class not in valid_classes:
                 logger.warning(f"Invalid integrity_class '{integrity_class}' for sample_id={sample_id}, setting to Unknown")
                 integrity_class = "Unknown"
 
-            # Insert summary score
             if all(col in row for col in ['total_score', 'comparison_to_reference']) and integrity_class != "Unknown":
                 cursor.execute('''
                     INSERT INTO fish_summary_scores
@@ -352,34 +310,31 @@ def insert_metrics_data(cursor, fish_df, event_id_map):
 
 def load_fish_data(site_name=None):
     """
-    Load fish data from CSV into the database (full pipeline).
+    Executes the full pipeline to process and load fish data into the database.
     
     Args:
-        site_name: Optional site name to filter data for (default: None, loads all sites)
+        site_name: An optional site name to filter data for. If None, all sites are loaded.
     
     Returns:
-        bool: True if processing was successful, False otherwise
+        True if the processing was successful, False otherwise.
     """
     conn = get_connection()
     cursor = conn.cursor()
   
     try:
-        # Check if data already exists
+        # To prevent re-processing, check if data already exists in the target table.
         cursor.execute('SELECT COUNT(*) FROM fish_summary_scores')
         data_exists = cursor.fetchone()[0] > 0
 
         if not data_exists:
-            # Load fish data from CSV
             fish_df = process_fish_csv_data(site_name)
             
             if fish_df.empty:
                 logger.warning("No fish data found for processing.")
                 return False
                 
-            # Insert collection events using shared utility
             event_id_map = insert_fish_collection_events(cursor, fish_df)
             
-            # Insert metrics and summary scores
             insert_metrics_data(cursor, fish_df, event_id_map)
             
             conn.commit()
@@ -401,10 +356,8 @@ def load_fish_data(site_name=None):
         close_connection(conn)
 
 if __name__ == "__main__":
-    # Test loading fish data
     success = load_fish_data()
     if success:
         logger.info("Fish data processing completed successfully")
-        # To view the data, use: from data_processing.data_queries import get_fish_dataframe
     else:
         logger.error("Fish data processing failed. Check database setup.")
