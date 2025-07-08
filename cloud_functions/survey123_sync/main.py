@@ -6,7 +6,7 @@ It downloads new chemical data submissions via ArcGIS REST API, processes them u
 logic, and updates the SQLite database stored in Cloud Storage.
 
 Trigger: Cloud Scheduler (daily at 6 AM Central)
-Runtime: Python 3.9
+Runtime: Python 3.12
 Environment Variables:
 - GOOGLE_CLOUD_PROJECT: GCP project ID
 - GCS_BUCKET_DATABASE: Cloud Storage bucket for database

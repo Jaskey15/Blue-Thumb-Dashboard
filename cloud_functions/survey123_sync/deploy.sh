@@ -8,7 +8,7 @@ set -e
 # Configuration
 FUNCTION_NAME="survey123-daily-sync"
 REGION="us-central1"
-RUNTIME="python311"
+RUNTIME="python312"
 MEMORY="512MB"
 TIMEOUT="540s"
 MAX_INSTANCES="10"
@@ -21,6 +21,9 @@ echo "Function: $FUNCTION_NAME"
 echo "Region: $REGION"
 echo "Runtime: $RUNTIME"
 
+# Change to the function's directory to correctly set the source
+cd "$(dirname "$0")"
+
 # Deploy the function
 gcloud functions deploy $FUNCTION_NAME \
     --gen2 \
@@ -28,7 +31,7 @@ gcloud functions deploy $FUNCTION_NAME \
     --region=$REGION \
     --source=. \
     --entry-point=survey123_daily_sync \
-    --trigger=http \
+    --trigger-http \
     --memory=$MEMORY \
     --timeout=$TIMEOUT \
     --max-instances=$MAX_INSTANCES \
