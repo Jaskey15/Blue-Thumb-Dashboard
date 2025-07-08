@@ -1,26 +1,20 @@
 """
-Chemical data utilities for the Blue Thumb Water Quality Dashboard.
-Shared functions for processing and validating chemical data.
+Shared utilities for processing, validating, and inserting chemical water quality data.
 """
 
 import pandas as pd
 import numpy as np
 from data_processing import setup_logging
 
-# Set up logging
 logger = setup_logging("chemical_utils", category="processing")
 
-# =============================================================================
-# CONSTANTS AND CONFIGURATION
-# =============================================================================
+# Constants and configuration
 
-# Key parameters for analysis and visualization
 KEY_PARAMETERS = [    
     'do_percent', 'pH', 'soluble_nitrogen', 
     'Phosphorus', 'Chloride', 
 ]
 
-# Map of parameter codes to parameter_id in the database
 PARAMETER_MAP = {
     'do_percent': 1,
     'pH': 2,
@@ -29,8 +23,7 @@ PARAMETER_MAP = {
     'Chloride': 5
 }
 
-# Define constants for BDL values (Below Detection Limit)
-# Values provided by Blue Thumb Cordinator
+# BDL (Below Detection Limit) values provided by the Blue Thumb Coordinator.
 BDL_VALUES = {
     'Nitrate': 0.3,    
     'Nitrite': 0.03,    
@@ -38,26 +31,26 @@ BDL_VALUES = {
     'Phosphorus': 0.005,
 }
 
-# =============================================================================
-# DATA VALIDATION AND CLEANING
-# =============================================================================
+# Data validation and cleaning
 
 def convert_bdl_value(value, bdl_replacement):
     """
-    Convert zeros to BDL replacement values.
-    Keeps NaN values as NaN for visualization gaps.
+    Converts a zero value to its BDL replacement value.
+    
+    This function treats zero as an indicator for a value that is below the
+    detection limit. It keeps NaN values as they are to represent actual gaps
+    in data for visualization purposes.
     
     Args:
-        value: The value to check/convert
-        bdl_replacement: The replacement value for BDL (below detection limit)
+        value: The value to check and convert.
+        bdl_replacement: The value to use for BDL replacement.
         
     Returns:
-        Converted value or NaN
+        The converted value, or NaN if the input was NaN or could not be converted.
     """
     if pd.isna(value):
-        return np.nan  # Keep NaN as NaN for visualization
+        return np.nan  # Preserve NaN to represent data gaps.
     
-    # Try to convert to numeric if it's not already
     try:
         if not isinstance(value, (int, float)):
             value = float(value)
@@ -65,30 +58,31 @@ def convert_bdl_value(value, bdl_replacement):
         return np.nan  
         
     if value == 0:
-        return bdl_replacement  # Assume zeros are below detection limit
+        return bdl_replacement  # Assumes that a value of zero means it is below the detection limit.
     
-    return value  # Return the original value if not zero
+    return value
 
 def validate_chemical_data(df, remove_invalid=True):
     """
-    Validate chemical data and optionally remove invalid values.
-    pH must be between 0-14, all other parameters must be > 0.
+    Validates chemical data, ensuring values are within logical ranges.
+    
+    Checks that pH is between 0-14 and all other chemical parameters are non-negative.
+    Invalid values can either be removed (set to NaN) or logged as warnings.
     
     Args:
-        df: DataFrame with chemical data
-        remove_invalid: If True, set invalid values to NaN; if False, just log warnings
+        df: A DataFrame containing the chemical data.
+        remove_invalid: If True, sets invalid values to NaN.
         
     Returns:
-        DataFrame with validated data
+        A DataFrame with the validated data.
     """
     df_clean = df.copy()
     total_issues = 0
     
-    # Define chemical parameters (excluding pH which has special handling)
+    # pH has a specific valid range (0-14).
     chemical_params = ['do_percent', 'Nitrate', 'Nitrite', 'Ammonia', 
                       'Phosphorus', 'Chloride', 'soluble_nitrogen']
     
-    # Validate pH (must be between 0-14)
     if 'pH' in df_clean.columns:
         ph_invalid_mask = ((df_clean['pH'] < 0) | (df_clean['pH'] > 14)) & df_clean['pH'].notna()
         ph_invalid_count = ph_invalid_mask.sum()
@@ -101,7 +95,7 @@ def validate_chemical_data(df, remove_invalid=True):
             else:
                 logger.warning(f"Found {ph_invalid_count} pH values outside 0-14 range")
     
-    # Validate other chemical parameters (must be > 0)
+    # Other chemical parameters must be non-negative.
     for param in chemical_params:
         if param in df_clean.columns:
             invalid_mask = (df_clean[param] < 0) & df_clean[param].notna()
@@ -115,7 +109,6 @@ def validate_chemical_data(df, remove_invalid=True):
                 else:
                     logger.warning(f"Found {invalid_count} {param} values < 0")
     
-    # Log overall summary
     if total_issues > 0:
         action = "removed" if remove_invalid else "flagged"
         logger.info(f"Data validation complete: {total_issues} total issues {action}")
@@ -126,14 +119,14 @@ def validate_chemical_data(df, remove_invalid=True):
 
 def apply_bdl_conversions(df, bdl_columns=None):
     """
-    Apply BDL (Below Detection Limit) conversions to specified columns.
+    Applies BDL conversions to the specified DataFrame columns.
     
     Args:
-        df: DataFrame with chemical data
-        bdl_columns: List of columns to apply BDL conversion to (default: all BDL_VALUES keys)
+        df: The DataFrame with chemical data.
+        bdl_columns: A list of columns to apply BDL conversions to.
         
     Returns:
-        DataFrame with BDL conversions applied
+        A DataFrame with BDL conversions applied.
     """
     if bdl_columns is None:
         bdl_columns = list(BDL_VALUES.keys())
@@ -145,7 +138,6 @@ def apply_bdl_conversions(df, bdl_columns=None):
         if column in df_converted.columns:
             bdl_value = BDL_VALUES.get(column, 0)
             
-            # Apply conversion
             df_converted[column] = df_converted[column].apply(
                 lambda x: convert_bdl_value(x, bdl_value)
             )
@@ -159,57 +151,52 @@ def apply_bdl_conversions(df, bdl_columns=None):
 
 def remove_empty_chemical_rows(df, chemical_columns=None):
     """
-    Remove rows where all chemical parameters are null.
+    Removes rows from a DataFrame where all specified chemical columns are null.
     
     Args:
-        df: DataFrame with chemical data
-        chemical_columns: List of chemical columns to check (default: all chemical columns)
+        df: The DataFrame to process.
+        chemical_columns: A list of columns to check for null values.
         
     Returns:
-        DataFrame with empty rows removed
+        A DataFrame with empty rows removed.
     """
     if chemical_columns is None:
-        # Default chemical columns
         chemical_columns = ['do_percent', 'pH', 'Nitrate', 'Nitrite', 'Ammonia', 
                            'Phosphorus', 'Chloride', 'soluble_nitrogen']
     
-    # Filter for columns that actually exist in the DataFrame
     existing_columns = [col for col in chemical_columns if col in df.columns]
     
     if not existing_columns:
         logger.warning("No chemical columns found for empty row removal")
         return df
     
-    # Count non-null values in each row
     non_null_counts = df[existing_columns].notnull().sum(axis=1)
     
-    # Keep rows that have at least one chemical parameter
     df_filtered = df[non_null_counts > 0].copy()
     
-    # Log how many rows were removed
     removed_count = len(df) - len(df_filtered)
     if removed_count > 0:
         logger.info(f"Removed {removed_count} rows with no chemical data")
     
     return df_filtered
 
-# =============================================================================
-# DATA PROCESSING AND ANALYSIS
-# =============================================================================
+# Data processing and analysis
 
 def calculate_soluble_nitrogen(df):
     """
-    Calculate soluble nitrogen from Nitrate, Nitrite, and Ammonia values.
-    Uses BDL replacement values for calculation purposes.
+    Calculates soluble nitrogen by summing Nitrate, Nitrite, and Ammonia values.
+    
+    This function uses BDL replacement values for calculations to handle nulls and
+    zeros consistently, ensuring that the total soluble nitrogen is a conservative
+    and accurate representation.
     
     Args:
-        df: DataFrame with individual nitrogen component columns
+        df: A DataFrame containing the individual nitrogen component columns.
         
     Returns:
-        DataFrame with soluble_nitrogen column added
+        The DataFrame with a 'soluble_nitrogen' column added.
     """
     try:
-        # Check if we have the required columns
         required_columns = ['Nitrate', 'Nitrite', 'Ammonia']
         if not all(col in df.columns for col in required_columns):
             missing = [col for col in required_columns if col not in df.columns]
@@ -218,7 +205,7 @@ def calculate_soluble_nitrogen(df):
         
         df_calc = df.copy()
         
-        # For calculation purposes, treat NaN and zeros as BDL values
+        # For calculation, treat NaNs and zeros as their respective BDL values.
         def get_calc_value(series, bdl_value):
             return series.fillna(bdl_value).replace(0, bdl_value)
         
@@ -226,10 +213,9 @@ def calculate_soluble_nitrogen(df):
         nitrite_calc = get_calc_value(df_calc['Nitrite'], BDL_VALUES['Nitrite'])
         ammonia_calc = get_calc_value(df_calc['Ammonia'], BDL_VALUES['Ammonia'])
         
-        # Calculate total soluble nitrogen
         df_calc['soluble_nitrogen'] = nitrate_calc + nitrite_calc + ammonia_calc
         
-        # Apply proper rounding to ensure consistent decimal places (2 decimal places)
+        # Apply rounding to ensure consistent decimal places for reporting.
         df_calc['soluble_nitrogen'] = df_calc['soluble_nitrogen'].apply(
             lambda x: float(f"{x:.2f}") if pd.notna(x) else x
         )
@@ -243,21 +229,21 @@ def calculate_soluble_nitrogen(df):
 
 def determine_status(parameter, value, reference_values):
     """
-    Determine the status of a parameter value based on reference thresholds.
+    Determines the status of a parameter value based on reference thresholds.
     
     Args:
-        parameter: Parameter name (e.g., 'do_percent', 'pH')
-        value: Parameter value to evaluate
-        reference_values: Dictionary of reference values for parameters
+        parameter: The name of the parameter (e.g., 'do_percent', 'pH').
+        value: The parameter value to evaluate.
+        reference_values: A dictionary of reference thresholds for parameters.
         
     Returns:
-        String status ('Normal', 'Caution', 'Poor', etc.)
+        A string representing the status ('Normal', 'Caution', 'Poor', etc.).
     """
     if pd.isna(value):
         return "Unknown"
         
     if parameter not in reference_values:
-        return "Normal"  # Default if no reference values
+        return "Normal"  # Default to Normal if no reference values are defined.
         
     ref = reference_values[parameter]
     
@@ -289,18 +275,17 @@ def determine_status(parameter, value, reference_values):
             else:
                 return "Normal"
                 
-    return "Normal"  # Default if no specific condition met
+    return "Normal"
 
 def get_reference_values():
     """
-    Get reference values from the database.
-    Moved from chemical_processing.py for shared use.
+    Retrieves chemical reference values from the database.
     
     Returns:
-        dict: Reference values organized by parameter
+        A dictionary of reference values, organized by parameter.
         
     Raises:
-        Exception: If reference values cannot be retrieved from database
+        Exception: If reference values cannot be retrieved from the database.
     """
     from database.database import get_connection, close_connection
     
@@ -323,7 +308,6 @@ def get_reference_values():
             reference_values[param] = {}
             param_data = df[df['parameter_code'] == param]
             
-            # Mapping of database threshold_type to dashboard reference key
             threshold_mapping = {
                 'normal_min': 'normal min',
                 'normal_max': 'normal max',
@@ -334,13 +318,11 @@ def get_reference_values():
                 'poor': 'poor'
             }
 
-            # Process all thresholds with a single loop
             for _, row in param_data.iterrows():
                 if row['threshold_type'] in threshold_mapping:
                     reference_key = threshold_mapping[row['threshold_type']]
                     reference_values[param][reference_key] = row['value']
         
-        # Validate that we have reference values for key parameters
         if not reference_values:
             raise Exception("Failed to parse chemical reference values from database")
             
@@ -353,18 +335,15 @@ def get_reference_values():
     finally:
         close_connection(conn)
 
-# =============================================================================
-# DATABASE OPERATIONS
-# =============================================================================
+# Database operations
 
 def get_existing_data(conn):
     """
-    Get all existing data for batch processing and duplicate detection.
+    Retrieves all existing chemical measurements and site lookups for batch processing.
     
     Returns:
-        tuple: (existing_measurements, site_lookup)
+        A tuple containing a set of existing measurements and a site lookup dictionary.
     """
-    # Get all existing measurements
     existing_measurements_query = """
     SELECT event_id, parameter_id
     FROM chemical_measurements
@@ -372,7 +351,7 @@ def get_existing_data(conn):
     existing_measurements_df = pd.read_sql_query(existing_measurements_query, conn)
     existing_measurements = set(zip(existing_measurements_df['event_id'], existing_measurements_df['parameter_id']))
     
-    # Get all existing sites (NO CREATION - only lookup)
+    # Sites are not created here; this is only for looking up existing sites.
     existing_sites_df = pd.read_sql_query("SELECT site_name, site_id FROM sites", conn)
     site_lookup = dict(zip(existing_sites_df['site_name'], existing_sites_df['site_id']))
     
@@ -380,18 +359,18 @@ def get_existing_data(conn):
 
 def insert_collection_event(cursor, site_id, date_str, year, month, site_name):
     """
-    Insert collection event (always creates new event, allowing duplicates).
+    Inserts a new chemical collection event, allowing for duplicate site-date entries.
     
     Args:
-        cursor: Database cursor
-        site_id: Site ID (must already exist)
-        date_str: Date string (YYYY-MM-DD)
-        year: Year
-        month: Month
-        site_name: Site name for logging
+        cursor: A database cursor.
+        site_id: The ID of the site (must already exist).
+        date_str: The collection date as a 'YYYY-MM-DD' string.
+        year: The year of collection.
+        month: The month of collection.
+        site_name: The name of the site, used for logging.
         
     Returns:
-        int: event_id of the newly created event
+        The event_id of the newly created event.
     """
     cursor.execute("""
     INSERT INTO chemical_collection_events 
@@ -404,18 +383,18 @@ def insert_collection_event(cursor, site_id, date_str, year, month, site_name):
 
 def insert_chemical_measurement(cursor, event_id, parameter_id, value, status, existing_measurements):
     """
-    Insert chemical measurement if it doesn't exist.
+    Inserts a new chemical measurement if it does not already exist for the event.
     
     Args:
-        cursor: Database cursor
-        event_id: Collection event ID
-        parameter_id: Parameter ID
-        value: Measurement value
-        status: Measurement status
-        existing_measurements: Set of existing (event_id, parameter_id) tuples
+        cursor: A database cursor.
+        event_id: The ID of the collection event.
+        parameter_id: The ID of the parameter.
+        value: The measured value.
+        status: The status of the measurement ('Normal', 'Caution', etc.).
+        existing_measurements: A set of existing (event_id, parameter_id) tuples.
         
     Returns:
-        bool: True if measurement was inserted, False if it already existed
+        True if the measurement was inserted, False if it already existed.
     """
     if (event_id, parameter_id) not in existing_measurements:
         cursor.execute("""
@@ -430,18 +409,18 @@ def insert_chemical_measurement(cursor, event_id, parameter_id, value, status, e
 
 def insert_chemical_data(df, allow_duplicates=True, data_source="unknown"):
     """
-    Shared function to insert chemical data.
+    Inserts processed chemical data into the database in a batch operation.
     
-    Note: This function now allows duplicate site+date combinations by default.
-    Use chemical_duplicates.py to consolidate replicates after insertion.
+    This function allows for duplicate site-date combinations by default, which can
+    be consolidated later using the functions in chemical_duplicates.py.
  
     Args:
-        df: DataFrame with processed chemical data 
-        allow_duplicates: Whether to allow duplicate site+date combinations (True by default)
-        data_source: Description of data source for logging
+        df: A DataFrame with processed chemical data.
+        allow_duplicates: If True, allows multiple events for the same site and date.
+        data_source: A string describing the source of the data for logging.
         
     Returns:
-        dict: Statistics about the insertion process
+        A dictionary of statistics about the insertion process.
     """
     from database.database import get_connection, close_connection
     from utils import round_parameter_value
@@ -459,56 +438,46 @@ def insert_chemical_data(df, allow_duplicates=True, data_source="unknown"):
     cursor = conn.cursor()
     
     try:
-        # Get reference values for status determination
         reference_values = get_reference_values()
         
-        # load existing data
         existing_measurements, site_lookup = get_existing_data(conn)
         logger.info(f"Found {len(existing_measurements)} existing measurements")
         
-        # Track statistics
         stats = {
             'sites_processed': 0,
-            'sites_created': 0,  # Always 0 - we don't create sites
             'events_added': 0,
             'measurements_added': 0,
             'data_source': data_source
         }
         
-        # Process data by site and date
         for (site_name, date), group in df.groupby(['Site_Name', 'Date']):
             stats['sites_processed'] += 1
             
-            # Get site_id (sites guaranteed to exist from prior processing)
+            # Sites are guaranteed to exist from prior processing steps.
             site_id = site_lookup[site_name]
             
-            # Process this date group (should only be one row per site per date)
+            # Each site-date group is processed as a unique collection event.
             for _, row in group.iterrows():
                 date_str = row['Date'].strftime('%Y-%m-%d')
                 year = row['Year']
                 month = row['Month']
                 
-                # Insert collection event
                 event_id = insert_collection_event(
                     cursor, site_id, date_str, year, month, site_name
                 )
                 stats['events_added'] += 1
                 
-                # Insert measurements for each parameter
                 for param_name, param_id in PARAMETER_MAP.items():
                     if param_name in row and pd.notna(row[param_name]):
                         raw_value = row[param_name]
                         
-                        # Apply appropriate rounding before insertion
                         rounded_value = round_parameter_value(param_name, raw_value, 'chemical')
                         
                         if rounded_value is None:
                             continue
                             
-                        # Determine status using rounded value
                         status = determine_status(param_name, rounded_value, reference_values)
                         
-                        # Insert measurement
                         measurement_was_inserted = insert_chemical_measurement(
                             cursor, event_id, param_id, rounded_value, status, existing_measurements
                         )
@@ -517,7 +486,6 @@ def insert_chemical_data(df, allow_duplicates=True, data_source="unknown"):
         
         conn.commit()
         
-        # Log results
         logger.info(f"Successfully inserted {data_source} data:")
         logger.info(f"  - Sites processed: {stats['sites_processed']}")
         logger.info(f"  - Collection events added: {stats['events_added']}")
