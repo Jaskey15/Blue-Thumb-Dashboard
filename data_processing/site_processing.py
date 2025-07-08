@@ -1,16 +1,9 @@
 """
-Site Information Processing and Database Management
+Manages the processing and loading of site information into the database.
 
-Manages site data processing for the Blue Thumb Water Quality Dashboard.
-Loads consolidated site data from master_sites.csv and maintains the sites table.
-
-Key Functions:
-- process_site_data(): Load sites from master_sites.csv into database
-- insert_sites_into_db(): Insert site records into database  
-- cleanup_unused_sites(): Remove sites with no monitoring data
-- classify_active_sites(): Mark sites as active/historic based on recent data
-
-Usage: Run directly or import functions for site database operations.
+This module handles loading consolidated site data from `master_sites.csv`,
+inserting it into the database, classifying sites as active or historic,
+and removing sites that have no associated monitoring data.
 """
 
 import os
@@ -19,16 +12,16 @@ from data_processing.data_loader import PROCESSED_DATA_DIR
 from database.database import get_connection, close_connection
 from data_processing import setup_logging
 
-# Initialize logger
 logger = setup_logging("site_processing", category="processing")
 
 def load_site_data():
     """
-    Load site information from MASTER_SITES.CSV file (consolidated data).
-    Returns a DataFrame with essential site information.
+    Loads and prepares site information from the master_sites.csv file.
+    
+    Returns:
+        A DataFrame with site information ready for database insertion.
     """
     try:
-        # Load from master_sites.csv
         master_sites_path = os.path.join(
             os.path.dirname(os.path.dirname(__file__)), 
             'data', 'processed', 'master_sites.csv'
@@ -41,10 +34,9 @@ def load_site_data():
         site_df = pd.read_csv(master_sites_path)
         logger.info(f"Loaded {len(site_df)} sites from master_sites.csv")
         
-        # FILTER TO ONLY DATABASE SCHEMA COLUMNS
+        # Filter the DataFrame to include only columns that exist in the database schema.
         database_columns = ['site_name', 'latitude', 'longitude', 'county', 'river_basin', 'ecoregion']
         
-        # Check which columns exist
         available_columns = [col for col in database_columns if col in site_df.columns]
         missing_columns = [col for col in database_columns if col not in site_df.columns]
         
@@ -55,22 +47,20 @@ def load_site_data():
             logger.error("Required site_name column missing from master_sites.csv")
             return pd.DataFrame()
         
-        # Select only the columns that match the database schema
         sites_df = site_df[available_columns].copy()
         
-        # Convert latitude and longitude to numeric types
         if 'latitude' in sites_df.columns:
             sites_df['latitude'] = pd.to_numeric(sites_df['latitude'], errors='coerce')
         if 'longitude' in sites_df.columns:
             sites_df['longitude'] = pd.to_numeric(sites_df['longitude'], errors='coerce')
         
-        # Drop duplicates (should already be unique, but safety check)
+        # Ensure site names are unique as a final safety check.
         sites_df = sites_df.drop_duplicates(subset=['site_name']).copy()
         
         logger.info(f"Processed {len(sites_df)} unique sites with database schema columns")
         logger.info(f"Using columns: {list(sites_df.columns)}")
         
-        # Save the database-ready sites data to processed directory
+        # Save the database-ready data for auditing and review.
         sites_for_db_path = os.path.join(PROCESSED_DATA_DIR, 'sites_for_db.csv')
         sites_df.to_csv(sites_for_db_path, index=False)
         logger.info(f"Saved database-ready sites to: sites_for_db.csv")
@@ -83,13 +73,13 @@ def load_site_data():
 
 def insert_sites_into_db(sites_df):
     """
-    Insert site data into the SQLite database.
+    Inserts or replaces site data in the database.
     
     Args:
-        sites_df: DataFrame containing site information
+        sites_df: A DataFrame containing the site information to load.
     
     Returns:
-        int: Number of sites inserted
+        The number of sites inserted or updated.
     """
     if sites_df.empty:
         logger.warning("No site data to insert into database")
@@ -98,39 +88,32 @@ def insert_sites_into_db(sites_df):
     conn = get_connection()
     
     try:
-        # Ensure we have the required site_name column
         if 'site_name' not in sites_df.columns:
             logger.error("Missing required column 'site_name' in site data")
             return 0
         
-        # Make sure site_name is a string
         sites_df['site_name'] = sites_df['site_name'].astype(str)
         
-        # Get columns that exist in the dataframe
         columns = sites_df.columns.tolist()
         
-        # Debug logging
         logger.info(f"Inserting sites with columns: {columns}")
         if not sites_df.empty:
             sample_row = sites_df.iloc[0].to_dict()
             logger.info(f"Sample row: {sample_row}")
         
-        # Prepare SQL statement
+        # Use INSERT OR REPLACE to handle updates to existing sites.
         placeholders = ', '.join(['?' for _ in columns])
         columns_str = ', '.join(columns)
         sql = f"INSERT OR REPLACE INTO sites ({columns_str}) VALUES ({placeholders})"
         
-        # Prepare data for insertion
         site_data = []
         for _, row in sites_df.iterrows():
             site_data.append(tuple(row[col] for col in columns))
         
-        # Execute insertion
         cursor = conn.cursor()
         cursor.executemany(sql, site_data)
         conn.commit()
         
-        # Log the results
         sites_count = len(site_data)
         logger.info(f"Successfully inserted/updated {sites_count} sites in the database")
         return sites_count
@@ -144,8 +127,13 @@ def insert_sites_into_db(sites_df):
         close_connection(conn)
 
 def process_site_data():
+    """
+    Executes the full pipeline to load and process site data.
+    
+    Returns:
+        True if the process completes, False otherwise.
+    """
     try:
-        # Load consolidated site data
         logger.info("Loading consolidated site data from master_sites.csv")
         sites_df = load_site_data()
         
@@ -153,7 +141,6 @@ def process_site_data():
             logger.error("Failed to load consolidated site data")
             return False
         
-        # Insert all sites into database
         sites_count = insert_sites_into_db(sites_df)
         
         logger.info(f"Site processing complete!")
@@ -167,16 +154,16 @@ def process_site_data():
 
 def cleanup_unused_sites():
     """
-    Remove sites from the database that have no data in any monitoring tables.
+    Removes sites from the database that have no associated monitoring data.
     
     Returns:
-        bool: True if successful, False otherwise
+        True if successful, False otherwise.
     """
     conn = get_connection()
     try:
         cursor = conn.cursor()
         
-        # Get all sites that DO have data in any monitoring table
+        # Identify all sites that have at least one record in any monitoring table.
         cursor.execute('''
             SELECT DISTINCT site_id FROM (
                 SELECT site_id FROM chemical_collection_events
@@ -191,15 +178,13 @@ def cleanup_unused_sites():
         
         sites_with_data = {row[0] for row in cursor.fetchall()}
         
-        # Get all sites in the sites table
         cursor.execute('SELECT site_id FROM sites')
         all_sites = {row[0] for row in cursor.fetchall()}
         
-        # Find sites with no data
+        # Determine which sites have no data by finding the difference.
         unused_sites = all_sites - sites_with_data
         
         if unused_sites:
-            # Remove unused sites
             placeholders = ','.join(['?' for _ in unused_sites])
             cursor.execute(f'DELETE FROM sites WHERE site_id IN ({placeholders})', list(unused_sites))
             conn.commit()
@@ -219,11 +204,13 @@ def cleanup_unused_sites():
 
 def classify_active_sites():
     """
-    Classify sites as active or historic based on recent chemical data.
-    Active sites have chemical readings within 1 years of the most recent reading date.
+    Classifies sites as active or historic based on recent chemical data.
+    
+    A site is "active" if it has a chemical reading within one year of the
+    most recent reading date across all sites. Otherwise, it is "historic".
     
     Returns:
-        bool: True if classification was successful, False otherwise
+        True if classification was successful, False otherwise.
     """
     conn = get_connection()
     try:
@@ -266,7 +253,6 @@ def classify_active_sites():
         # Step 4: Update each site's active status
         for site_id, site_name, last_reading in sites_data:
             if last_reading and last_reading >= cutoff_date_str:
-                # Active site
                 cursor.execute("""
                     UPDATE sites 
                     SET active = 1, last_chemical_reading_date = ?
@@ -275,7 +261,6 @@ def classify_active_sites():
                 active_count += 1
                 logger.debug(f"Active site: {site_name} (last reading: {last_reading})")
             else:
-                # Historic site
                 cursor.execute("""
                     UPDATE sites 
                     SET active = 0, last_chemical_reading_date = ?
@@ -304,8 +289,7 @@ if __name__ == "__main__":
     success = process_site_data()
     if success:
         print("Site processing completed successfully!")
-        # Display total site count
-        from database.database import get_connection, close_connection
+        # Display total site count after processing.
         conn = get_connection()
         try:
             cursor = conn.cursor()
