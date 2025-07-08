@@ -14,7 +14,7 @@ from data_processing.data_loader import clean_site_name
 from data_processing import setup_logging
 
 # Set up logging
-logger = setup_logging("consolidate_sites", category="preprocessing")
+logger = setup_logging("consolidate_sites", category="processing")
 
 # Define directories
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

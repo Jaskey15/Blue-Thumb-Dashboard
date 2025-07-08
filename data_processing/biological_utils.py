@@ -1,6 +1,5 @@
 """
-Shared utilities for processing fish and macroinvertebrate data.
-Handles collection event validation, database insertion, and data cleaning.
+Shared utilities for validating, inserting, and cleaning biological data.
 """
 
 import pandas as pd
@@ -21,7 +20,6 @@ def validate_collection_event_data(df, grouping_columns, required_columns=None):
     if df.empty:
         raise ValueError("DataFrame is empty")
     
-    # Verify required columns exist
     missing_grouping = [col for col in grouping_columns if col not in df.columns]
     if missing_grouping:
         raise ValueError(f"Missing required grouping columns: {missing_grouping}")
@@ -31,7 +29,6 @@ def validate_collection_event_data(df, grouping_columns, required_columns=None):
         if missing_required:
             raise ValueError(f"Missing required columns: {missing_required}")
     
-    # Check for data quality issues in grouping columns
     for col in grouping_columns:
         null_count = df[col].isnull().sum()
         if null_count > 0:
@@ -55,25 +52,21 @@ def insert_collection_events(cursor, df, table_name, grouping_columns, column_ma
     - Macro: {(sample_id, habitat): event_id}
     """
     try:
-        # Validate input data
         validate_collection_event_data(df, grouping_columns)
         
         if df.empty:
             logger.warning(f"No data to insert into {table_name}")
             return {}
         
-        # Track processing results
         event_id_map = {}
         events_inserted = 0
         events_skipped = 0
         
-        # Process unique collection events
         unique_events = df.drop_duplicates(subset=grouping_columns).copy()
         logger.info(f"Processing {len(unique_events)} unique events for {table_name}")
         
         for _, event_row in unique_events.iterrows():
             try:
-                # Get site_id from database
                 site_name = event_row['site_name']
                 cursor.execute("SELECT site_id FROM sites WHERE site_name = ?", (site_name,))
                 site_result = cursor.fetchone()
@@ -85,10 +78,8 @@ def insert_collection_events(cursor, df, table_name, grouping_columns, column_ma
                 
                 site_id = site_result[0]
                 
-                # Prepare database record
                 insert_data = {'site_id': site_id}
                 
-                # Map columns to database schema
                 for db_column, df_column in column_mapping.items():
                     if db_column == 'site_id':
                         continue  # Already handled
@@ -98,7 +89,6 @@ def insert_collection_events(cursor, df, table_name, grouping_columns, column_ma
                     else:
                         logger.warning(f"Column '{df_column}' not found in data for {db_column}")
                 
-                # Build and execute insert
                 columns = list(insert_data.keys())
                 placeholders = ', '.join(['?' for _ in columns])
                 columns_str = ', '.join(columns)
@@ -108,15 +98,15 @@ def insert_collection_events(cursor, df, table_name, grouping_columns, column_ma
                 cursor.execute(sql, values)
                 event_id = cursor.lastrowid
                 
-                # Create mapping key based on data type
+                # Create mapping key based on data type (fish vs. macroinvertebrate)
                 if len(grouping_columns) == 2 and 'sample_id' in grouping_columns:
-                    # Fish: key is sample_id
+                    # Fish events are identified by a single sample_id
                     mapping_key = event_row['sample_id']
                 elif len(grouping_columns) == 3 and 'habitat' in grouping_columns:
-                    # Macro: key is (sample_id, habitat)
+                    # Macroinvertebrate events are unique by sample_id and habitat
                     mapping_key = (event_row['sample_id'], event_row['habitat'])
                 else:
-                    # Fallback: use all grouping values
+                    # Fallback for other biological data types
                     mapping_key = tuple(event_row[col] for col in grouping_columns)
                 
                 event_id_map[mapping_key] = event_id
@@ -154,7 +144,7 @@ def remove_invalid_biological_values(df, invalid_values=None, score_columns=None
         invalid_values = [-999, -99]
     
     if score_columns is None:
-        # Find score columns and comparison values
+        # Auto-detect score columns if not provided
         score_columns = [col for col in df.columns if str(col).endswith('_score')]
         if 'comparison_to_reference' in df.columns:
             score_columns.append('comparison_to_reference')
@@ -165,14 +155,12 @@ def remove_invalid_biological_values(df, invalid_values=None, score_columns=None
         logger.warning("No score columns found for invalid value removal")
         return df
     
-
     invalid_mask = pd.DataFrame(False, index=df.index, columns=df.columns)
     
     for col in existing_score_columns:
         for invalid_val in invalid_values:
             invalid_mask[col] = invalid_mask[col] | (df[col] == invalid_val)
     
-    # Remove rows with any invalid values
     rows_with_invalid = invalid_mask[existing_score_columns].any(axis=1)
     invalid_count = rows_with_invalid.sum()
     
@@ -201,8 +189,8 @@ def convert_columns_to_numeric(df, columns=None, errors='coerce'):
     df_converted = df.copy()
     conversion_count = 0
     
-    # Auto-detect numeric columns if none specified
     if columns is None:
+        # Auto-detect numeric columns if none are specified
         numeric_patterns = ['_score', '_value', 'year', 'sample_id', 'comparison_to_reference']
         columns = []
         for col in df_converted.columns:
@@ -212,7 +200,6 @@ def convert_columns_to_numeric(df, columns=None, errors='coerce'):
             except Exception as e:
                 logger.warning(f"Error checking column {col}: {e}")
     
-    # Filter to existing columns
     existing_columns = [col for col in columns if col in df_converted.columns]
     
     for col in existing_columns:

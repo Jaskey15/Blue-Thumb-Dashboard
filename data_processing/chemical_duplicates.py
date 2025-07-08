@@ -1,43 +1,25 @@
 """
-chemical_duplicates.py - Chemical Data Duplicate Detection and Consolidation
-This module handles all duplicate-related operations for chemical data
+Detects and consolidates duplicate chemical data entries using a "worst-case" approach.
 
-Key Functions:
-- identify_replicate_samples(): Find replicate samples in database
-- consolidate_replicate_samples(): Merge replicates using "worst case" values
-
-Workflow:
-1. Data insertion now allows duplicate site+date combinations (multiple collection events)
-2. Use identify_replicate_samples() to find groups with multiple events for same site+date
-3. Use consolidate_replicate_samples() to merge replicates using "worst case" logic:
-   - pH: Value furthest from neutral (7.0)
-   - DO: Lowest value (worst oxygen saturation)
-   - All others: Highest value (worst case for nutrients/pollutants)
-
-Usage:
-- Import functions for use in data processing pipeline
+This module provides functions to identify and merge replicate chemical samples 
+from the database. The consolidation logic selects the "worst-case" value for 
+each parameter (e.g., highest for nutrients, lowest for dissolved oxygen) to ensure
+the most conservative representation of water quality is retained.
 """
 
 import pandas as pd
 import numpy as np
 from data_processing import setup_logging
 
-# Set up logging
 logger = setup_logging("chemical_duplicates", category="processing")
 
 def identify_replicate_samples():
-    """
-    Identify replicate samples in the database (same site + date combinations).
-    
-    Returns:
-        list: List of dictionaries with replicate group information
-    """
+    """Identifies replicate chemical samples from the database."""
     from database.database import get_connection, close_connection
     
     try:
         conn = get_connection()
         
-        # Find site-date combinations with multiple collection events
         replicate_query = """
         SELECT s.site_name, c.collection_date, 
                COUNT(*) as event_count,
@@ -55,7 +37,6 @@ def identify_replicate_samples():
         if replicate_df.empty:
             return []
         
-        # Convert to list of dictionaries for easier processing
         replicate_groups = []
         for _, row in replicate_df.iterrows():
             event_ids = [int(id.strip()) for id in row['event_ids'].split(',')]
@@ -64,7 +45,7 @@ def identify_replicate_samples():
                 'collection_date': row['collection_date'],
                 'event_count': row['event_count'],
                 'event_ids': event_ids,
-                'keep_event_id': min(event_ids)  # Keep the one with lowest ID
+                'keep_event_id': min(event_ids)  # Keep event with the lowest ID for consistency
             })
         
         return replicate_groups
@@ -75,44 +56,41 @@ def identify_replicate_samples():
 
 def get_worst_case_value(values, parameter_name):
     """
-    Get the "worst case" value for a parameter from a list of values.
+    Determines the "worst-case" value from a list based on the parameter.
     
     Args:
-        values: List of parameter values (may contain None/NaN)
-        parameter_name: Name of parameter to determine worst case logic
+        values: A list of parameter values, which may contain None or NaN.
+        parameter_name: The name of the parameter, used to determine worst-case logic.
         
     Returns:
-        float: Worst case value, or None if all values are null
+        The worst-case value, or None if all input values are null.
     """
-    # Filter out null values
     valid_values = [v for v in values if pd.notna(v) and v is not None]
     
     if not valid_values:
         return None
     
-    # Apply parameter-specific logic
     if parameter_name == 'pH':
-        # Furthest from neutral (pH 7)
+        # For pH, the value furthest from neutral (7.0) is considered the worst case.
         return max(valid_values, key=lambda x: abs(x - 7.0))
     elif parameter_name == 'do_percent':
-        # Lowest dissolved oxygen is worst
+        # For dissolved oxygen, the lowest percentage is the worst case for aquatic life.
         return min(valid_values)
     else:
-        # For all other parameters (nutrients, chloride), highest is worst
+        # For nutrients and other pollutants, the highest concentration is the worst case.
         return max(valid_values)
 
 def consolidate_replicate_samples():
     """
-    Consolidate replicate samples by merging them into single collection events.
+    Identifies and consolidates replicate samples using worst-case logic.
     
     Returns:
-        dict: Summary of consolidation results
+        A dictionary summarizing the consolidation results.
     """
     from database.database import get_connection, close_connection
     from data_processing.chemical_utils import PARAMETER_MAP, determine_status, get_reference_values
     
     try:
-        # Step 1: Identify replicate groups
         replicate_groups = identify_replicate_samples()
         
         if not replicate_groups:
@@ -125,17 +103,14 @@ def consolidate_replicate_samples():
         conn = get_connection()
         cursor = conn.cursor()
         
-        # Get reference values for status determination
         reference_values = get_reference_values()
         
-        # Track statistics
         stats = {
             'groups_processed': 0,
             'events_removed': 0,
             'measurements_updated': 0
         }
         
-        # Process each replicate group
         for group in replicate_groups:
             site_name = group['site_name']
             collection_date = group['collection_date']
@@ -156,7 +131,6 @@ def consolidate_replicate_samples():
             if measurements_df.empty:
                 continue
             
-            # Group by parameter and find worst case values
             consolidated_measurements = {}
             for parameter_id in measurements_df['parameter_id'].unique():
                 param_data = measurements_df[measurements_df['parameter_id'] == parameter_id]
@@ -166,7 +140,6 @@ def consolidate_replicate_samples():
                 worst_value = get_worst_case_value(values, parameter_code)
                 
                 if worst_value is not None:
-                    # Determine status for the consolidated value
                     status = determine_status(parameter_code, worst_value, reference_values)
                     consolidated_measurements[parameter_id] = {
                         'value': worst_value,
@@ -175,9 +148,7 @@ def consolidate_replicate_samples():
                         'original_values': values
                     }
             
-            # Update measurements in the kept event
             for parameter_id, measurement_data in consolidated_measurements.items():
-                # Check if measurement exists in kept event
                 existing_query = """
                 SELECT 1 FROM chemical_measurements 
                 WHERE event_id = ? AND parameter_id = ?
@@ -185,7 +156,6 @@ def consolidate_replicate_samples():
                 existing = cursor.execute(existing_query, (keep_event_id, parameter_id)).fetchone()
                 
                 if existing:
-                    # Update existing measurement
                     cursor.execute("""
                     UPDATE chemical_measurements 
                     SET value = ?, status = ?
@@ -193,7 +163,6 @@ def consolidate_replicate_samples():
                     """, (measurement_data['value'], measurement_data['status'], 
                           keep_event_id, parameter_id))
                 else:
-                    # Insert new measurement
                     cursor.execute("""
                     INSERT INTO chemical_measurements (event_id, parameter_id, value, status)
                     VALUES (?, ?, ?, ?)
@@ -202,7 +171,7 @@ def consolidate_replicate_samples():
                 
                 stats['measurements_updated'] += 1
             
-            # Delete the other events (cascade will delete their measurements)
+            # Deleting the other events will also delete their measurements due to cascade settings.
             for remove_event_id in remove_event_ids:
                 cursor.execute("DELETE FROM chemical_collection_events WHERE event_id = ?", 
                              (remove_event_id,))
@@ -213,7 +182,6 @@ def consolidate_replicate_samples():
         conn.commit()
         close_connection(conn)
         
-        # Log concise summary
         logger.info(f"Chemical duplicate consolidation: {stats['groups_processed']} groups, {stats['events_removed']} events removed, {stats['measurements_updated']} measurements updated")
         
         return stats

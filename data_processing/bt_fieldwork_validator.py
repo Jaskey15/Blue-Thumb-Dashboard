@@ -1,10 +1,5 @@
 """
-Validates and corrects fish collection data against Blue Thumb field records.
-
-Core responsibilities:
-1. Date validation using BT field work as authoritative source
-2. Replicate detection based on multiple collection dates
-3. Duplicate consolidation when no multiple dates exist
+Validates fish collection dates and identifies replicates using Blue Thumb field data.
 """
 
 import pandas as pd
@@ -15,27 +10,16 @@ from data_processing import setup_logging
 logger = setup_logging("bt_fieldwork_validator", category="processing")
 
 def load_bt_field_work_dates():
-    """
-    Load field work dates for authoritative date validation.
-    
-    Workflow:
-    1. Load raw BT field work CSV
-    2. Clean dates and site names
-    3. Extract year for matching
-    """
+    """Load and process Blue Thumb field work dates for authoritative validation."""
     try:
         bt_path = 'data/raw/BT_fish_collection_dates.csv'
         bt_df = pd.read_csv(bt_path)
         logger.info(f"Loaded {len(bt_df)} BT field work records for date validation")
         
-
         bt_df['Date_Clean'] = pd.to_datetime(bt_df['Date'], errors='coerce')
         bt_df = bt_df.dropna(subset=['Date_Clean'])
         
-        # Standardize site names for matching
         bt_df['Site_Clean'] = bt_df['Name'].apply(clean_site_name)
-        
-        # Add year for efficient filtering
         bt_df['Year'] = bt_df['Date_Clean'].dt.year
         
         logger.info(f"Processed {len(bt_df)} valid BT field work records")
@@ -47,18 +31,15 @@ def load_bt_field_work_dates():
 
 def find_bt_site_match(db_site_name, bt_sites, threshold=0.9):
     """
-    Find matching BT site using exact match then fuzzy matching.
+    Find matching BT site using exact and fuzzy matching.
     
     Matching priority:
     1. Exact match lookup
     2. Fuzzy match above threshold
-    3. No match if confidence too low
     """
-    # Try exact match first for efficiency
     if db_site_name in bt_sites:
         return db_site_name
     
-    # Fall back to fuzzy matching
     best_match = None
     best_score = 0
     
@@ -81,11 +62,10 @@ def detect_replicates_by_dates(bt_df, site_name, year):
     Detection logic:
     1. Find matching BT site name
     2. Check target year ±1 for multiple dates
-    3. Multiple dates = legitimate replicates
+    3. Conclude that multiple dates indicate legitimate replicates
     """
     if bt_df.empty or 'Site_Clean' not in bt_df.columns:
         return None
-        
 
     bt_sites = set(bt_df['Site_Clean'].unique())
     bt_site_match = find_bt_site_match(site_name, bt_sites)
@@ -117,7 +97,6 @@ def correct_collection_dates(fish_df, bt_df=None):
     if fish_df.empty:
         return fish_df.copy()
     
-    # Load BT data if not provided
     if bt_df is None:
         bt_df = load_bt_field_work_dates()
     
@@ -126,7 +105,6 @@ def correct_collection_dates(fish_df, bt_df=None):
     fish_corrected['collection_date'] = pd.to_datetime(fish_corrected['collection_date'])
     fish_corrected['year_from_date'] = fish_corrected['collection_date'].dt.year
     
-    # Find date inconsistencies
     mismatched_mask = fish_corrected['year'] != fish_corrected['year_from_date']
     mismatched_records = fish_corrected[mismatched_mask]
     
@@ -146,7 +124,6 @@ def correct_collection_dates(fish_df, bt_df=None):
     year_field_corrections = 0
     correction_log = []
     
-    # Process each mismatch
     for idx, record in mismatched_records.iterrows():
         site_name = record['site_name']
         db_year = record['year']  
@@ -157,7 +134,6 @@ def correct_collection_dates(fish_df, bt_df=None):
         correction_source = None
         new_date = None
         
-
         bt_site_match = find_bt_site_match(site_name, bt_sites)
         
         if bt_site_match:
@@ -194,7 +170,7 @@ def correct_collection_dates(fish_df, bt_df=None):
                     'bt_site_match': bt_site_match
                 })
         
-        # Fall back to YEAR field if no BT match
+        # Fall back to YEAR field if no BT match is found
         if not correction_applied:
             try:
                 corrected_date = original_date.replace(year=db_year)
@@ -223,7 +199,6 @@ def correct_collection_dates(fish_df, bt_df=None):
         if correction_applied:
             corrections_applied += 1
     
-    # Log correction summary
     if corrections_applied > 0:
         logger.info(f"Date correction complete: {corrections_applied} corrections applied")
         logger.info(f"  - BT truth corrections: {bt_corrections} ({bt_corrections/corrections_applied*100:.1f}%)")
@@ -246,18 +221,15 @@ def categorize_and_process_duplicates(fish_df, bt_df):
     if fish_df.empty:
         return fish_processed
     
-    # Set up BT site lookup
     if bt_df.empty or 'Site_Clean' not in bt_df.columns:
         bt_sites = set()
     else:
         bt_sites = set(bt_df['Site_Clean'].unique())
     
-    # Track processing decisions
     rep_groups_processed = 0
     duplicate_groups_averaged = 0
     date_assignments = []
     
-    # Find groups with multiple samples
     duplicate_groups = fish_df.groupby(['site_name', 'year']).filter(lambda x: len(x) > 1)
     
     if duplicate_groups.empty:
@@ -266,7 +238,6 @@ def categorize_and_process_duplicates(fish_df, bt_df):
     unique_duplicate_groups = duplicate_groups.groupby(['site_name', 'year']).size().reset_index()
     unique_duplicate_groups.columns = ['site_name', 'year', 'sample_count']
     
-    # Process each group
     records_to_remove = []
     records_to_add = []
     
@@ -275,21 +246,18 @@ def categorize_and_process_duplicates(fish_df, bt_df):
         year = group_info['year']
         sample_count = group_info['sample_count']
         
-        # Get samples for this group
         group_samples = fish_df[
             (fish_df['site_name'] == site_name) & 
             (fish_df['year'] == year)
         ].copy()
         
-        # Check for multiple dates
         replicate_dates = detect_replicates_by_dates(bt_df, site_name, year)
         
         if replicate_dates is not None and len(replicate_dates) >= 2:
-            # Process as replicates - multiple dates found
+            # Replicates: Multiple BT dates were found, so assign them chronologically
             replicate_dates_sorted = replicate_dates.sort_values('Date_Clean')
             group_samples_sorted = group_samples.sort_values('sample_id')
             
-            # Assign dates chronologically
             for i, (idx, sample) in enumerate(group_samples_sorted.iterrows()):
                 if i < len(replicate_dates_sorted):
                     bt_date = replicate_dates_sorted.iloc[i]['Date_Clean']
@@ -300,7 +268,6 @@ def categorize_and_process_duplicates(fish_df, bt_df):
                 else:
                     assignment_type = f"Extra_{i+1}"
                 
-                # Log assignment details
                 year_used = replicate_dates_sorted.iloc[0]['Year']
                 date_assignments.append({
                     'site_name': site_name,
@@ -317,14 +284,13 @@ def categorize_and_process_duplicates(fish_df, bt_df):
             logger.debug(f"Processed {site_name} ({year}) as replicates: {len(replicate_dates_sorted)} BT dates found")
             
         else:
-            # Process as duplicates - no multiple dates
+            # Duplicates: No multiple BT dates were found, so average the records
             averaged_record = average_group_samples(group_samples)
             records_to_remove.extend(group_samples.index)
             records_to_add.append(averaged_record)
             duplicate_groups_averaged += 1
             logger.debug(f"Processed {site_name} ({year}) as duplicates: no multiple BT dates found")
     
-    # Apply changes
     if records_to_remove:
         fish_processed = fish_processed.drop(records_to_remove)
     
@@ -342,20 +308,17 @@ def average_group_samples(group):
     Averaging rules:
     1. Average comparison_to_reference values
     2. Keep first record's metadata
-    3. Set individual scores to NULL (can't average 1,3,5 scale)
+    3. Set individual scores to NULL to avoid misinterpretation of an averaged categorical scale
     """
-    # Average comparison values
     comparison_values = group['comparison_to_reference'].dropna().tolist()
     if comparison_values:
         avg_comparison = sum(comparison_values) / len(comparison_values)
     else:
         avg_comparison = None
     
-    # Use first record as base
     averaged_row = group.iloc[0].copy()
     averaged_row['comparison_to_reference'] = avg_comparison
     
-    # Clear individual scores
     score_columns = [col for col in averaged_row.index if 'score' in str(col).lower() and col != 'comparison_to_reference']
     for col in score_columns:
         averaged_row[col] = None

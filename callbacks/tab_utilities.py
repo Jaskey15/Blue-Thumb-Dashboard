@@ -10,7 +10,7 @@ from utils import setup_logging, load_markdown_content
 from .helper_functions import create_empty_state, create_error_state, get_parameter_name, get_parameter_label
 from visualizations.map_viz import COLORS
 
-logger = setup_logging("tab_utilities")
+logger = setup_logging("tab_utilities", category="callbacks")
 
 # ===========================================================================================
 # OVERVIEW TAB UTILITIES
