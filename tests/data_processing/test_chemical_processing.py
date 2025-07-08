@@ -25,7 +25,8 @@ from data_processing.updated_chemical_processing import (
     process_conditional_nutrient,
     process_simple_nutrients,
     format_to_database_schema,
-    process_updated_chemical_data
+    process_updated_chemical_data,
+    get_ph_worst_case
 )
 from data_processing.chemical_duplicates import (
     get_worst_case_value,
@@ -257,6 +258,32 @@ class TestChemicalProcessing(unittest.TestCase):
         # Check that intermediate column was removed
         self.assertNotIn('parsed_datetime', result_df.columns)
 
+    def test_get_ph_worst_case(self):
+        """Test logic for selecting pH value furthest from neutral."""
+        # Test case where pH #2 is further from 7 (more acidic)
+        row1 = pd.Series({'pH #1': 7.5, 'pH #2': 6.0})
+        self.assertEqual(get_ph_worst_case(row1), 6.0)
+
+        # Test case where pH #1 is further from 7 (more basic)
+        row2 = pd.Series({'pH #1': 8.5, 'pH #2': 7.2})
+        self.assertEqual(get_ph_worst_case(row2), 8.5)
+
+        # Test case with equidistant values (prefers pH #1 as tie-breaker)
+        row3 = pd.Series({'pH #1': 6.0, 'pH #2': 8.0})
+        self.assertEqual(get_ph_worst_case(row3), 6.0)
+
+        # Test case with one null value
+        row4 = pd.Series({'pH #1': 7.8, 'pH #2': np.nan})
+        self.assertEqual(get_ph_worst_case(row4), 7.8)
+
+        # Test case with both null values
+        row5 = pd.Series({'pH #1': None, 'pH #2': None})
+        self.assertIsNone(get_ph_worst_case(row5))
+
+        # Test case with invalid string data
+        row6 = pd.Series({'pH #1': 'invalid', 'pH #2': 7.9})
+        self.assertEqual(get_ph_worst_case(row6), 7.9)
+
     def test_get_greater_value(self):
         """Test logic for selecting greater of two values."""
         # Create test row
@@ -375,17 +402,18 @@ class TestChemicalProcessing(unittest.TestCase):
         """Test formatting of data to match database schema."""
         # Create test data
         test_df = pd.DataFrame({
-            'Site Name': ['Site1', 'Site2'],
-            'Date': pd.to_datetime(['2023-01-01', '2023-01-02']),
-            'Year': [2023, 2023],
-            'Month': [1, 2],
-            '% Oxygen Saturation': [95.5, 88.0],
-            'pH #1': [7.2, 6.8],
-            'Nitrate': [0.5, 1.2],
-            'Nitrite': [0.05, 0.1],
-            'Ammonia': [0.1, 0.3],
-            'Orthophosphate': [0.02, 0.15],
-            'Chloride': [25.0, 45.0]
+            'Site Name': ['Site1', 'Site2', 'Site3'],
+            'Date': pd.to_datetime(['2023-01-01', '2023-01-02', '2023-01-03']),
+            'Year': [2023, 2023, 2023],
+            'Month': [1, 1, 1],
+            '% Oxygen Saturation': [95.5, 88.0, 90.0],
+            'pH #1': [7.2, 6.8, 8.0],
+            'pH #2': [7.5, 6.5, 6.0],
+            'Nitrate': [0.5, 1.2, 0.8],
+            'Nitrite': [0.05, 0.1, 0.2],
+            'Ammonia': [0.1, 0.3, 0.4],
+            'Orthophosphate': [0.02, 0.15, 0.1],
+            'Chloride': [25.0, 45.0, 30.0]
         })
         
         result_df = format_to_database_schema(test_df)
@@ -394,6 +422,11 @@ class TestChemicalProcessing(unittest.TestCase):
         self.assertIn('Site_Name', result_df.columns)
         self.assertIn('do_percent', result_df.columns)
         self.assertIn('Phosphorus', result_df.columns)
+        
+        # Check pH calculation (worst case)
+        self.assertEqual(result_df['pH'].iloc[0], 7.5)  # 7.5 is further from 7 than 7.2
+        self.assertEqual(result_df['pH'].iloc[1], 6.5)  # 6.5 is further from 7 than 6.8
+        self.assertEqual(result_df['pH'].iloc[2], 8.0)  # Equidistant, should prefer pH #1
         
         # Check that soluble nitrogen was calculated
         self.assertIn('soluble_nitrogen', result_df.columns)
@@ -509,7 +542,7 @@ class TestChemicalProcessing(unittest.TestCase):
     def test_updated_processing_pipeline(self, mock_load_data):
         """Test the complete updated chemical processing pipeline."""
         # Mock data loading
-        mock_load_data.return_value = self.sample_updated_data
+        mock_load_data.return_value = self.sample_updated_data.copy()
         
         # Process the data
         result_df = process_updated_chemical_data()
@@ -528,9 +561,10 @@ class TestChemicalProcessing(unittest.TestCase):
         
         # Check that values were processed correctly
         self.assertEqual(result_df['do_percent'].iloc[0], 95.5)
-        self.assertEqual(result_df['pH'].iloc[0], 7.2)
+        self.assertEqual(result_df['pH'].iloc[0], 7.3)  # pH #2 is further from 7 (7.3 vs 7.2)
+        self.assertEqual(result_df['pH'].iloc[1], 8.1)  # pH #1 is further from 7 (8.1 vs 8.0)
         self.assertEqual(result_df['Nitrate'].iloc[0], 0.6)  # Greater of 0.5 and 0.6
-        self.assertEqual(result_df['Nitrite'].iloc[0], 0.05)  # Greater of 0.05 and 0.04
+        self.assertEqual(result_df['Nitrite'].iloc[1], 0.12)  # Greater of 0.1 and 0.12
 
     # =============================================================================
     # EDGE CASES

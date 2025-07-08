@@ -253,6 +253,39 @@ def process_simple_nutrients(df):
         logger.error(f"Error processing simple nutrients: {e}")
         return df
 
+def get_ph_worst_case(row):
+    """
+    Get the pH value that is furthest from neutral (7).
+
+    Args:
+        row: Pandas Series (row of DataFrame)
+
+    Returns:
+        float: The selected pH value, or None if no valid reading
+    """
+    try:
+        ph1 = pd.to_numeric(row['pH #1'], errors='coerce')
+        ph2 = pd.to_numeric(row['pH #2'], errors='coerce')
+
+        if pd.isna(ph1) and pd.isna(ph2):
+            return None
+        if pd.isna(ph1):
+            return ph2
+        if pd.isna(ph2):
+            return ph1
+
+        dist1 = abs(ph1 - 7)
+        dist2 = abs(ph2 - 7)
+
+        if dist2 > dist1:
+            return ph2
+        else:  # If dist1 >= dist2, prefer ph1 (also handles tie-break)
+            return ph1
+
+    except Exception as e:
+        logger.warning(f"Error processing pH values: {e}")
+        return None
+
 def format_to_database_schema(df):
     """
     Format the processed data to match the existing database schema.
@@ -267,11 +300,13 @@ def format_to_database_schema(df):
         # Start with a copy of the existing dataframe
         formatted_df = df.copy()
         
+        # Calculate pH using the "worst-case" logic
+        formatted_df['pH'] = formatted_df.apply(get_ph_worst_case, axis=1)
+
         # Remap columns that actually need to change
         column_mappings = {
             'Site Name': 'Site_Name',
-            '% Oxygen Saturation': 'do_percent', 
-            'pH #1': 'pH',
+            '% Oxygen Saturation': 'do_percent',
             'Orthophosphate': 'Phosphorus'
         }
         
