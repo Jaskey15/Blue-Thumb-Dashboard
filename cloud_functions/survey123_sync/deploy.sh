@@ -8,7 +8,7 @@ set -e
 # Configuration
 FUNCTION_NAME="survey123-daily-sync"
 REGION="us-central1"
-RUNTIME="python39"
+RUNTIME="python311"
 MEMORY="512MB"
 TIMEOUT="540s"
 MAX_INSTANCES="10"

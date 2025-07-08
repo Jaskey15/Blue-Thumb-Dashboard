@@ -35,13 +35,19 @@ Survey123 Form ➜ ArcGIS API ➜ Cloud Function ➜ Cloud Storage ➜ Dashboard
 
 First, you'll need to set up ArcGIS authentication:
 
-1. **Create ArcGIS Service Account**:
-   - Log into your ArcGIS Online organization
-   - Go to Organization → Settings → App Registrations
-   - Create a new app registration
-   - Note the `Client ID` and `Client Secret`
+1.  **Find or Create an App Registration**:
+    *   Log into your ArcGIS Online organization.
+    *   Go to **Organization** → **Settings** → **App Registrations**.
+    *   **Check for an existing registration** that is used for the Blue Thumb project. Using an existing registration is preferred.
+    *   If no suitable registration exists, **Create a new app registration**.
+    *   Note the `Client ID` and `Client Secret` that are generated.
 
-2. **Get Survey123 Form ID**:
+2.  **Ensure Permissions**:
+    *   The App Registration (identified by the `Client ID`) must have permission to view the data from your Survey123 form.
+    *   If you are reusing an existing app registration, these permissions are likely already in place.
+    *   If you created a new one, you must **share the Survey123 form with the new App Registration** within ArcGIS Online to grant it access.
+
+3.  **Get Survey123 Form ID**:
    - Open your Survey123 form in the web designer
    - The form ID is in the URL: `survey123.arcgis.com/share/{FORM_ID}`
 
