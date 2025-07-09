@@ -112,7 +112,11 @@ class Survey123DataFetcher:
             records = []
             for feature in features:
                 attributes = feature.get('attributes', {})
-                records.append(attributes)
+                # Skip features with None or invalid attributes
+                if attributes is not None and isinstance(attributes, dict):
+                    records.append(attributes)
+                else:
+                    logger.warning(f"Skipping feature with invalid attributes: {feature}")
             
             df = pd.DataFrame(records)
             logger.info(f"Converted to DataFrame with {len(df)} rows and {len(df.columns)} columns")
