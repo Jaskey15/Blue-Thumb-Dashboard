@@ -142,7 +142,6 @@ def apply_bdl_conversions(df, bdl_columns=None):
                 lambda x: convert_bdl_value(x, bdl_value)
             )
             conversion_count += 1
-            logger.debug(f"Applied BDL conversion to {column} (BDL value: {bdl_value})")
     
     if conversion_count > 0:
         logger.info(f"Applied BDL conversions to {conversion_count} columns")
@@ -326,7 +325,6 @@ def get_reference_values():
         if not reference_values:
             raise Exception("Failed to parse chemical reference values from database")
             
-        logger.debug(f"Successfully retrieved reference values for {len(reference_values)} parameters")
         return reference_values
         
     except Exception as e:
@@ -441,7 +439,6 @@ def insert_chemical_data(df, allow_duplicates=True, data_source="unknown"):
         reference_values = get_reference_values()
         
         existing_measurements, site_lookup = get_existing_data(conn)
-        logger.info(f"Found {len(existing_measurements)} existing measurements")
         
         stats = {
             'sites_processed': 0,
@@ -486,10 +483,7 @@ def insert_chemical_data(df, allow_duplicates=True, data_source="unknown"):
         
         conn.commit()
         
-        logger.info(f"Successfully inserted {data_source} data:")
-        logger.info(f"  - Sites processed: {stats['sites_processed']}")
-        logger.info(f"  - Collection events added: {stats['events_added']}")
-        logger.info(f"  - Measurements added: {stats['measurements_added']}")
+        logger.info(f"Successfully inserted {data_source}: {stats['measurements_added']} measurements from {stats['sites_processed']} sites")
         
         return stats
         

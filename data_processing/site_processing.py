@@ -32,7 +32,6 @@ def load_site_data():
             return pd.DataFrame()
         
         site_df = pd.read_csv(master_sites_path)
-        logger.info(f"Loaded {len(site_df)} sites from master_sites.csv")
         
         # Filter the DataFrame to include only columns that exist in the database schema.
         database_columns = ['site_name', 'latitude', 'longitude', 'county', 'river_basin', 'ecoregion']
@@ -57,13 +56,11 @@ def load_site_data():
         # Ensure site names are unique as a final safety check.
         sites_df = sites_df.drop_duplicates(subset=['site_name']).copy()
         
-        logger.info(f"Processed {len(sites_df)} unique sites with database schema columns")
-        logger.info(f"Using columns: {list(sites_df.columns)}")
+        logger.info(f"Processed {len(sites_df)} unique sites for database")
         
         # Save the database-ready data for auditing and review.
         sites_for_db_path = os.path.join(PROCESSED_DATA_DIR, 'sites_for_db.csv')
         sites_df.to_csv(sites_for_db_path, index=False)
-        logger.info(f"Saved database-ready sites to: sites_for_db.csv")
         
         return sites_df
     
@@ -99,11 +96,6 @@ def insert_sites_into_db(sites_df):
         
         columns = sites_df.columns.tolist()
         
-        logger.info(f"Inserting/updating sites with columns: {columns}")
-        if not sites_df.empty:
-            sample_row = sites_df.iloc[0].to_dict()
-            logger.info(f"Sample row: {sample_row}")
-        
         cursor = conn.cursor()
         sites_inserted = 0
         sites_updated = 0
@@ -128,7 +120,6 @@ def insert_sites_into_db(sites_df):
                     
                     cursor.execute(update_sql, update_values)
                     sites_updated += 1
-                    logger.debug(f"Updated existing site: {site_name} (ID: {site_id})")
                 
             else:
                 # Site doesn't exist - INSERT it
@@ -139,14 +130,11 @@ def insert_sites_into_db(sites_df):
                 
                 cursor.execute(insert_sql, insert_values)
                 sites_inserted += 1
-                logger.debug(f"Inserted new site: {site_name}")
         
         conn.commit()
         
         total_processed = sites_inserted + sites_updated
-        logger.info(f"Successfully processed {total_processed} sites:")
-        logger.info(f"  - {sites_inserted} new sites inserted")
-        logger.info(f"  - {sites_updated} existing sites updated")
+        logger.info(f"Site database operations: {sites_inserted} inserted, {sites_updated} updated")
         
         return total_processed
     
@@ -168,7 +156,6 @@ def process_site_data():
         True if the process completes, False otherwise.
     """
     try:
-        logger.info("Loading consolidated site data from master_sites.csv")
         sites_df = load_site_data()
         
         if sites_df.empty:
@@ -177,8 +164,7 @@ def process_site_data():
         
         sites_count = insert_sites_into_db(sites_df)
         
-        logger.info(f"Site processing complete!")
-        logger.info(f"Total sites in database: {sites_count}")
+        logger.info(f"Site processing complete: {sites_count} sites processed")
         
         return True
             
@@ -223,9 +209,9 @@ def cleanup_unused_sites():
             cursor.execute(f'DELETE FROM sites WHERE site_id IN ({placeholders})', list(unused_sites))
             conn.commit()
             
-            logger.info(f"Removed {len(unused_sites)} unused sites from database")
+            logger.info(f"Removed {len(unused_sites)} unused sites")
         else:
-            logger.info("No unused sites found - all sites have monitoring data")
+            logger.info("No unused sites found")
         
         return True
         
@@ -262,15 +248,12 @@ def classify_active_sites():
             return False
             
         most_recent_date = result[0]
-        logger.info(f"Most recent chemical reading date: {most_recent_date}")
         
-        # Step 2: Calculate cutoff date (2 years before most recent reading)
+        # Step 2: Calculate cutoff date (1 year before most recent reading)
         from datetime import datetime, timedelta
         most_recent_dt = datetime.strptime(most_recent_date, '%Y-%m-%d')
         cutoff_date = most_recent_dt - timedelta(days=365)
         cutoff_date_str = cutoff_date.strftime('%Y-%m-%d')
-        
-        logger.info(f"Active site cutoff date: {cutoff_date_str}")
         
         # Step 3: Get the most recent chemical reading date for each site
         cursor.execute("""
@@ -293,7 +276,6 @@ def classify_active_sites():
                     WHERE site_id = ?
                 """, (last_reading, site_id))
                 active_count += 1
-                logger.debug(f"Active site: {site_name} (last reading: {last_reading})")
             else:
                 cursor.execute("""
                     UPDATE sites 
@@ -301,14 +283,10 @@ def classify_active_sites():
                     WHERE site_id = ?
                 """, (last_reading, site_id))
                 historic_count += 1
-                logger.debug(f"Historic site: {site_name} (last reading: {last_reading or 'never'})")
         
         conn.commit()
         
-        logger.info(f"Site classification complete:")
-        logger.info(f"  - Active sites: {active_count}")
-        logger.info(f"  - Historic sites: {historic_count}")
-        logger.info(f"  - Total sites: {active_count + historic_count}")
+        logger.info(f"Site classification complete: {active_count} active, {historic_count} historic")
         
         return True
         

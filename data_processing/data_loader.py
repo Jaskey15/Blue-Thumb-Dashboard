@@ -112,16 +112,12 @@ def clean_site_names_column(df, site_column='sitename', log_changes=True):
         cleaned_name = clean_site_name(original_name)
         
         if pd.notna(original_name) and str(original_name) != str(cleaned_name):
-            if log_changes:
-                logger.info(f"Cleaned site name: '{original_name}' -> '{cleaned_name}'")
             changes_made += 1
         
         df_clean.at[idx, site_column] = cleaned_name
     
     if log_changes and changes_made > 0:
         logger.info(f"Cleaned {changes_made} site names in {site_column} column")
-    elif log_changes:
-        logger.info(f"No site name changes needed in {site_column} column")
     
     return df_clean
 
@@ -147,8 +143,6 @@ def load_csv_data(data_type, usecols=None, dtype=None, parse_dates=None,
         return pd.DataFrame()
     
     try:
-        logger.info(f"Loading {data_type} data from {file_path}")
-        
         df = pd.read_csv(
             file_path,
             usecols=usecols,
@@ -158,7 +152,7 @@ def load_csv_data(data_type, usecols=None, dtype=None, parse_dates=None,
             low_memory=False 
         )
         
-        logger.info(f"Successfully loaded {len(df)} rows from {data_type} data")
+        logger.info(f"Loaded {len(df)} rows from {data_type} data")
         
         if clean_site_names:
             # Attempt to find the site name column automatically.
@@ -203,9 +197,8 @@ def save_processed_data(df, data_type):
     file_path = os.path.join(PROCESSED_DATA_DIR, f"processed_{sanitized_type}.csv")
     
     try:
-        logger.info(f"Saving {data_type} data to {file_path}")
         df.to_csv(file_path, index=False)
-        logger.info(f"Successfully saved {len(df)} rows of {data_type} data")
+        logger.info(f"Saved {len(df)} rows of {data_type} data")
         return True
     
     except Exception as e:
@@ -301,7 +294,6 @@ def get_unique_sites(data_type, site_column='sitename'):
             return []
     
     unique_sites = df[site_column].dropna().unique().tolist()
-    logger.info(f"Found {len(unique_sites)} unique sites in {data_type} data")
     
     return unique_sites
 
@@ -333,7 +325,6 @@ def convert_bdl_values(df, bdl_columns, bdl_replacements):
                         return None
             
             df_copy[column] = df_copy[column].apply(convert_value)
-            logger.debug(f"Converted BDL values in column: {column}")
     
     return df_copy
 
@@ -369,8 +360,6 @@ def get_date_range(data_type, date_column='Date'):
     min_date = df[date_column_lower].min()
     max_date = df[date_column_lower].max()
     
-    logger.info(f"Date range for {data_type} data: {min_date} to {max_date}")
-    
     return min_date, max_date
 
 def get_site_lookup_dict():
@@ -387,7 +376,6 @@ def get_site_lookup_dict():
         sites_df = pd.read_sql_query("SELECT site_name, site_id FROM sites", conn)
         site_lookup = dict(zip(sites_df['site_name'], sites_df['site_id']))
         
-        logger.debug(f"Created site lookup dictionary with {len(site_lookup)} sites")
         return site_lookup
     finally:
         close_connection(conn)
@@ -418,7 +406,6 @@ def find_site_id_by_name(site_name, strict=True):
     
     # Try exact match first
     if cleaned_name in site_lookup:
-        logger.debug(f"Exact match found for '{cleaned_name}' → site_id {site_lookup[cleaned_name]}")
         return site_lookup[cleaned_name], 'exact', 1.0
     
     # If strict mode, don't try fuzzy matching
@@ -442,10 +429,8 @@ def find_site_id_by_name(site_name, strict=True):
                 best_match = db_site_name
         
         if best_match:
-            logger.info(f"Fuzzy match found for '{cleaned_name}' → '{best_match}' (similarity: {best_score:.3f})")
             return site_lookup[best_match], 'fuzzy', best_score
         else:
-            logger.warning(f"No suitable fuzzy match found for '{cleaned_name}' (best similarity: {best_score:.3f})")
             return None, 'not_found', best_score
             
     except ImportError:
@@ -479,7 +464,6 @@ def validate_site_matches(df, site_name_column, strict=True, log_mismatches=True
     
     # Get unique site names to validate
     unique_sites = df[site_name_column].dropna().unique()
-    logger.info(f"Found {len(unique_sites)} unique sites to validate")
     
     validation_results = {
         'exact_matches': 0,
@@ -524,18 +508,11 @@ def validate_site_matches(df, site_name_column, strict=True, log_mismatches=True
     match_rate = total_matched / len(unique_sites) if unique_sites.size > 0 else 0
     
     # Log summary
-    logger.info(f"Site matching validation results:")
-    logger.info(f"  - Total unique sites: {len(unique_sites)}")
-    logger.info(f"  - Exact matches: {validation_results['exact_matches']}")
-    logger.info(f"  - Fuzzy matches: {validation_results['fuzzy_matches']}")
-    logger.info(f"  - No matches: {validation_results['no_matches']}")
-    logger.info(f"  - Match rate: {match_rate:.1%}")
+    logger.info(f"Site validation: {len(unique_sites)} sites, {match_rate:.1%} match rate ({validation_results['exact_matches']} exact, {validation_results['fuzzy_matches']} fuzzy, {validation_results['no_matches']} unmatched)")
     
     # Log detailed mismatches if requested
     if log_mismatches and validation_results['unmatched_sites']:
-        logger.warning(f"Unmatched sites ({len(validation_results['unmatched_sites'])}):")
-        for site_info in validation_results['unmatched_sites']:
-            logger.warning(f"  - '{site_info['original_name']}' (best similarity: {site_info['confidence']:.3f})")
+        logger.warning(f"Unmatched sites: {[s['original_name'] for s in validation_results['unmatched_sites']]}")
     
     # Count records affected
     matched_records = len(df[df[site_name_column].isin([s['original_name'] for s in validation_results['matched_sites']])])

@@ -146,7 +146,10 @@ def clean_all_csvs():
             df.to_csv(output_path, index=False, encoding='utf-8')
             
             unique_sites = df[site_column].nunique()
-            logger.info(f"  ✓ {len(df)} rows, {site_changes} names cleaned, {unique_sites} unique sites")
+            if site_changes > 0:
+                logger.info(f"  ✓ {len(df)} rows, {site_changes} names cleaned, {unique_sites} unique sites")
+            else:
+                logger.info(f"  ✓ {len(df)} rows, {unique_sites} unique sites")
             
             total_changes += site_changes
             total_sites += unique_sites
@@ -183,7 +186,6 @@ def extract_sites_from_csv(config):
     
     try:
         df = pd.read_csv(file_path, low_memory=False)
-        logger.info(f"Loaded {len(df)} rows from {config['file']}")
         
         if config['site_column'] not in df.columns:
             logger.error(f"Site column '{config['site_column']}' not found in {config['file']}")
@@ -211,7 +213,6 @@ def extract_sites_from_csv(config):
         
         site_data = site_data[site_data['site_name'].notna() & (site_data['site_name'] != '')]
         
-        logger.info(f"Extracted {len(site_data)} unique sites from {config['file']}")
         return site_data
         
     except Exception as e:
@@ -300,7 +301,6 @@ def consolidate_sites():
                     }
                     conflicts_list.append(conflict_record)
                     conflicts_found += 1
-                    logger.warning(f"Conflict detected for '{site_name}': {', '.join(conflicts)}")
                 else:
                     # If no conflicts, fill in any missing metadata from the new source.
                     updated = False
@@ -325,10 +325,8 @@ def consolidate_sites():
                 consolidated_sites = pd.concat([consolidated_sites, new_record.to_frame().T], ignore_index=True)
                 sites_added += 1
         
-        logger.info(f"  Added: {sites_added} new sites")
-        logger.info(f"  Updated: {sites_updated} existing sites")
-        if conflicts_found > 0:
-            logger.warning(f"  Conflicts: {conflicts_found} sites flagged for review")
+        if sites_added > 0 or sites_updated > 0 or conflicts_found > 0:
+            logger.info(f"  Added: {sites_added}, Updated: {sites_updated}, Conflicts: {conflicts_found}")
     
     conflicts_df = pd.DataFrame(conflicts_list) if conflicts_list else pd.DataFrame()
     
@@ -397,7 +395,6 @@ def verify_cleaned_csvs():
         try:
             # Try to read the file to verify it's accessible
             df = pd.read_csv(file_path, nrows=1, low_memory=False)
-            logger.debug(f"✓ {filename} verified")
         except Exception as e:
             logger.error(f"✗ {filename} is corrupted: {e}")
             corrupted_files.append(filename)
@@ -411,7 +408,7 @@ def verify_cleaned_csvs():
         logger.error(f"Corrupted cleaned CSV files: {corrupted_files}")
         return False
     
-    logger.info(f"✅ All {len(required_files)} cleaned CSV files verified")
+    logger.info(f"All {len(required_files)} cleaned CSV files verified")
     return True
 
 def consolidate_sites_from_csvs():
@@ -442,9 +439,7 @@ def consolidate_sites_from_csvs():
         save_success = save_consolidated_data(consolidated_sites, conflicts_df)
         
         if save_success:
-            logger.info(f"✅ Site consolidation completed successfully")
-            logger.info(f"   - {len(consolidated_sites)} unique sites consolidated")
-            logger.info(f"   - {len(conflicts_df)} conflicts detected")
+            logger.info(f"Site consolidation completed: {len(consolidated_sites)} sites, {len(conflicts_df)} conflicts")
             return True
         else:
             logger.error("Failed to save consolidated site data")
