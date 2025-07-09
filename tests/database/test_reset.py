@@ -128,7 +128,6 @@ class TestDataReloading:
     @patch('data_processing.site_processing.process_site_data')
     @patch('data_processing.chemical_processing.load_chemical_data_to_db')
     @patch('data_processing.updated_chemical_processing.load_updated_chemical_data_to_db')
-    @patch('data_processing.chemical_duplicates.consolidate_replicate_samples')
     @patch('data_processing.fish_processing.load_fish_data')
     @patch('data_processing.macro_processing.load_macroinvertebrate_data')
     @patch('data_processing.habitat_processing.load_habitat_data')
@@ -137,7 +136,7 @@ class TestDataReloading:
     @patch('data_processing.site_processing.cleanup_unused_sites')
     def test_complete_data_loading(
         self, mock_cleanup, mock_classify, mock_merge,
-        mock_habitat, mock_macro, mock_fish, mock_consolidate,
+        mock_habitat, mock_macro, mock_fish,
         mock_updated_chemical, mock_chemical, mock_site
     ):
         """Test loading all data types."""
@@ -145,7 +144,6 @@ class TestDataReloading:
         mock_site.return_value = True
         mock_chemical.return_value = True
         mock_updated_chemical.return_value = True
-        mock_consolidate.return_value = True
         mock_fish.return_value = True
         mock_macro.return_value = True
         mock_habitat.return_value = True
@@ -160,7 +158,7 @@ class TestDataReloading:
         mock_site.assert_called_once()
         mock_chemical.assert_called_once()
         mock_updated_chemical.assert_called_once()
-        mock_consolidate.assert_called_once()
+        # Note: Chemical duplicate consolidation step was removed
         mock_fish.assert_called_once()
         mock_macro.assert_called_once()
         mock_habitat.assert_called_once()

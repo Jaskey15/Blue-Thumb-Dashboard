@@ -28,10 +28,7 @@ from data_processing.updated_chemical_processing import (
     process_updated_chemical_data,
     get_ph_worst_case
 )
-from data_processing.chemical_duplicates import (
-    get_worst_case_value,
-    identify_replicate_samples
-)
+# Note: chemical_duplicates functionality was removed - tests for that functionality are no longer needed
 from data_processing.chemical_utils import (
     validate_chemical_data,
     determine_status,
@@ -441,59 +438,11 @@ class TestChemicalProcessing(unittest.TestCase):
             self.assertIn(col, result_df.columns)
 
     # =============================================================================
-    # DUPLICATE HANDLING TESTS
+    # NOTE: DUPLICATE HANDLING TESTS REMOVED
     # =============================================================================
-
-    def test_get_worst_case_value(self):
-        """Test worst case value selection for different parameters."""
-        # Test pH (furthest from neutral)
-        ph_values = [6.5, 7.5, 8.5]
-        self.assertEqual(get_worst_case_value(ph_values, 'pH'), 8.5)  # Furthest from 7.0
-        
-        # Test DO (lowest value)
-        do_values = [95.5, 88.0, 110.2]
-        self.assertEqual(get_worst_case_value(do_values, 'do_percent'), 88.0)  # Lowest value
-        
-        # Test nutrients (highest value)
-        nutrient_values = [0.5, 1.2, 0.8]
-        self.assertEqual(get_worst_case_value(nutrient_values, 'Nitrate'), 1.2)  # Highest value
-        
-        # Test with null values
-        mixed_values = [0.5, None, 1.2]
-        self.assertEqual(get_worst_case_value(mixed_values, 'Nitrate'), 1.2)  # Highest non-null
-        
-        # Test all null values
-        null_values = [None, None, None]
-        self.assertIsNone(get_worst_case_value(null_values, 'Nitrate'))
-
-    @patch('database.database.close_connection')
-    @patch('database.database.get_connection')
-    def test_identify_replicate_samples(self, mock_get_connection, mock_close_connection):
-        """Test identification of replicate samples."""
-        # Mock database connection and cursor
-        mock_conn = MagicMock()
-        mock_get_connection.return_value = mock_conn
-        
-        # Mock pandas read_sql_query to return sample data
-        with patch('pandas.read_sql_query') as mock_read_sql:
-            mock_read_sql.return_value = pd.DataFrame({
-                'site_name': ['Site1', 'Site2'],
-                'collection_date': ['2023-01-01', '2023-01-02'],
-                'event_count': [2, 3],
-                'event_ids': ['1,2', '3,4,5']
-            })
-            
-            # Call function
-            result = identify_replicate_samples()
-            
-            # Check results
-            self.assertEqual(len(result), 2)
-            self.assertEqual(result[0]['site_name'], 'Site1')
-            self.assertEqual(result[0]['event_count'], 2)
-            self.assertEqual(result[0]['event_ids'], [1, 2])
-            self.assertEqual(result[1]['site_name'], 'Site2')
-            self.assertEqual(result[1]['event_count'], 3)
-            self.assertEqual(result[1]['event_ids'], [3, 4, 5])
+    # Chemical duplicate consolidation functionality was removed from the project.
+    # All replicate samples are now preserved as separate collection events,
+    # maintaining complete data integrity for scientific analysis.
 
     # =============================================================================
     # INTEGRATION TESTS

@@ -345,24 +345,114 @@ def save_consolidated_data(consolidated_sites, conflicts_df):
     Args:
         consolidated_sites: A DataFrame with the consolidated site data.
         conflicts_df: A DataFrame with any conflicts that require manual review.
+        
+    Returns:
+        True if all files saved successfully, False otherwise.
     """
-    # Save the master sites file, which is used for final site processing.
-    master_path = os.path.join(PROCESSED_DATA_DIR, 'master_sites.csv')
-    consolidated_sites.to_csv(master_path, index=False, encoding='utf-8')
-    logger.info(f"Saved master sites to: master_sites.csv")
+    try:
+        # Save the master sites file, which is used for final site processing.
+        master_path = os.path.join(PROCESSED_DATA_DIR, 'master_sites.csv')
+        consolidated_sites.to_csv(master_path, index=False, encoding='utf-8')
+        logger.info(f"Saved master sites to: master_sites.csv")
+        
+        # Save the full consolidated sites file, including source tracking, to the interim directory.
+        consolidated_path = os.path.join(INTERIM_DATA_DIR, 'consolidated_sites.csv')
+        consolidated_sites.to_csv(consolidated_path, index=False, encoding='utf-8')
+        logger.info(f"Saved consolidated sites to: consolidated_sites.csv")
+        
+        if not conflicts_df.empty:
+            conflicts_path = os.path.join(INTERIM_DATA_DIR, 'site_conflicts_for_review.csv')
+            conflicts_df.to_csv(conflicts_path, index=False, encoding='utf-8')
+            logger.warning(f"Saved {len(conflicts_df)} conflicts to: site_conflicts_for_review.csv")
+            logger.warning("⚠️  Manual review required for conflicting sites!")
+        else:
+            logger.info("✓ No conflicts detected - all sites consolidated cleanly")
+            
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error saving consolidated data: {e}")
+        return False
+
+def verify_cleaned_csvs():
+    """
+    Verify that all required cleaned CSV files exist and are readable.
     
-    # Save the full consolidated sites file, including source tracking, to the interim directory.
-    consolidated_path = os.path.join(INTERIM_DATA_DIR, 'consolidated_sites.csv')
-    consolidated_sites.to_csv(consolidated_path, index=False, encoding='utf-8')
-    logger.info(f"Saved consolidated sites to: consolidated_sites.csv")
+    Returns:
+        True if all files are present and accessible, False otherwise.
+    """
+    logger.info("Verifying cleaned CSV files...")
     
-    if not conflicts_df.empty:
-        conflicts_path = os.path.join(INTERIM_DATA_DIR, 'site_conflicts_for_review.csv')
-        conflicts_df.to_csv(conflicts_path, index=False, encoding='utf-8')
-        logger.warning(f"Saved {len(conflicts_df)} conflicts to: site_conflicts_for_review.csv")
-        logger.warning("⚠️  Manual review required for conflicting sites!")
-    else:
-        logger.info("✓ No conflicts detected - all sites consolidated cleanly")
+    required_files = [config['file'] for config in CSV_CONFIGS]
+    missing_files = []
+    corrupted_files = []
+    
+    for filename in required_files:
+        file_path = os.path.join(INTERIM_DATA_DIR, filename)
+        
+        if not os.path.exists(file_path):
+            missing_files.append(filename)
+            continue
+            
+        try:
+            # Try to read the file to verify it's accessible
+            df = pd.read_csv(file_path, nrows=1, low_memory=False)
+            logger.debug(f"✓ {filename} verified")
+        except Exception as e:
+            logger.error(f"✗ {filename} is corrupted: {e}")
+            corrupted_files.append(filename)
+    
+    if missing_files:
+        logger.error(f"Missing cleaned CSV files: {missing_files}")
+        logger.error("Run 'clean_all_csvs()' first to generate cleaned files")
+        return False
+        
+    if corrupted_files:
+        logger.error(f"Corrupted cleaned CSV files: {corrupted_files}")
+        return False
+    
+    logger.info(f"✅ All {len(required_files)} cleaned CSV files verified")
+    return True
+
+def consolidate_sites_from_csvs():
+    """
+    Consolidate sites from all cleaned CSV files into master sites list.
+    
+    This function calls the main consolidation process and ensures the
+    master_sites.csv file is created properly.
+    
+    Returns:
+        True if consolidation completed successfully, False otherwise.
+    """
+    logger.info("Consolidating sites from all cleaned CSV files...")
+    
+    try:
+        # Verify files exist first
+        if not verify_cleaned_csvs():
+            return False
+        
+        # Run the main consolidation process
+        consolidated_sites, conflicts_df = consolidate_sites()
+        
+        if consolidated_sites.empty:
+            logger.error("Site consolidation produced no results")
+            return False
+        
+        # Save the consolidated data
+        save_success = save_consolidated_data(consolidated_sites, conflicts_df)
+        
+        if save_success:
+            logger.info(f"✅ Site consolidation completed successfully")
+            logger.info(f"   - {len(consolidated_sites)} unique sites consolidated")
+            logger.info(f"   - {len(conflicts_df)} conflicts detected")
+            return True
+        else:
+            logger.error("Failed to save consolidated site data")
+            return False
+            
+    except Exception as e:
+        logger.error(f"Error during site consolidation: {e}")
+        return False
 
 def main():
     """

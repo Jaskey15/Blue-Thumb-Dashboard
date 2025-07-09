@@ -73,7 +73,10 @@ def load_site_data():
 
 def insert_sites_into_db(sites_df):
     """
-    Inserts or replaces site data in the database.
+    Inserts or updates site data in the database.
+    
+    Uses INSERT OR IGNORE followed by UPDATE to avoid foreign key constraint 
+    issues when sites already exist with child records.
     
     Args:
         sites_df: A DataFrame containing the site information to load.
@@ -96,31 +99,62 @@ def insert_sites_into_db(sites_df):
         
         columns = sites_df.columns.tolist()
         
-        logger.info(f"Inserting sites with columns: {columns}")
+        logger.info(f"Inserting/updating sites with columns: {columns}")
         if not sites_df.empty:
             sample_row = sites_df.iloc[0].to_dict()
             logger.info(f"Sample row: {sample_row}")
         
-        # Use INSERT OR REPLACE to handle updates to existing sites.
-        placeholders = ', '.join(['?' for _ in columns])
-        columns_str = ', '.join(columns)
-        sql = f"INSERT OR REPLACE INTO sites ({columns_str}) VALUES ({placeholders})"
-        
-        site_data = []
-        for _, row in sites_df.iterrows():
-            site_data.append(tuple(row[col] for col in columns))
-        
         cursor = conn.cursor()
-        cursor.executemany(sql, site_data)
+        sites_inserted = 0
+        sites_updated = 0
+        
+        for _, row in sites_df.iterrows():
+            site_name = row['site_name']
+            
+            # Check if site already exists
+            cursor.execute("SELECT site_id FROM sites WHERE site_name = ?", (site_name,))
+            existing_site = cursor.fetchone()
+            
+            if existing_site:
+                # Site exists - UPDATE it (avoids foreign key constraint issues)
+                site_id = existing_site[0]
+                
+                # Build UPDATE statement for non-site_name columns
+                update_columns = [col for col in columns if col != 'site_name']
+                if update_columns:
+                    set_clause = ', '.join([f"{col} = ?" for col in update_columns])
+                    update_sql = f"UPDATE sites SET {set_clause} WHERE site_id = ?"
+                    update_values = [row[col] for col in update_columns] + [site_id]
+                    
+                    cursor.execute(update_sql, update_values)
+                    sites_updated += 1
+                    logger.debug(f"Updated existing site: {site_name} (ID: {site_id})")
+                
+            else:
+                # Site doesn't exist - INSERT it
+                placeholders = ', '.join(['?' for _ in columns])
+                columns_str = ', '.join(columns)
+                insert_sql = f"INSERT INTO sites ({columns_str}) VALUES ({placeholders})"
+                insert_values = [row[col] for col in columns]
+                
+                cursor.execute(insert_sql, insert_values)
+                sites_inserted += 1
+                logger.debug(f"Inserted new site: {site_name}")
+        
         conn.commit()
         
-        sites_count = len(site_data)
-        logger.info(f"Successfully inserted/updated {sites_count} sites in the database")
-        return sites_count
+        total_processed = sites_inserted + sites_updated
+        logger.info(f"Successfully processed {total_processed} sites:")
+        logger.info(f"  - {sites_inserted} new sites inserted")
+        logger.info(f"  - {sites_updated} existing sites updated")
+        
+        return total_processed
     
     except Exception as e:
         conn.rollback()
-        logger.error(f"Error inserting site data into database: {e}")
+        logger.error(f"Error inserting/updating site data: {e}")
+        import traceback
+        logger.error(f"Full traceback: {traceback.format_exc()}")
         return 0
     
     finally:

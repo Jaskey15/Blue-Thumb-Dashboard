@@ -171,6 +171,25 @@ def transfer_site_data(cursor, from_site_id, to_site_id):
     """
     transfer_counts = {}
     
+    logger.info(f"    Transferring data from site_id {from_site_id} to site_id {to_site_id}")
+    
+    # Verify both sites exist before attempting transfer
+    cursor.execute("SELECT site_name FROM sites WHERE site_id = ?", (from_site_id,))
+    from_site_result = cursor.fetchone()
+    cursor.execute("SELECT site_name FROM sites WHERE site_id = ?", (to_site_id,))
+    to_site_result = cursor.fetchone()
+    
+    if not from_site_result:
+        logger.error(f"Source site_id {from_site_id} not found in database")
+        raise Exception(f"Source site_id {from_site_id} not found")
+    
+    if not to_site_result:
+        logger.error(f"Destination site_id {to_site_id} not found in database")
+        raise Exception(f"Destination site_id {to_site_id} not found")
+    
+    logger.debug(f"    Source site: {from_site_result[0]}")
+    logger.debug(f"    Destination site: {to_site_result[0]}")
+    
     tables_to_update = [
         ('chemical_collection_events', 'site_id'),
         ('fish_collection_events', 'site_id'),
@@ -184,15 +203,61 @@ def transfer_site_data(cursor, from_site_id, to_site_id):
             cursor.execute(f"SELECT COUNT(*) FROM {table_name} WHERE {site_column} = ?", (from_site_id,))
             count = cursor.fetchone()[0]
             
+            logger.debug(f"    {table_name}: {count} records to transfer")
+            
             if count > 0:
-                # Reassign records to the preferred site_id.
-                cursor.execute(f"""
-                    UPDATE {table_name} 
-                    SET {site_column} = ? 
-                    WHERE {site_column} = ?
-                """, (to_site_id, from_site_id))
+                # Log a sample of what we're about to update
+                cursor.execute(f"SELECT * FROM {table_name} WHERE {site_column} = ? LIMIT 3", (from_site_id,))
+                sample_records = cursor.fetchall()
+                logger.debug(f"    Sample records from {table_name}: {sample_records}")
                 
-                transfer_counts[table_name] = count
+                # Check for potential conflicts at the destination
+                if table_name == 'chemical_collection_events':
+                    cursor.execute('''
+                        SELECT COUNT(*) FROM chemical_collection_events c1
+                        JOIN chemical_collection_events c2 ON 
+                            c1.sample_id = c2.sample_id AND 
+                            c1.collection_date = c2.collection_date
+                        WHERE c1.site_id = ? AND c2.site_id = ?
+                    ''', (from_site_id, to_site_id))
+                    conflicts = cursor.fetchone()[0]
+                    if conflicts > 0:
+                        logger.warning(f"    Potential UNIQUE constraint conflicts in {table_name}: {conflicts}")
+                
+                # Perform the reassignment with extensive error handling
+                try:
+                    logger.debug(f"    Executing UPDATE {table_name} SET {site_column} = {to_site_id} WHERE {site_column} = {from_site_id}")
+                    
+                    cursor.execute(f"""
+                        UPDATE {table_name} 
+                        SET {site_column} = ? 
+                        WHERE {site_column} = ?
+                    """, (to_site_id, from_site_id))
+                    
+                    rows_affected = cursor.rowcount
+                    logger.debug(f"    Successfully updated {rows_affected} rows in {table_name}")
+                    
+                    if rows_affected != count:
+                        logger.warning(f"    Expected to update {count} rows but actually updated {rows_affected} rows")
+                    
+                    transfer_counts[table_name] = rows_affected
+                    
+                except Exception as update_error:
+                    logger.error(f"    Failed to update {table_name}: {update_error}")
+                    logger.error(f"    Update query: UPDATE {table_name} SET {site_column} = {to_site_id} WHERE {site_column} = {from_site_id}")
+                    
+                    # Additional debugging - check the current state
+                    cursor.execute(f"SELECT COUNT(*) FROM {table_name} WHERE {site_column} = ?", (from_site_id,))
+                    current_count = cursor.fetchone()[0]
+                    logger.error(f"    Records still at source site after failed update: {current_count}")
+                    
+                    cursor.execute(f"SELECT COUNT(*) FROM {table_name} WHERE {site_column} = ?", (to_site_id,))
+                    dest_count = cursor.fetchone()[0]
+                    logger.error(f"    Records at destination site: {dest_count}")
+                    
+                    # Re-raise the error with more context
+                    raise Exception(f"Failed to transfer data from {table_name}: {update_error}")
+                    
             else:
                 transfer_counts[table_name] = 0
                 
@@ -200,6 +265,7 @@ def transfer_site_data(cursor, from_site_id, to_site_id):
             logger.error(f"Error transferring data from {table_name}: {e}")
             raise
     
+    logger.info(f"    Transfer completed. Total records transferred: {sum(transfer_counts.values())}")
     return transfer_counts
 
 def update_site_metadata(cursor, site_id, site_data_df, preferred_name):

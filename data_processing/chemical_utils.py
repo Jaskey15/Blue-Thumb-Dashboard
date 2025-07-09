@@ -411,8 +411,8 @@ def insert_chemical_data(df, allow_duplicates=True, data_source="unknown"):
     """
     Inserts processed chemical data into the database in a batch operation.
     
-    This function allows for duplicate site-date combinations by default, which can
-    be consolidated later using the functions in chemical_duplicates.py.
+    This function allows for duplicate site-date combinations by default, preserving
+    all original chemical data including any replicate samples.
  
     Args:
         df: A DataFrame with processed chemical data.

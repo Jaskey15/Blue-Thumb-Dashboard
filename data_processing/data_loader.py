@@ -70,18 +70,21 @@ def check_file_exists(file_path):
 
 def clean_site_name(site_name):
     """
-    Standardizes a site name by stripping whitespace and normalizing spaces.
+    Standardizes site names by removing extra whitespace and normalizing format.
     
     Args:
-        site_name: The raw site name string.
-    
+        site_name: Raw site name from data file
+        
     Returns:
-        The cleaned site name string.
+        Cleaned site name string
     """
-    if pd.isna(site_name):
-        return site_name
+    if pd.isna(site_name) or site_name is None:
+        return None
     
+    # Convert to string and strip whitespace
     cleaned = str(site_name).strip()
+    
+    # Replace multiple whitespace with single space
     cleaned = re.sub(r'\s+', ' ', cleaned)
     
     return cleaned
@@ -369,6 +372,182 @@ def get_date_range(data_type, date_column='Date'):
     logger.info(f"Date range for {data_type} data: {min_date} to {max_date}")
     
     return min_date, max_date
+
+def get_site_lookup_dict():
+    """
+    Creates a lookup dictionary of all sites in the database.
+    
+    Returns:
+        Dictionary mapping site_name to site_id
+    """
+    from database.database import get_connection, close_connection
+    
+    conn = get_connection()
+    try:
+        sites_df = pd.read_sql_query("SELECT site_name, site_id FROM sites", conn)
+        site_lookup = dict(zip(sites_df['site_name'], sites_df['site_id']))
+        
+        logger.debug(f"Created site lookup dictionary with {len(site_lookup)} sites")
+        return site_lookup
+    finally:
+        close_connection(conn)
+
+def find_site_id_by_name(site_name, strict=True):
+    """
+    Find site_id by name with optional fuzzy matching.
+    
+    Args:
+        site_name: Site name from data file
+        strict: If True, require exact match. If False, try fuzzy matching.
+    
+    Returns:
+        Tuple of (site_id, match_type, confidence) where:
+        - site_id: database site_id if found, None if not found
+        - match_type: 'exact', 'fuzzy', or 'not_found'
+        - confidence: matching confidence score (0.0-1.0)
+    """
+    if pd.isna(site_name) or site_name is None:
+        logger.warning("Cannot match null/empty site name")
+        return None, 'not_found', 0.0
+    
+    # Clean the input site name
+    cleaned_name = clean_site_name(site_name)
+    
+    # Get all sites from database
+    site_lookup = get_site_lookup_dict()
+    
+    # Try exact match first
+    if cleaned_name in site_lookup:
+        logger.debug(f"Exact match found for '{cleaned_name}' → site_id {site_lookup[cleaned_name]}")
+        return site_lookup[cleaned_name], 'exact', 1.0
+    
+    # If strict mode, don't try fuzzy matching
+    if strict:
+        logger.warning(f"No exact match found for '{cleaned_name}' (strict mode)")
+        return None, 'not_found', 0.0
+    
+    # Try fuzzy matching
+    try:
+        from difflib import SequenceMatcher
+        
+        best_match = None
+        best_score = 0.0
+        min_similarity = 0.85  # Require 85% similarity for fuzzy match
+        
+        for db_site_name in site_lookup.keys():
+            similarity = SequenceMatcher(None, cleaned_name.lower(), db_site_name.lower()).ratio()
+            
+            if similarity > best_score and similarity >= min_similarity:
+                best_score = similarity
+                best_match = db_site_name
+        
+        if best_match:
+            logger.info(f"Fuzzy match found for '{cleaned_name}' → '{best_match}' (similarity: {best_score:.3f})")
+            return site_lookup[best_match], 'fuzzy', best_score
+        else:
+            logger.warning(f"No suitable fuzzy match found for '{cleaned_name}' (best similarity: {best_score:.3f})")
+            return None, 'not_found', best_score
+            
+    except ImportError:
+        logger.warning("difflib not available for fuzzy matching, falling back to exact match only")
+        return None, 'not_found', 0.0
+
+def validate_site_matches(df, site_name_column, strict=True, log_mismatches=True):
+    """
+    Validates that all sites in a DataFrame can be matched to database sites.
+    
+    Args:
+        df: DataFrame containing site data
+        site_name_column: Name of the column containing site names
+        strict: Use strict matching (exact only) or allow fuzzy matching
+        log_mismatches: If True, log detailed information about mismatches
+    
+    Returns:
+        Dictionary with validation results and statistics
+    """
+    logger.info(f"Validating site matches for {len(df)} records (strict={strict})")
+    
+    if site_name_column not in df.columns:
+        logger.error(f"Column '{site_name_column}' not found in DataFrame")
+        return {
+            'success': False,
+            'error': f"Column '{site_name_column}' not found",
+            'total_records': len(df),
+            'matched_records': 0,
+            'match_rate': 0.0
+        }
+    
+    # Get unique site names to validate
+    unique_sites = df[site_name_column].dropna().unique()
+    logger.info(f"Found {len(unique_sites)} unique sites to validate")
+    
+    validation_results = {
+        'exact_matches': 0,
+        'fuzzy_matches': 0,
+        'no_matches': 0,
+        'matched_sites': [],
+        'unmatched_sites': []
+    }
+    
+    for site_name in unique_sites:
+        site_id, match_type, confidence = find_site_id_by_name(site_name, strict=strict)
+        
+        if match_type == 'exact':
+            validation_results['exact_matches'] += 1
+            validation_results['matched_sites'].append({
+                'original_name': site_name,
+                'matched_name': site_name,
+                'site_id': site_id,
+                'match_type': match_type,
+                'confidence': confidence
+            })
+        elif match_type == 'fuzzy':
+            validation_results['fuzzy_matches'] += 1
+            # Get the actual matched name from database
+            site_lookup = get_site_lookup_dict()
+            matched_name = next((name for name, id in site_lookup.items() if id == site_id), site_name)
+            validation_results['matched_sites'].append({
+                'original_name': site_name,
+                'matched_name': matched_name,
+                'site_id': site_id,
+                'match_type': match_type,
+                'confidence': confidence
+            })
+        else:
+            validation_results['no_matches'] += 1
+            validation_results['unmatched_sites'].append({
+                'original_name': site_name,
+                'confidence': confidence
+            })
+    
+    total_matched = validation_results['exact_matches'] + validation_results['fuzzy_matches']
+    match_rate = total_matched / len(unique_sites) if unique_sites.size > 0 else 0
+    
+    # Log summary
+    logger.info(f"Site matching validation results:")
+    logger.info(f"  - Total unique sites: {len(unique_sites)}")
+    logger.info(f"  - Exact matches: {validation_results['exact_matches']}")
+    logger.info(f"  - Fuzzy matches: {validation_results['fuzzy_matches']}")
+    logger.info(f"  - No matches: {validation_results['no_matches']}")
+    logger.info(f"  - Match rate: {match_rate:.1%}")
+    
+    # Log detailed mismatches if requested
+    if log_mismatches and validation_results['unmatched_sites']:
+        logger.warning(f"Unmatched sites ({len(validation_results['unmatched_sites'])}):")
+        for site_info in validation_results['unmatched_sites']:
+            logger.warning(f"  - '{site_info['original_name']}' (best similarity: {site_info['confidence']:.3f})")
+    
+    # Count records affected
+    matched_records = len(df[df[site_name_column].isin([s['original_name'] for s in validation_results['matched_sites']])])
+    
+    return {
+        'success': True,
+        'total_records': len(df),
+        'unique_sites': len(unique_sites),
+        'matched_records': matched_records,
+        'match_rate': match_rate,
+        'validation_details': validation_results
+    }
 
 if __name__ == "__main__":
     print("Testing data loader:")
