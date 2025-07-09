@@ -29,6 +29,103 @@ from layouts.tabs import (
 )
 
 
+def get_tab_content(tab_wrapper):
+    """
+    Helper function to extract the main tab content from a tab wrapper.
+    Handles two structures:
+    1. Wrapper div containing tab content + chatbot separately (biological, source_data, etc.)
+    2. Tab content div that includes chatbot as a child (chemical)
+    
+    Args:
+        tab_wrapper: The wrapper div returned by tab creation functions
+        
+    Returns:
+        The main tab content div (with tab-content-wrapper class)
+    """
+    # First check if this component itself has the tab-content-wrapper class
+    if (hasattr(tab_wrapper, 'className') and 
+        tab_wrapper.className and 
+        'tab-content-wrapper' in tab_wrapper.className):
+        return tab_wrapper
+    
+    # Otherwise, look for child with tab-content-wrapper class
+    if hasattr(tab_wrapper, 'children') and tab_wrapper.children:
+        for child in tab_wrapper.children:
+            if (hasattr(child, 'className') and 
+                child.className and 
+                'tab-content-wrapper' in child.className):
+                return child
+    return None
+
+
+def safe_get_children(component):
+    """
+    Safely get children from a component, handling components without children.
+    
+    Args:
+        component: Dash component
+        
+    Returns:
+        List of children or empty list if no children
+    """
+    if hasattr(component, 'children') and component.children is not None:
+        if isinstance(component.children, list):
+            return component.children
+        else:
+            return [component.children]
+    return []
+
+
+def find_component_by_id(root, component_id, component_type=None):
+    """
+    Recursively find a component by ID in the component tree.
+    
+    Args:
+        root: Root component to search from
+        component_id: ID to search for
+        component_type: Optional component type filter
+        
+    Returns:
+        Found component or None
+    """
+    # Check if this component matches
+    if hasattr(root, 'id') and root.id == component_id:
+        if component_type is None or isinstance(root, component_type):
+            return root
+    
+    # Search children
+    for child in safe_get_children(root):
+        result = find_component_by_id(child, component_id, component_type)
+        if result is not None:
+            return result
+    
+    return None
+
+
+def find_components_by_type(root, component_type):
+    """
+    Recursively find all components of a specific type.
+    
+    Args:
+        root: Root component to search from
+        component_type: Type of component to find
+        
+    Returns:
+        List of found components
+    """
+    components = []
+    
+    # Check if this component matches
+    if isinstance(root, component_type):
+        components.append(root)
+    
+    # Search children
+    for child in safe_get_children(root):
+        components.extend(find_components_by_type(child, component_type))
+    
+    return components
+
+
 class TestOverviewTab(unittest.TestCase):
     """Test overview tab layout creation."""
     
@@ -38,16 +135,18 @@ class TestOverviewTab(unittest.TestCase):
         # Mock markdown loading
         mock_markdown.return_value = html.Div("Mock markdown content")
         
-        tab = create_overview_tab()
+        tab_wrapper = create_overview_tab()
+        tab_content = get_tab_content(tab_wrapper)
         
         # Check it's a Div component
-        self.assertIsInstance(tab, html.Div)
+        self.assertIsInstance(tab_wrapper, html.Div)
+        self.assertIsNotNone(tab_content)
         
         # Check has correct class
-        self.assertIn("tab-content-wrapper", tab.className)
+        self.assertIn("tab-content-wrapper", tab_content.className)
         
         # Check structure (should have multiple rows)
-        children = tab.children
+        children = safe_get_children(tab_content)
         self.assertGreater(len(children), 3)  # At least 4 rows expected
         
         # All children should be Row components
@@ -59,16 +158,10 @@ class TestOverviewTab(unittest.TestCase):
         """Test overview tab parameter dropdown component."""
         mock_markdown.return_value = html.Div("Mock content")
         
-        tab = create_overview_tab()
+        tab_wrapper = create_overview_tab()
         
         # Find the parameter dropdown in the structure
-        dropdown = None
-        for row in tab.children:
-            for col in row.children:
-                for child in col.children:
-                    if isinstance(child, dcc.Dropdown) and hasattr(child, 'id') and child.id == 'parameter-dropdown':
-                        dropdown = child
-                        break
+        dropdown = find_component_by_id(tab_wrapper, 'parameter-dropdown', dcc.Dropdown)
         
         self.assertIsNotNone(dropdown)
         self.assertEqual(dropdown.id, 'parameter-dropdown')
@@ -80,16 +173,10 @@ class TestOverviewTab(unittest.TestCase):
         """Test overview tab map container."""
         mock_markdown.return_value = html.Div("Mock content")
         
-        tab = create_overview_tab()
+        tab_wrapper = create_overview_tab()
         
         # Find the map graph
-        map_graph = None
-        for row in tab.children:
-            for col in row.children:
-                for child in col.children:
-                    if isinstance(child, dcc.Graph) and hasattr(child, 'id') and child.id == 'site-map-graph':
-                        map_graph = child
-                        break
+        map_graph = find_component_by_id(tab_wrapper, 'site-map-graph', dcc.Graph)
         
         self.assertIsNotNone(map_graph)
         self.assertEqual(map_graph.id, 'site-map-graph')
@@ -108,32 +195,28 @@ class TestChemicalTab(unittest.TestCase):
         """Test chemical tab creation."""
         # Mock date range function
         mock_date_range.return_value = (2020, 2024)
-        tab = create_chemical_tab()
+        tab_wrapper = create_chemical_tab()
+        tab_content = get_tab_content(tab_wrapper)
         
         # Check it's a Div component
-        self.assertIsInstance(tab, html.Div)
+        self.assertIsInstance(tab_wrapper, html.Div)
+        self.assertIsNotNone(tab_content)
         
         # Check has correct class
-        self.assertIn("tab-content-wrapper", tab.className)
+        self.assertIn("tab-content-wrapper", tab_content.className)
         
         # Check structure
-        children = tab.children
+        children = safe_get_children(tab_content)
         self.assertGreater(len(children), 2)  # Download, description, site selection, controls
     
     @patch('layouts.tabs.chemical.get_chemical_date_range')
     def test_chemical_tab_site_dropdown(self, mock_date_range):
         """Test chemical tab site dropdown component."""
         mock_date_range.return_value = (2020, 2024)
-        tab = create_chemical_tab()
+        tab_wrapper = create_chemical_tab()
         
         # Find the site dropdown
-        site_dropdown = None
-        for child in tab.children:
-            if isinstance(child, html.Div):
-                for sub_child in child.children:
-                    if isinstance(sub_child, dcc.Dropdown) and hasattr(sub_child, 'id') and sub_child.id == 'chemical-site-dropdown':
-                        site_dropdown = sub_child
-                        break
+        site_dropdown = find_component_by_id(tab_wrapper, 'chemical-site-dropdown', dcc.Dropdown)
         
         self.assertIsNotNone(site_dropdown)
         self.assertEqual(site_dropdown.id, 'chemical-site-dropdown')
@@ -145,28 +228,10 @@ class TestChemicalTab(unittest.TestCase):
     def test_chemical_tab_parameter_dropdown(self, mock_date_range):
         """Test chemical tab parameter dropdown component."""
         mock_date_range.return_value = (2020, 2024)
-        tab = create_chemical_tab()
+        tab_wrapper = create_chemical_tab()
         
-        # Find the parameter dropdown in controls section
-        param_dropdown = None
-        controls_div = None
-        
-        # Find controls content div
-        for child in tab.children:
-            if isinstance(child, html.Div) and hasattr(child, 'id') and child.id == 'chemical-controls-content':
-                controls_div = child
-                break
-        
-        self.assertIsNotNone(controls_div)
-        
-        # Find parameter dropdown within controls
-        for row in controls_div.children:
-            if isinstance(row, dbc.Row):
-                for col in row.children:
-                    for item in col.children:
-                        if isinstance(item, dcc.Dropdown) and hasattr(item, 'id') and item.id == 'chemical-parameter-dropdown':
-                            param_dropdown = item
-                            break
+        # Find the parameter dropdown
+        param_dropdown = find_component_by_id(tab_wrapper, 'chemical-parameter-dropdown', dcc.Dropdown)
         
         self.assertIsNotNone(param_dropdown)
         
@@ -181,30 +246,26 @@ class TestBiologicalTab(unittest.TestCase):
     
     def test_create_biological_tab(self):
         """Test biological tab creation."""
-        tab = create_biological_tab()
+        tab_wrapper = create_biological_tab()
+        tab_content = get_tab_content(tab_wrapper)
         
         # Check it's a Div component
-        self.assertIsInstance(tab, html.Div)
+        self.assertIsInstance(tab_wrapper, html.Div)
+        self.assertIsNotNone(tab_content)
         
         # Check has correct class
-        self.assertIn("tab-content-wrapper", tab.className)
+        self.assertIn("tab-content-wrapper", tab_content.className)
         
         # Check basic structure
-        children = tab.children
+        children = safe_get_children(tab_content)
         self.assertGreater(len(children), 3)  # Download, description, community selection, site selection, content
     
     def test_biological_tab_community_selector(self):
         """Test biological tab community selector."""
-        tab = create_biological_tab()
+        tab_wrapper = create_biological_tab()
         
         # Find community dropdown
-        community_dropdown = None
-        for child in tab.children:
-            if isinstance(child, html.Div) and hasattr(child, 'children') and child.children is not None:
-                for sub_child in child.children:
-                    if isinstance(sub_child, dcc.Dropdown) and hasattr(sub_child, 'id') and sub_child.id == 'biological-community-dropdown':
-                        community_dropdown = sub_child
-                        break
+        community_dropdown = find_component_by_id(tab_wrapper, 'biological-community-dropdown', dcc.Dropdown)
         
         self.assertIsNotNone(community_dropdown)
         self.assertEqual(community_dropdown.id, 'biological-community-dropdown')
@@ -219,16 +280,10 @@ class TestBiologicalTab(unittest.TestCase):
     
     def test_biological_tab_site_selector(self):
         """Test biological tab site selector."""
-        tab = create_biological_tab()
+        tab_wrapper = create_biological_tab()
         
         # Find site dropdown
-        site_dropdown = None
-        for child in tab.children:
-            if isinstance(child, html.Div) and hasattr(child, 'id') and child.id == 'biological-site-search-section':
-                for sub_child in child.children:
-                    if isinstance(sub_child, dcc.Dropdown) and hasattr(sub_child, 'id') and sub_child.id == 'biological-site-dropdown':
-                        site_dropdown = sub_child
-                        break
+        site_dropdown = find_component_by_id(tab_wrapper, 'biological-site-dropdown', dcc.Dropdown)
         
         self.assertIsNotNone(site_dropdown)
         self.assertEqual(site_dropdown.id, 'biological-site-dropdown')
@@ -248,16 +303,18 @@ class TestHabitatTab(unittest.TestCase):
         mock_markdown.return_value = html.Div("Mock markdown")
         mock_image.return_value = html.Img()
         
-        tab = create_habitat_tab()
+        tab_wrapper = create_habitat_tab()
+        tab_content = get_tab_content(tab_wrapper)
         
         # Check it's a Div component
-        self.assertIsInstance(tab, html.Div)
+        self.assertIsInstance(tab_wrapper, html.Div)
+        self.assertIsNotNone(tab_content)
         
         # Check has correct class
-        self.assertIn("tab-content-wrapper", tab.className)
+        self.assertIn("tab-content-wrapper", tab_content.className)
         
         # Check structure
-        children = tab.children
+        children = safe_get_children(tab_content)
         self.assertGreater(len(children), 2)  # Download, description, site selection, content
     
     @patch('layouts.tabs.habitat.load_markdown_content')
@@ -267,16 +324,10 @@ class TestHabitatTab(unittest.TestCase):
         mock_markdown.return_value = html.Div("Mock markdown")
         mock_image.return_value = html.Img()
         
-        tab = create_habitat_tab()
+        tab_wrapper = create_habitat_tab()
         
         # Find site dropdown
-        site_dropdown = None
-        for child in tab.children:
-            if isinstance(child, html.Div):
-                for sub_child in child.children:
-                    if isinstance(sub_child, dcc.Dropdown) and hasattr(sub_child, 'id') and sub_child.id == 'habitat-site-dropdown':
-                        site_dropdown = sub_child
-                        break
+        site_dropdown = find_component_by_id(tab_wrapper, 'habitat-site-dropdown', dcc.Dropdown)
         
         self.assertIsNotNone(site_dropdown)
         self.assertEqual(site_dropdown.id, 'habitat-site-dropdown')
@@ -291,14 +342,10 @@ class TestHabitatTab(unittest.TestCase):
         mock_markdown.return_value = html.Div("Mock markdown")
         mock_image.return_value = html.Img()
         
-        tab = create_habitat_tab()
+        tab_wrapper = create_habitat_tab()
         
         # Find controls content container
-        controls_div = None
-        for child in tab.children:
-            if isinstance(child, html.Div) and hasattr(child, 'id') and child.id == 'habitat-controls-content':
-                controls_div = child
-                break
+        controls_div = find_component_by_id(tab_wrapper, 'habitat-controls-content', html.Div)
         
         self.assertIsNotNone(controls_div)
         
@@ -317,16 +364,18 @@ class TestProtectStreamsTab(unittest.TestCase):
         mock_markdown.return_value = html.Div("Mock markdown content")
         mock_image.return_value = html.Img()
         
-        tab = create_protect_our_streams_tab()
+        tab_wrapper = create_protect_our_streams_tab()
+        tab_content = get_tab_content(tab_wrapper)
         
         # Check it's a Div component
-        self.assertIsInstance(tab, html.Div)
+        self.assertIsInstance(tab_wrapper, html.Div)
+        self.assertIsNotNone(tab_content)
         
         # Check has correct class
-        self.assertIn("tab-content-wrapper", tab.className)
+        self.assertIn("tab-content-wrapper", tab_content.className)
         
         # Check structure - should have rows
-        children = tab.children
+        children = safe_get_children(tab_content)
         self.assertGreater(len(children), 1)  # At least intro row and actions row
         
         # Check all children are rows
@@ -340,18 +389,15 @@ class TestProtectStreamsTab(unittest.TestCase):
         mock_markdown.return_value = html.Div("Mock markdown content")
         mock_image.return_value = html.Img()
         
-        tab = create_protect_our_streams_tab()
+        tab_wrapper = create_protect_our_streams_tab()
         
         # Find the tabs component
-        tabs_component = None
-        for row in tab.children:
-            for col in row.children:
-                for child in col.children:
-                    if isinstance(child, dbc.Tabs):
-                        tabs_component = child
-                        break
+        tabs_components = find_components_by_type(tab_wrapper, dbc.Tabs)
         
-        self.assertIsNotNone(tabs_component)
+        # Should find at least one tabs component
+        self.assertGreater(len(tabs_components), 0)
+        
+        tabs_component = tabs_components[0]
         
         # Should have 4 tabs (Home & Yard, Rural & Agricultural, Recreation, Community Action)
         self.assertEqual(len(tabs_component.children), 4)
@@ -367,16 +413,18 @@ class TestSourceDataTab(unittest.TestCase):
     
     def test_create_source_data_tab(self):
         """Test source data tab creation."""
-        tab = create_source_data_tab()
+        tab_wrapper = create_source_data_tab()
+        tab_content = get_tab_content(tab_wrapper)
         
         # Check it's a Div component
-        self.assertIsInstance(tab, html.Div)
+        self.assertIsInstance(tab_wrapper, html.Div)
+        self.assertIsNotNone(tab_content)
         
         # Check has correct class
-        self.assertIn("tab-content-wrapper", tab.className)
+        self.assertIn("tab-content-wrapper", tab_content.className)
         
         # Check structure
-        children = tab.children
+        children = safe_get_children(tab_content)
         self.assertGreater(len(children), 1)  # Title row and cards row
         
         # Check all children are rows
@@ -385,27 +433,17 @@ class TestSourceDataTab(unittest.TestCase):
     
     def test_source_data_tab_cards(self):
         """Test source data tab has proper card structure."""
-        tab = create_source_data_tab()
+        tab_wrapper = create_source_data_tab()
+        tab_content = get_tab_content(tab_wrapper)
         
-        # Find the cards row (should be second row)
-        cards_row = None
-        if len(tab.children) > 1:
-            cards_row = tab.children[1]
+        # Find all cards in the structure
+        cards = find_components_by_type(tab_content, dbc.Card)
         
-        self.assertIsNotNone(cards_row)
-        self.assertIsInstance(cards_row, dbc.Row)
+        # Should have multiple cards
+        self.assertGreater(len(cards), 1)
         
-        # Should have multiple card columns
-        self.assertGreater(len(cards_row.children), 1)
-        
-        # Each column should contain a card
-        for col in cards_row.children:
-            self.assertIsInstance(col, dbc.Col)
-            # Column should contain a card
-            card = col.children[0]
-            self.assertIsInstance(card, dbc.Card)
-            
-            # Card should have header and body
+        # Each card should have header and body
+        for card in cards:
             self.assertEqual(len(card.children), 2)
             self.assertIsInstance(card.children[0], dbc.CardHeader)
             self.assertIsInstance(card.children[1], dbc.CardBody)
@@ -448,34 +486,29 @@ class TestTabIntegration(unittest.TestCase):
     def test_tab_styling_consistency(self):
         """Test consistent styling across tabs."""
         # Test tabs that don't require mocking
-        biological_tab = create_biological_tab()
-        source_tab = create_source_data_tab()
+        biological_tab_wrapper = create_biological_tab()
+        source_tab_wrapper = create_source_data_tab()
+        
+        # Extract tab content
+        biological_tab_content = get_tab_content(biological_tab_wrapper)
+        source_tab_content = get_tab_content(source_tab_wrapper)
         
         # Both should have tab-content-wrapper class
-        self.assertIn("tab-content-wrapper", biological_tab.className)
-        self.assertIn("tab-content-wrapper", source_tab.className)
+        self.assertIsNotNone(biological_tab_content)
+        self.assertIsNotNone(source_tab_content)
+        self.assertIn("tab-content-wrapper", biological_tab_content.className)
+        self.assertIn("tab-content-wrapper", source_tab_content.className)
     
     @patch('layouts.tabs.chemical.get_chemical_date_range')
     def test_tab_download_components_consistency(self, mock_date_range):
         """Test that tabs consistently include download components."""
         mock_date_range.return_value = (2020, 2024)
-        chemical_tab = create_chemical_tab()
-        
-        biological_tab = create_biological_tab()
+        chemical_tab_wrapper = create_chemical_tab()
+        biological_tab_wrapper = create_biological_tab()
         
         # Find download components
-        chemical_download = None
-        biological_download = None
-        
-        for child in chemical_tab.children:
-            if isinstance(child, dcc.Download) and child.id == 'chemical-download-component':
-                chemical_download = child
-                break
-        
-        for child in biological_tab.children:
-            if isinstance(child, dcc.Download) and child.id == 'biological-download-component':
-                biological_download = child
-                break
+        chemical_download = find_component_by_id(chemical_tab_wrapper, 'chemical-download-component', dcc.Download)
+        biological_download = find_component_by_id(biological_tab_wrapper, 'biological-download-component', dcc.Download)
         
         # Both should have download components
         self.assertIsNotNone(chemical_download)
