@@ -206,7 +206,7 @@ def calculate_soluble_nitrogen(df):
         
         # For calculation, treat NaNs and zeros as their respective BDL values.
         def get_calc_value(series, bdl_value):
-            return series.fillna(bdl_value).replace(0, bdl_value)
+            return series.fillna(bdl_value).replace(0, bdl_value).infer_objects(copy=False)
         
         nitrate_calc = get_calc_value(df_calc['Nitrate'], BDL_VALUES['Nitrate'])
         nitrite_calc = get_calc_value(df_calc['Nitrite'], BDL_VALUES['Nitrite'])

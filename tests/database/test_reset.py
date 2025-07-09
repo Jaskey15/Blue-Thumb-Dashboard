@@ -125,66 +125,123 @@ class TestSchemaRecreation:
 class TestDataReloading:
     """Test data reloading process."""
     
-    @patch('data_processing.site_processing.process_site_data')
-    @patch('data_processing.chemical_processing.load_chemical_data_to_db')
-    @patch('data_processing.updated_chemical_processing.load_updated_chemical_data_to_db')
-    @patch('data_processing.fish_processing.load_fish_data')
-    @patch('data_processing.macro_processing.load_macroinvertebrate_data')
-    @patch('data_processing.habitat_processing.load_habitat_data')
-    @patch('data_processing.merge_sites.merge_duplicate_sites')
-    @patch('data_processing.site_processing.classify_active_sites')
-    @patch('data_processing.site_processing.cleanup_unused_sites')
+    @patch('database.reset_database.verify_cleaned_csvs')
+    @patch('database.reset_database.consolidate_sites_from_csvs')
+    @patch('database.reset_database.process_site_data')
+    @patch('database.reset_database.merge_duplicate_sites')
+    @patch('database.reset_database.generate_final_data_summary')
+    @patch('database.reset_database.load_chemical_data_to_db')
+    @patch('database.reset_database.load_updated_chemical_data_to_db')
+    @patch('database.reset_database.load_fish_data')
+    @patch('database.reset_database.load_macroinvertebrate_data')
+    @patch('database.reset_database.load_habitat_data')
+    @patch('database.reset_database.classify_active_sites')
+    @patch('database.reset_database.cleanup_unused_sites')
     def test_complete_data_loading(
-        self, mock_cleanup, mock_classify, mock_merge,
-        mock_habitat, mock_macro, mock_fish,
-        mock_updated_chemical, mock_chemical, mock_site
+        self, mock_cleanup, mock_classify, mock_habitat, mock_macro, mock_fish,
+        mock_updated_chemical, mock_chemical, mock_summary, mock_merge,
+        mock_site, mock_consolidate, mock_verify
     ):
-        """Test loading all data types."""
-        # Set up all mocks to succeed
+        """Test loading all data types with new Sites First approach."""
+        # Set up all mocks to succeed (Phase 1: Site Unification)
+        mock_verify.return_value = True
+        mock_consolidate.return_value = True
         mock_site.return_value = True
+        mock_merge.return_value = True
+        mock_summary.return_value = {
+            'sites': {'total': 100, 'active': 80, 'historic': 20},
+            'chemical': {'events': 500, 'measurements': 2000},
+            'biological': {'fish_events': 50, 'macro_events': 75},
+            'habitat': {'assessments': 25}
+        }
+        
+        # Set up monitoring data loading mocks (Phase 2)
         mock_chemical.return_value = True
         mock_updated_chemical.return_value = True
         mock_fish.return_value = True
         mock_macro.return_value = True
         mock_habitat.return_value = True
-        mock_merge.return_value = True
+        
+        # Set up final cleanup mocks (Phase 3)
         mock_classify.return_value = True
         mock_cleanup.return_value = True
         
         result = reload_all_data()
         assert result is True
         
-        # Verify all steps were called in order
+        # Verify all steps were called in the new pipeline order
+        # Phase 1: Site Unification
+        mock_verify.assert_called_once()
+        mock_consolidate.assert_called_once()
         mock_site.assert_called_once()
+        mock_merge.assert_called_once()
+        
+        # Phase 2: Monitoring Data Loading
         mock_chemical.assert_called_once()
         mock_updated_chemical.assert_called_once()
         # Note: Chemical duplicate consolidation step was removed
         mock_fish.assert_called_once()
         mock_macro.assert_called_once()
         mock_habitat.assert_called_once()
-        mock_merge.assert_called_once()
+        
+        # Phase 3: Final Data Quality and Cleanup
         mock_classify.assert_called_once()
         mock_cleanup.assert_called_once()
+        
+        # Summary should be called twice (once mid-pipeline, once at end)
+        assert mock_summary.call_count == 2
     
-    @patch('data_processing.site_processing.process_site_data')
-    def test_site_data_loading_failure(self, mock_site):
-        """Test handling of site data loading failure."""
+    @patch('database.reset_database.verify_cleaned_csvs')
+    @patch('database.reset_database.consolidate_sites_from_csvs')
+    @patch('database.reset_database.process_site_data')
+    def test_site_data_loading_failure(self, mock_site, mock_consolidate, mock_verify):
+        """Test handling of site data loading failure in the new pipeline."""
+        # Set up early steps to succeed
+        mock_verify.return_value = True
+        mock_consolidate.return_value = True
+        # But site processing fails
         mock_site.return_value = False
         
         result = reload_all_data()
         assert result is False
+        
+        # Verify the pipeline stopped at site processing
+        mock_verify.assert_called_once()
+        mock_consolidate.assert_called_once()
         mock_site.assert_called_once()
     
-    @patch('data_processing.site_processing.process_site_data')
-    @patch('data_processing.chemical_processing.load_chemical_data_to_db')
-    def test_chemical_data_loading_failure(self, mock_chemical, mock_site):
-        """Test handling of chemical data loading failure."""
+    @patch('database.reset_database.verify_cleaned_csvs')
+    @patch('database.reset_database.consolidate_sites_from_csvs')
+    @patch('database.reset_database.process_site_data')
+    @patch('database.reset_database.merge_duplicate_sites')
+    @patch('database.reset_database.generate_final_data_summary')
+    @patch('database.reset_database.load_chemical_data_to_db')
+    def test_chemical_data_loading_failure(self, mock_chemical, mock_summary, mock_merge, mock_site, mock_consolidate, mock_verify):
+        """Test handling of chemical data loading failure in the new pipeline."""
+        # Set up Phase 1 (Site Unification) to succeed
+        mock_verify.return_value = True
+        mock_consolidate.return_value = True
         mock_site.return_value = True
-        mock_chemical.return_value = False
+        mock_merge.return_value = True
+        mock_summary.return_value = {
+            'sites': {'total': 100, 'active': 80, 'historic': 20},
+            'chemical': {'events': 0, 'measurements': 0},
+            'biological': {'fish_events': 0, 'macro_events': 0},
+            'habitat': {'assessments': 0}
+        }
+        
+        # Chemical data loading raises an exception (this causes pipeline abort)
+        mock_chemical.side_effect = Exception("Chemical data loading failed")
         
         result = reload_all_data()
         assert result is False
+        
+        # Verify Phase 1 completed successfully but Phase 2 failed at chemical loading
+        mock_verify.assert_called_once()
+        mock_consolidate.assert_called_once()
         mock_site.assert_called_once()
+        mock_merge.assert_called_once()
+        mock_summary.assert_called_once()  # Called once in Phase 1
         mock_chemical.assert_called_once()
 
 class TestResetProcess:
