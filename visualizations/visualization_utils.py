@@ -1,16 +1,5 @@
 """
-Shared visualization utilities for consistent styling and data presentation.
-
-This module contains helper functions and constants shared between different 
-visualization modules (fish, macroinvertebrate, habitat) to ensure consistent 
-styling and reduce code duplication.
-
-Functions organized by purpose:
-- Core Visualization Functions: Primary chart creation utilities
-- Data Processing & Formatting: Data manipulation for visualization
-- Table & UI Components: Metrics table creation and styling
-- Error Handling & Fallbacks: Graceful error handling
-- Constants & Configuration: Shared styling and configuration
+Shared visualization utilities for consistent styling and data presentation across modules.
 """
 
 import plotly.graph_objects as go
@@ -19,10 +8,6 @@ from dash import dash_table, html
 from utils import setup_logging
 
 logger = setup_logging("visualization_utils", category="visualization")
-
-# =============================================================================
-# Constants & Configuration
-# =============================================================================
 
 DEFAULT_COLORS = {
     'Winter': 'blue',
@@ -41,18 +26,11 @@ FONT_SIZES = {
     'cell': 11
 }
 
-# =============================================================================
 # Core Visualization Functions
-# =============================================================================
 
 def add_reference_lines(fig, df, thresholds, colors=None):
     """
-    Add threshold reference lines with dynamic date ranges.
-    
-    Priority order:
-    1. Use provided colors if specified
-    2. Match threshold label to DEFAULT_COLORS
-    3. Fall back to gray for unmatched labels
+    Add threshold reference lines with color priority: provided > label match > gray fallback.
     """
     try:
         if df.empty or not thresholds:
@@ -64,13 +42,12 @@ def add_reference_lines(fig, df, thresholds, colors=None):
             logger.warning("No year data found for reference lines")
             return fig
         
-        # Create bounds for full year range
+        # Full year range bounds
         x_min = pd.Timestamp(f'{min(years)}-01-01')
         x_max = pd.Timestamp(f'{max(years)}-12-31')
         
-        # Add reference lines for each threshold
         for label, threshold in thresholds.items():
-            # Select line color based on priority order
+            # Color selection priority order
             color = 'gray'
             if colors and label in colors:
                 color = colors[label]
@@ -103,12 +80,7 @@ def add_reference_lines(fig, df, thresholds, colors=None):
 
 def update_layout(fig, df, title, y_label, y_column='comparison_to_reference', tick_format='.2f', has_legend=False):
     """
-    Apply consistent layout settings across all visualizations.
-    
-    Priority order:
-    1. Set dynamic y-range based on data type
-    2. Configure x-axis with year ticks
-    3. Add legend if multi-trace plot
+    Apply standardized layout settings with dynamic ranges and consistent styling.
     """
     try:
         if df.empty:
@@ -117,7 +89,6 @@ def update_layout(fig, df, title, y_label, y_column='comparison_to_reference', t
         y_min, y_max = calculate_dynamic_y_range(df, column=y_column)
         years = sorted(df['year'].unique()) if 'year' in df.columns else []
         
-        # Standardize layout across all plots
         layout_updates = {
             'title': title,
             'title_x': 0.5,
@@ -138,7 +109,7 @@ def update_layout(fig, df, title, y_label, y_column='comparison_to_reference', t
             'template': 'seaborn'  
         }
         
-        # Add horizontal legend for multi-trace plots
+        # Horizontal legend for multi-trace plots
         if has_legend:
             layout_updates['legend'] = dict(
                 orientation="h",
@@ -159,12 +130,7 @@ def update_layout(fig, df, title, y_label, y_column='comparison_to_reference', t
 
 def create_trace(df, date_column, y_column, name, color=None, hover_fields=None):
     """
-    Create standardized scatter trace with consistent styling and hover text.
-    
-    Priority order:
-    1. Sort data chronologically
-    2. Apply consistent marker styling
-    3. Generate hover text if fields provided
+    Create standardized scatter trace with chronological sorting and consistent styling.
     """
     try:
         if df.empty:
@@ -247,17 +213,11 @@ def generate_hover_text(df, hover_fields):
         logger.error(f"Error generating hover text: {e}")
         return []
 
-# =============================================================================
 # Data Processing & Formatting
-# =============================================================================
 
 def calculate_dynamic_y_range(df, column='comparison_to_reference'):
     """
-    Calculate y-axis range with appropriate padding for data type.
-    
-    Rules:
-    - Habitat (total_score): 0-110 minimum, expand if > ~90
-    - Biological: 0-1.1 minimum, expand if > ~1.0
+    Calculate y-axis range with data type-appropriate minimums and padding.
     """
     try:
         if df.empty or column not in df.columns:
@@ -284,12 +244,7 @@ def calculate_dynamic_y_range(df, column='comparison_to_reference'):
 
 def format_metrics_table(metrics_df, summary_df, metric_order, summary_labels=None, season=None):
     """
-    Format metrics into standardized table with summary statistics.
-    
-    Priority order:
-    1. Filter by season if specified
-    2. Format metrics by year
-    3. Add summary rows with appropriate precision
+    Format metrics into standardized table with seasonal filtering and appropriate precision.
     """
     try:
         if metrics_df.empty or summary_df.empty:
@@ -303,7 +258,7 @@ def format_metrics_table(metrics_df, summary_df, metric_order, summary_labels=No
         
         years = sorted(metrics_df['year'].unique()) if not metrics_df.empty else []
         
-        # Build metrics table
+        # Metrics table construction
         table_data = {'Metric': metric_order}
         
         for year in years:
@@ -323,7 +278,7 @@ def format_metrics_table(metrics_df, summary_df, metric_order, summary_labels=No
                             scores.append('-')
                             continue
                         
-                        # Format with appropriate precision
+                        # Precision formatting based on value type
                         if isinstance(score_value, float) and score_value != int(score_value):
                             scores.append(round(score_value, 1))
                         else:
@@ -338,7 +293,7 @@ def format_metrics_table(metrics_df, summary_df, metric_order, summary_labels=No
         
         metrics_table = pd.DataFrame(table_data)
         
-        # Build summary rows
+        # Summary rows construction
         default_summary_labels = ['Total Score', 'Comparison to Reference', 'Condition']
         summary_labels = summary_labels or default_summary_labels
         summary_rows = pd.DataFrame({'Metric': summary_labels})
@@ -381,18 +336,11 @@ def format_metrics_table(metrics_df, summary_df, metric_order, summary_labels=No
         logger.error(f"Error formatting metrics table: {e}")
         return pd.DataFrame({'Metric': metric_order}), pd.DataFrame({'Metric': ['Error']})
 
-# =============================================================================
 # Table & UI Components
-# =============================================================================
 
 def create_table_styles(metrics_table):
     """
-    Create consistent table styling across all data views.
-    
-    Style rules:
-    1. Bold headers and first column
-    2. Center-align numeric data
-    3. Bold summary rows with top border
+    Create consistent table styling with bold headers, centered data, and summary row emphasis.
     """
     return {
         'style_table': {
@@ -438,7 +386,7 @@ def create_table_styles(metrics_table):
     }
 
 def create_data_table(full_table, table_id, styles):
-    """Create standardized data table with consistent styling."""
+    """Create standardized data table with consistent styling across all views."""
     try:
         return dash_table.DataTable(
             id=table_id,
@@ -450,12 +398,10 @@ def create_data_table(full_table, table_id, styles):
         logger.error(f"Error creating data table: {e}")
         return html.Div(f"Error creating table: {str(e)}")
 
-# =============================================================================
 # Error Handling & Fallbacks
-# =============================================================================
 
 def create_empty_figure(site_name=None, data_type="data"):
-    """Create empty figure with informative message when no data available."""
+    """Create empty figure with informative message for missing data scenarios."""
     fig = go.Figure()
     site_msg = f" for {site_name}" if site_name else ""
     fig.update_layout(
@@ -472,7 +418,7 @@ def create_empty_figure(site_name=None, data_type="data"):
     return fig
 
 def create_error_figure(error_message):
-    """Create error figure with clear error message for troubleshooting."""
+    """Create error figure with clear message for troubleshooting and debugging."""
     fig = go.Figure()
     fig.update_layout(
         title="Error creating visualization",

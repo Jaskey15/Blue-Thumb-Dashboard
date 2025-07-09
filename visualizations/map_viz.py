@@ -33,10 +33,6 @@ from visualizations.map_queries import (
 
 logger = setup_logging("map_viz", category="visualization")
 
-# ============================================================================
-# CONSTANTS AND CONFIGURATION
-# ============================================================================
-
 # Status-based color scheme for all parameter types
 COLORS = {
     'normal': '#1e8449',      # Green
@@ -66,7 +62,7 @@ COLORS = {
     }
 }
 
-# Display names for parameters in UI elements
+# Parameter display names for UI consistency
 PARAMETER_LABELS = {
     'do_percent': 'Dissolved Oxygen',
     'pH': 'pH',
@@ -78,7 +74,7 @@ PARAMETER_LABELS = {
     'Habitat_Score': 'Habitat'
 }
 
-# Parameter labels specifically for map hover text
+# Parameter labels for hover text
 MAP_PARAMETER_LABELS = {
     'do_percent': 'Dissolved Oxygen Saturation',
     'pH': 'pH',
@@ -87,31 +83,21 @@ MAP_PARAMETER_LABELS = {
     'Chloride': 'Chloride'
 }
 
-# ============================================================================
 # CORE MAP FUNCTIONS
-# ============================================================================
 
 def create_basic_site_map(active_only=False):
     """
-    Creates a base map showing all monitoring sites with active/historic differentiation.
-    Uses single trace for all markers to optimize performance.
-    
-    Args:
-        active_only: If True, shows only active sites
-        
-    Returns:
-        (figure, active_count, historic_count, total_count)
+    Create base map with active/historic site differentiation using batch operations.
     """
     try:
         from visualizations.map_queries import get_sites_for_maps
         
-        # Load sites data efficiently
         sites_df = get_sites_for_maps(active_only=active_only)
         
         if sites_df.empty:
             return create_error_map("Error: No monitoring sites available"), 0, 0, 0
         
-        # Calculate site counts
+        # Site count calculations
         if active_only:
             active_count = len(sites_df)
             historic_count = 0
@@ -121,7 +107,7 @@ def create_basic_site_map(active_only=False):
             historic_count = (sites_df['active'] == False).sum()
             total_count = len(sites_df)
         
-        # Generate hover text with vectorized operations
+        # Vectorized hover text generation
         hover_texts = (
             "<b>Site:</b> " + sites_df['site_name'].astype(str) + "<br>" +
             "<b>County:</b> " + sites_df['county'].astype(str) + "<br>" +
@@ -129,11 +115,10 @@ def create_basic_site_map(active_only=False):
             "<b>Ecoregion:</b> " + sites_df['ecoregion'].astype(str)
         ).tolist()
         
-        # Set marker styles based on active status
+        # Vectorized marker styling
         marker_colors = sites_df['active'].map({True: '#3366CC', False: '#9370DB'}).tolist()
         marker_sizes = sites_df['active'].map({True: 10, False: 6}).tolist()
         
-        # Create map with single batch marker operation
         fig = go.Figure()
         
         if len(sites_df) > 0:
@@ -178,17 +163,15 @@ def add_parameter_colors_to_map(fig, param_type, param_name, sites_df=None, acti
     try:        
         from visualizations.map_queries import get_sites_for_maps
         
-        # Load sites if not provided
         if sites_df is None:
             sites_df = get_sites_for_maps(active_only=active_only)
         
         if sites_df.empty:
             return fig, 0, 0
         
-        # Clear existing markers
-        fig.data = []
+        fig.data = []  # Clear existing markers
         
-        # Convert DataFrame to list for marker addition
+        # Convert DataFrame to list for marker processing
         sites_list = []
         for _, row in sites_df.iterrows():
             sites_list.append({
@@ -201,7 +184,7 @@ def add_parameter_colors_to_map(fig, param_type, param_name, sites_df=None, acti
                 "active": row['active']
             })
         
-        # Add parameter-specific markers
+        # Parameter-specific marker addition
         if param_type == 'chem':
             fig, sites_with_data, total_sites = add_data_markers(
                 fig, sites_list, 'chemical', parameter_name=param_name, filter_no_data=True
@@ -229,9 +212,7 @@ def add_parameter_colors_to_map(fig, param_type, param_name, sites_df=None, acti
         logger.error(f"Error adding parameter colors: {e}")
         return fig, 0, len(sites_df) if sites_df is not None and not sites_df.empty else 0
 
-# ============================================================================
 # DATA PROCESSING FUNCTIONS
-# ============================================================================
 
 def get_latest_data_by_type(data_type):
     """
@@ -243,7 +224,6 @@ def get_latest_data_by_type(data_type):
     Returns:
         DataFrame with latest data per site
     """
-    # Define query functions for each data type
     query_functions = {
         'chemical': get_latest_chemical_data_for_maps,
         'fish': get_latest_fish_data_for_maps,
@@ -254,7 +234,6 @@ def get_latest_data_by_type(data_type):
     if data_type not in query_functions:
         raise ValueError(f"Unknown data type: {data_type}")
     
-    # Execute optimized query
     df = query_functions[data_type]()
     
     if df.empty:
@@ -276,7 +255,6 @@ def get_status_color(data, data_type):
         For single values: (status_text, color_code)
         For Series: (status_series, color_series)
     """
-    # Define color mappings for each data type 
     color_maps = {
         'chemical': {
             'Normal': COLORS['normal'],
@@ -307,7 +285,7 @@ def get_status_color(data, data_type):
         }
     }
     
-    # Handle single values
+    # Single value handling
     if not isinstance(data, pd.Series):
         if pd.isna(data) or data is None:
             return "Unknown", 'gray'
@@ -321,7 +299,7 @@ def get_status_color(data, data_type):
     clean_series = data_series.astype(str).str.strip()
     is_null = data_series.isna()
     
-    # Map colors using vectorized operations
+    # Vectorized color mapping
     color_map = color_maps.get(data_type, {})
     colors = clean_series.map(color_map).fillna('gray')
     statuses = clean_series.where(~is_null, "Unknown")
@@ -330,13 +308,7 @@ def get_status_color(data, data_type):
 
 def get_total_site_count(active_only=False):
     """
-    Gets total site count using optimized SQL query.
-    
-    Args:
-        active_only: If True, counts only active sites
-        
-    Returns:
-        Integer count of sites
+    Get total site count using optimized SQL query for performance.
     """
     conn = None
     try:
@@ -361,9 +333,7 @@ def get_total_site_count(active_only=False):
         if conn:
             close_connection(conn)
 
-# ============================================================================
 # UI HELPER FUNCTIONS
-# ============================================================================
 
 def create_hover_text(df, data_type, config, parameter_name):
     """
@@ -378,12 +348,10 @@ def create_hover_text(df, data_type, config, parameter_name):
     Returns:
         List of formatted hover text strings
     """
-    # Base hover info - site name
     hover_texts = "<b>Site:</b> " + df[config['site_column']].astype(str) + "<br>"
     
-    # Add parameter-specific information
+    # Parameter-specific information formatting
     if data_type == 'chemical' and parameter_name:
-        # Format values with appropriate units
         def format_chemical_value(value, param):
             if pd.isna(value):
                 return "No data"
@@ -398,7 +366,7 @@ def create_hover_text(df, data_type, config, parameter_name):
         
         value_series = df[config['value_column']].apply(lambda x: format_chemical_value(x, parameter_name))
         
-        # Add appropriate units
+        # Unit application based on parameter type
         if parameter_name == 'do_percent':
             value_series = value_series.where(value_series == "No data", value_series + "%")
         elif parameter_name == 'pH':
@@ -425,7 +393,7 @@ def create_hover_text(df, data_type, config, parameter_name):
         hover_texts += "<b>Habitat Score:</b> " + habitat_scores + "<br>"
         hover_texts += "<b>Grade:</b> " + df['computed_status'].astype(str) + "<br>"
     
-    # Add date information with consistent formatting
+    # Date information with consistent formatting
     if config['date_column'] in df.columns:
         if data_type == 'chemical':
             dates = pd.to_datetime(df[config['date_column']]).dt.strftime('%m-%d-%Y')
@@ -451,14 +419,7 @@ def create_hover_text(df, data_type, config, parameter_name):
 
 def _create_base_map_layout(fig, title="Monitoring Sites"):
     """
-    Applies consistent layout configuration to map figures.
-    
-    Args:
-        fig: Plotly figure to configure
-        title: Map title
-    
-    Returns:
-        Configured figure with standard layout
+    Apply consistent layout configuration across all map instances.
     """
     fig.update_layout(
         map=dict(
@@ -498,13 +459,7 @@ def _create_base_map_layout(fig, title="Monitoring Sites"):
 
 def create_error_map(error_message):
     """
-    Creates a basic map with error message overlay.
-    
-    Args:
-        error_message: Error text to display
-    
-    Returns:
-        Plotly figure with error message
+    Create basic map with error message overlay for troubleshooting.
     """
     fig = go.Figure()
     fig.update_layout(
@@ -547,15 +502,13 @@ def add_data_markers(fig, sites, data_type, parameter_name=None, season=None, fi
     import pandas as pd
     import plotly.graph_objects as go
     
-    # Get the latest data for this data type
     latest_data = get_latest_data_by_type(data_type)
 
-    # Handle empty data
     if latest_data.empty:
         logger.warning(f"No {data_type} data available for mapping")
         return fig, 0, len(sites)
     
-    # Data type specific configurations
+    # Data type configuration for consistent processing
     data_config = {
         'chemical': {
             'value_column': parameter_name,
@@ -585,7 +538,7 @@ def add_data_markers(fig, sites, data_type, parameter_name=None, season=None, fi
     
     config = data_config[data_type]
     
-    # Convert sites to DataFrame for efficient merging
+    # Efficient DataFrame merging for site data
     sites_df = pd.DataFrame(sites)
     sites_df = sites_df.rename(columns={'name': config['site_column']})
     
@@ -605,12 +558,10 @@ def add_data_markers(fig, sites, data_type, parameter_name=None, season=None, fi
         (config['value_column'] in merged_data.columns)
     )
     
-    # Apply filtering if requested
     if filter_no_data:
         sites_to_plot = merged_data[has_data_mask].copy()
     else:
         sites_to_plot = merged_data.copy()
-        # For sites without data, we'll use default styling
     
     sites_with_data = has_data_mask.sum()
     total_sites = len(sites)  
@@ -618,28 +569,27 @@ def add_data_markers(fig, sites, data_type, parameter_name=None, season=None, fi
     if total_sites == 0:
         return fig, sites_with_data, len(sites)
     
-    # Compute all statuses and colors 
+    # Vectorized status and color computation
     if config['status_column'] in sites_to_plot.columns:
         statuses, colors = get_status_color(sites_to_plot[config['status_column']], data_type)
         sites_to_plot = sites_to_plot.copy()
         sites_to_plot['computed_status'] = statuses
         sites_to_plot['computed_color'] = colors
     else:
-        # No status data available
         sites_to_plot = sites_to_plot.copy()
         sites_to_plot['computed_status'] = "Unknown"
         sites_to_plot['computed_color'] = 'gray'
 
     hover_texts = create_hover_text(sites_to_plot, data_type, config, parameter_name)
     
-    # Batch add all markers at once 
+    # Batch marker addition for improved performance
     if len(sites_to_plot) > 0:
         lats = sites_to_plot['lat'].tolist()
         lons = sites_to_plot['lon'].tolist()
         colors_list = sites_to_plot['computed_color'].tolist()
         active_status = sites_to_plot['active'].tolist()
         
-        # Vectorized marker size and color computation
+        # Vectorized marker styling
         marker_sizes = []
         final_colors = []
         
@@ -655,7 +605,7 @@ def add_data_markers(fig, sites, data_type, parameter_name=None, season=None, fi
                     marker_sizes.append(6)
                     final_colors.append('#9370DB')  # Purple for historic
         
-        # Add all markers in a single trace 
+        # Single trace for all markers for performance
         fig.add_trace(go.Scattermap(
             lat=lats,
             lon=lons,

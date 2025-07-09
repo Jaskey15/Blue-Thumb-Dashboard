@@ -17,24 +17,17 @@ import sqlite3
 from database.database import get_connection, close_connection
 from utils import setup_logging
 
-# Set up logging
 logger = setup_logging("map_queries", category="visualization")
 
 def get_sites_for_maps(active_only=False):
     """
-    Fetches site information optimized for map display.
-    
-    Args:
-        active_only: If True, returns only active sites
-        
-    Returns:
-        DataFrame with site coordinates and metadata
+    Fetch site information optimized for map display performance.
     """
     conn = None
     try:
         conn = get_connection()
         
-        # Base query with essential columns
+        # Essential columns for map rendering
         query = """
         SELECT 
             site_name,
@@ -55,14 +48,13 @@ def get_sites_for_maps(active_only=False):
             
         query += " ORDER BY site_name"
         
-        # Load data efficiently into DataFrame
         sites_df = pd.read_sql_query(query, conn, params=params)
         
         if sites_df.empty:
             logger.warning("No sites found in database")
             return pd.DataFrame()
         
-        # Handle missing metadata with vectorized operations
+        # Vectorized missing data handling
         sites_df['county'] = sites_df['county'].fillna('Unknown')
         sites_df['river_basin'] = sites_df['river_basin'].fillna('Unknown')
         sites_df['ecoregion'] = sites_df['ecoregion'].fillna('Unknown')
@@ -83,19 +75,13 @@ def get_sites_for_maps(active_only=False):
             
 def get_latest_chemical_data_for_maps(site_name=None):
     """
-    Fetches latest chemical readings per site using window functions.
-    
-    Args:
-        site_name: Optional site name to filter results
-        
-    Returns:
-        DataFrame with pivoted chemical parameters and their statuses
+    Fetch latest chemical readings per site using window functions for efficiency.
     """
     from data_processing.chemical_utils import KEY_PARAMETERS
     
     conn = get_connection()
     try:
-        # Get latest measurements per parameter using window function
+        # Window function to get most recent measurement per parameter
         query = """
         WITH latest_measurements AS (
             SELECT 
@@ -127,7 +113,6 @@ def get_latest_chemical_data_for_maps(site_name=None):
         WHERE rn = 1
         """
         
-        # Add site filter if specified
         params = []
         if site_name:
             query = query.replace("WHERE rn = 1", "WHERE rn = 1 AND Site_Name = ?")
@@ -141,7 +126,7 @@ def get_latest_chemical_data_for_maps(site_name=None):
             
         df['Date'] = pd.to_datetime(df['Date'])
         
-        # Create value and status pivots by site
+        # Pivot data for map display format
         value_pivot = df.pivot_table(
             index='Site_Name',
             columns='parameter_code',
@@ -156,7 +141,7 @@ def get_latest_chemical_data_for_maps(site_name=None):
             aggfunc='first'
         ).reset_index()
         
-        # Add latest date info per site
+        # Aggregate latest date information per site
         site_dates = df.groupby('Site_Name')['Date'].max().reset_index()
         site_years = df.groupby('Site_Name')['Year'].max().reset_index()
         site_months = df.groupby('Site_Name')['Month'].max().reset_index()
@@ -165,7 +150,7 @@ def get_latest_chemical_data_for_maps(site_name=None):
         value_pivot = value_pivot.merge(site_years, on='Site_Name', how='left')
         value_pivot = value_pivot.merge(site_months, on='Site_Name', how='left')
         
-        # Add status columns for each parameter
+        # Combine status information with values
         for param in KEY_PARAMETERS:
             if param in status_pivot.columns:
                 value_pivot[f'{param}_status'] = status_pivot[param]
@@ -181,19 +166,13 @@ def get_latest_chemical_data_for_maps(site_name=None):
 
 def get_latest_fish_data_for_maps(site_name=None):
     """
-    Fetches latest fish survey data per site.
-    
-    Args:
-        site_name: Optional site name to filter results
-    
-    Returns:
-        DataFrame with IBI scores and integrity classifications
+    Fetch latest fish survey data per site using window functions.
     """
     conn = None
     try:
         conn = get_connection()
         
-        # Get latest fish survey per site using window function
+        # Most recent fish survey per site
         query = '''
         WITH latest_fish AS (
             SELECT 
@@ -222,7 +201,6 @@ def get_latest_fish_data_for_maps(site_name=None):
         WHERE rn = 1
         '''
         
-        # Add site filter if specified
         params = []
         if site_name:
             query = query.replace("WHERE rn = 1", "WHERE rn = 1 AND site_name = ?")
@@ -253,19 +231,13 @@ def get_latest_fish_data_for_maps(site_name=None):
 
 def get_latest_macro_data_for_maps(site_name=None):
     """
-    Fetches latest macroinvertebrate survey data per site.
-    
-    Args:
-        site_name: Optional site name to filter results
-    
-    Returns:
-        DataFrame with bioassessment scores and conditions
+    Fetch latest macroinvertebrate survey data per site using window functions.
     """
     conn = None
     try:
         conn = get_connection()
         
-        # Get latest macro survey per site using window function
+        # Most recent macro survey per site
         query = '''
         WITH latest_macro AS (
             SELECT 
@@ -300,7 +272,6 @@ def get_latest_macro_data_for_maps(site_name=None):
         WHERE rn = 1
         '''
         
-        # Add site filter if specified
         params = []
         if site_name:
             query = query.replace("WHERE rn = 1", "WHERE rn = 1 AND site_name = ?")
@@ -310,7 +281,7 @@ def get_latest_macro_data_for_maps(site_name=None):
         
         macro_df = pd.read_sql_query(query, conn, params=params)
         
-        # Convert dates to datetime for consistent handling
+        # Consistent date handling across functions
         if 'collection_date' in macro_df.columns and not macro_df.empty:
             macro_df['collection_date'] = pd.to_datetime(macro_df['collection_date'])
         
@@ -335,19 +306,13 @@ def get_latest_macro_data_for_maps(site_name=None):
 
 def get_latest_habitat_data_for_maps(site_name=None):
     """
-    Fetches latest habitat assessment data per site.
-    
-    Args:
-        site_name: Optional site name to filter results
-    
-    Returns:
-        DataFrame with habitat scores and grades
+    Fetch latest habitat assessment data per site using window functions.
     """
     conn = None
     try:
         conn = get_connection()
         
-        # Get latest habitat assessment per site using window function
+        # Most recent habitat assessment per site
         query = '''
         WITH latest_habitat AS (
             SELECT 
@@ -376,7 +341,6 @@ def get_latest_habitat_data_for_maps(site_name=None):
         WHERE rn = 1
         '''
         
-        # Add site filter if specified
         params = []
         if site_name:
             query = query.replace("WHERE rn = 1", "WHERE rn = 1 AND site_name = ?")

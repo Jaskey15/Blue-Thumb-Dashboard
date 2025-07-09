@@ -1,5 +1,4 @@
 """
-Utility functions for the Tenmile Creek Water Quality Dashboard.
 This module contains reusable helper functions used across the dashboard.
 """
 
@@ -26,16 +25,12 @@ DEFAULT_IMAGE_STYLE = {
 
 def setup_logging(module_name, category="general"):
     """
-    Configure logging to use the logs directory with component-specific log file.
-    
-    Args:
-        module_name: Name of the module (used for log file name)
-        category: Category subfolder for organizing logs (default: "general")
+    Configure component-specific logging with organized directory structure.
     """
     import os
     import logging
     
-    # Find project root by looking for app.py
+    # Project root discovery
     def find_project_root():
         current_dir = os.getcwd()
         max_levels = 5
@@ -54,38 +49,31 @@ def setup_logging(module_name, category="general"):
             f"Make sure app.py exists in your project root."
         )
     
-    # Get project root and create logs directory structure
     project_root = find_project_root()
     logs_dir = os.path.join(project_root, 'logs', category)
     os.makedirs(logs_dir, exist_ok=True)
     
-    # Create log file path
     log_file = os.path.join(logs_dir, f"{module_name}.log")
     
-    # Get or create logger for this module
+    # Module-specific logger configuration
     logger = logging.getLogger(module_name)
-    
-    # Clear any existing handlers for this specific logger
     logger.handlers.clear()
     logger.setLevel(logging.INFO)
+    logger.propagate = False  # Prevent conflicts with root logger
     
     # Prevent propagation to root logger to avoid conflicts
     logger.propagate = False
     
-    # Create file handler
     file_handler = logging.FileHandler(log_file)
     file_handler.setLevel(logging.INFO)
     
-    # Create console handler  
     console_handler = logging.StreamHandler()
     console_handler.setLevel(logging.INFO)
     
-    # Create formatter
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
     file_handler.setFormatter(formatter)
     console_handler.setFormatter(formatter)
     
-    # Add handlers to logger
     logger.addHandler(file_handler)
     logger.addHandler(console_handler)
     
@@ -93,21 +81,12 @@ def setup_logging(module_name, category="general"):
 
 def round_parameter_value(param_name, value, data_type='chemical'):
     """
-    Round parameter values to appropriate decimal places based on parameter type.
-    
-    Args:
-        param_name: Name of the parameter
-        value: Raw parameter value
-        data_type: Type of data ('chemical', 'bio', 'habitat')
-        
-    Returns:
-        Rounded value or None if input is invalid
+    Round values to parameter-appropriate precision for consistent display.
     """
     if pd.isna(value) or value is None:
         return None
     
     try:
-        # Convert to float first
         float_value = float(value)
         
         if data_type == 'chemical':
@@ -122,8 +101,7 @@ def round_parameter_value(param_name, value, data_type='chemical'):
             elif param_name == 'Chloride':
                 return int(round(float_value))
             else:
-                # Default for unknown chemical parameters (2 decimal places)
-                return float(f"{float_value:.2f}")
+                return float(f"{float_value:.2f}")  # Default for unknown chemical parameters
                 
         elif data_type == 'bio':
             return float(f"{float_value:.2f}")
@@ -132,8 +110,7 @@ def round_parameter_value(param_name, value, data_type='chemical'):
             return int(round(float_value))
             
         else:
-            # Default rounding (2 decimal places)
-            return float(f"{float_value:.2f}")
+            return float(f"{float_value:.2f}")  # Default rounding
             
     except (ValueError, TypeError):
         logger.warning(f"Could not round value {value} for parameter {param_name}")
@@ -141,24 +118,14 @@ def round_parameter_value(param_name, value, data_type='chemical'):
 
 def load_markdown_content(filename, fallback_message=None, link_target=None):
     """
-    Load content from a markdown file and convert it to Dash components.
-    
-    Args:
-        filename: Path to the markdown file relative to the text directory
-        fallback_message: Optional custom message to display if loading fails
-        link_target: Optional target attribute for links (e.g., "_blank")
-        
-    Returns:
-        Dash component with the markdown content
+    Load and convert markdown files to Dash components with error handling.
     """
-    # Setup Logging
     logger = setup_logging("load_markdown_content", category="utils")
 
     try:
         base_dir = os.path.dirname(__file__) 
         file_path = os.path.join(base_dir, 'text', filename)  
 
-        # Check if file exists before attempting to open it
         if not os.path.exists(file_path):
             error_msg = f"Markdown file not found: {file_path}"
             logger.error(error_msg)
@@ -167,11 +134,10 @@ def load_markdown_content(filename, fallback_message=None, link_target=None):
                 className="alert alert-warning"
             )
 
-        # Read and convert the markdown content
         with open(file_path, 'r', encoding='utf-8') as file:
             content = file.read()
             
-        # Create markdown component with optional link_target
+        # Optional link targeting for external links
         markdown_props = {}
         if link_target:
             markdown_props['link_target'] = link_target
@@ -192,17 +158,10 @@ def load_markdown_content(filename, fallback_message=None, link_target=None):
     
 def get_sites_with_data(data_type):
     """
-    Get a list of site names that have data for the specified data type.
-    
-    Args:
-        data_type: 'chemical', 'fish', 'macro', or 'habitat'
-    
-    Returns:
-        List of site names that have data for the specified type
+    Get sites that have actual data measurements for filtering purposes.
     """
     from database.database import get_connection, close_connection
 
-    # Set up logger for this function
     logger = setup_logging("get_sites_with_data", category="utils")
     
     conn = None
@@ -210,7 +169,7 @@ def get_sites_with_data(data_type):
         conn = get_connection()
         cursor = conn.cursor()
         
-        # Define queries for each data type
+        # Queries target sites with actual measurement data
         queries = {
             'chemical': """
                 SELECT DISTINCT s.site_name 
@@ -262,21 +221,12 @@ def get_sites_with_data(data_type):
     
 def create_metrics_accordion(table_component, title, accordion_id):
     """
-    Create an accordion layout for a metrics table.
-    
-    Args:
-        table_component: The table to display inside the accordion
-        title: The title to display for the accordion item
-        accordion_id: A unique ID for the accordion component
-        
-    Returns:
-        A Dash accordion component
+    Wrap metrics tables in collapsible accordion for better UX.
     """
     try:
         accordion = html.Div([
             dbc.Accordion([
                 dbc.AccordionItem(
-                    # Content - metrics table
                     table_component,
                     title=title,
                 ),
@@ -293,36 +243,22 @@ def create_metrics_accordion(table_component, title, accordion_id):
 
 def create_image_with_caption(src, caption, className="img-fluid", style=None, alt_text=None):
     """
-    Create an image with a caption below it.
-    
-    Args:
-        src: Image source URL or path
-        caption: Caption text to display below the image
-        className: CSS class for the image (default: "img-fluid")
-        style: Optional custom style for the image
-        alt_text: Alternative text for the image for accessibility
-        
-    Returns:
-        A Div containing the image and caption
+    Create accessible image components with consistent styling.
     """
     try:
-        # Use default style if none provided
         if style is None:
             style = DEFAULT_IMAGE_STYLE.copy()
             
-        # Use caption as alt text if none provided
         if alt_text is None:
-            alt_text = caption
+            alt_text = caption  # Use caption as fallback for accessibility
         
         return html.Div([
-            # Image component
             html.Img(
                 src=src,
                 className=className,
                 style=style,
                 alt=alt_text
             ),
-            # Caption below the image
             html.Figcaption(
                 caption,
                 style=CAPTION_STYLE
@@ -338,15 +274,7 @@ def create_image_with_caption(src, caption, className="img-fluid", style=None, a
 
 def safe_div(a, b, default=0):
     """
-    Safely divide two numbers, returning a default value if division by zero.
-    
-    Args:
-        a: Numerator
-        b: Denominator
-        default: Default value to return if b is zero (default: 0)
-        
-    Returns:
-        Result of a/b or default if b is zero
+    Prevent division by zero errors in calculations.
     """
     try:
         return a / b if b != 0 else default
@@ -355,15 +283,7 @@ def safe_div(a, b, default=0):
 
 def format_value(value, precision=2, unit=None):
     """
-    Format a numerical value with specified precision and optional unit.
-    
-    Args:
-        value: Numerical value to format
-        precision: Number of decimal places (default: 2)
-        unit: Optional unit to append (e.g., "mg/L")
-        
-    Returns:
-        Formatted string representation of the value
+    Standardize numerical display formatting across components.
     """
     try:
         if value is None:
