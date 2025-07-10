@@ -132,6 +132,7 @@ gsutil cp database/blue_thumb.db gs://blue-thumb-database/
 - Downloads SQLite database from Cloud Storage
 - Creates automatic backup with timestamp
 - Inserts new chemical measurements
+- Reclassifies active/historic site status** based on updated data
 - Uploads updated database back to Cloud Storage
 
 ### 5. Sync Tracking
@@ -166,6 +167,15 @@ elif range_selection == "Mid":
 elif range_selection == "High":
     value = max(high_reading_1, high_reading_2)
 ```
+
+### Active/Historic Site Classification
+
+After inserting new chemical data, the function automatically reclassifies all sites:
+
+- **Active Sites**: Have chemical readings within 1 year of the most recent reading date across all sites
+- **Historic Sites**: No recent chemical data or readings older than 1-year cutoff
+- **Process**: Updates the `active` flag and `last_chemical_reading_date` for all sites in the database
+- **Ensures Accuracy**: Dashboard always reflects current site activity status after new data arrives
 
 ## Monitoring and Debugging
 
@@ -202,7 +212,12 @@ gcloud scheduler jobs describe survey123-daily-sync --location=us-central1
   "records_inserted": 21,
   "execution_time": "0:00:45.123456",
   "last_sync": "2024-01-30T06:00:00",
-  "current_sync": "2024-01-31T06:00:00"
+  "current_sync": "2024-01-31T06:00:00",
+  "site_classification": {
+    "sites_classified": 370,
+    "active_count": 85,
+    "historic_count": 285
+  }
 }
 ```
 
@@ -277,6 +292,7 @@ gcloud functions deploy survey123-daily-sync \
 - **Dashboard integration** for sync status monitoring
 - **Multi-form support** for different survey types
 - **Data validation rules** specific to site conditions
+- ✅ **Active/Historic site reclassification** - **IMPLEMENTED**: Sites are automatically reclassified after each sync
 
 ## Support
 

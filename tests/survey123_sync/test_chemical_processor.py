@@ -24,7 +24,8 @@ sys.modules['google.cloud.storage'] = MagicMock()
 from chemical_processor import (
     get_reference_values_from_db,
     process_survey123_chemical_data,
-    insert_processed_data_to_db
+    insert_processed_data_to_db,
+    classify_active_sites_in_db
 )
 
 
@@ -288,6 +289,104 @@ class TestChemicalProcessor(unittest.TestCase):
         self.assertEqual(result['records_inserted'], 0)
         self.assertIn('error', result)
         self.assertIn('Database connection failed', result['error'])
+
+    def test_classify_active_sites_in_db_success(self):
+        """Test successful site classification."""
+        # Create a temporary in-memory database
+        with tempfile.NamedTemporaryFile(suffix='.db') as temp_db:
+            # Setup test database
+            conn = sqlite3.connect(temp_db.name)
+            cursor = conn.cursor()
+            
+            # Create minimal required tables
+            cursor.execute('''
+                CREATE TABLE sites (
+                    site_id INTEGER PRIMARY KEY,
+                    site_name TEXT NOT NULL,
+                    active BOOLEAN DEFAULT 1,
+                    last_chemical_reading_date TEXT
+                )
+            ''')
+            
+            cursor.execute('''
+                CREATE TABLE chemical_collection_events (
+                    event_id INTEGER PRIMARY KEY,
+                    site_id INTEGER NOT NULL,
+                    collection_date TEXT NOT NULL,
+                    FOREIGN KEY (site_id) REFERENCES sites (site_id)
+                )
+            ''')
+            
+            # Insert test data
+            cursor.execute("INSERT INTO sites (site_id, site_name) VALUES (1, 'Active Site')")
+            cursor.execute("INSERT INTO sites (site_id, site_name) VALUES (2, 'Historic Site')")
+            
+            # Add recent data for active site (within 1 year)
+            cursor.execute("INSERT INTO chemical_collection_events (site_id, collection_date) VALUES (1, '2023-12-01')")
+            
+            # Add old data for historic site (more than 1 year old)
+            cursor.execute("INSERT INTO chemical_collection_events (site_id, collection_date) VALUES (2, '2020-01-01')")
+            
+            conn.commit()
+            conn.close()
+            
+            # Test the classification function
+            result = classify_active_sites_in_db(temp_db.name)
+            
+            # Verify results
+            self.assertNotIn('error', result)
+            self.assertEqual(result['sites_classified'], 2)
+            self.assertEqual(result['active_count'], 1)
+            self.assertEqual(result['historic_count'], 1)
+            self.assertIn('cutoff_date', result)
+            self.assertIn('most_recent_date', result)
+    
+    def test_classify_active_sites_in_db_no_chemical_data(self):
+        """Test site classification with no chemical data."""
+        # Create a temporary in-memory database
+        with tempfile.NamedTemporaryFile(suffix='.db') as temp_db:
+            # Setup test database with sites but no chemical data
+            conn = sqlite3.connect(temp_db.name)
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                CREATE TABLE sites (
+                    site_id INTEGER PRIMARY KEY,
+                    site_name TEXT NOT NULL,
+                    active BOOLEAN DEFAULT 1,
+                    last_chemical_reading_date TEXT
+                )
+            ''')
+            
+            cursor.execute('''
+                CREATE TABLE chemical_collection_events (
+                    event_id INTEGER PRIMARY KEY,
+                    site_id INTEGER NOT NULL,
+                    collection_date TEXT NOT NULL,
+                    FOREIGN KEY (site_id) REFERENCES sites (site_id)
+                )
+            ''')
+            
+            cursor.execute("INSERT INTO sites (site_id, site_name) VALUES (1, 'Test Site')")
+            
+            conn.commit()
+            conn.close()
+            
+            # Test the classification function
+            result = classify_active_sites_in_db(temp_db.name)
+            
+            # Should return error for no chemical data
+            self.assertIn('error', result)
+            self.assertEqual(result['sites_classified'], 0)
+    
+    def test_classify_active_sites_in_db_database_error(self):
+        """Test handling of database errors during classification."""
+        # Test with non-existent database file
+        result = classify_active_sites_in_db('/non/existent/path/test.db')
+        
+        # Should return error result
+        self.assertIn('error', result)
+        self.assertEqual(result['sites_classified'], 0)
 
 
 if __name__ == '__main__':

@@ -191,4 +191,86 @@ def insert_processed_data_to_db(df: pd.DataFrame, db_path: str) -> Dict[str, Any
         
     except Exception as e:
         logger.error(f"Error inserting data to database: {e}")
-        return {'records_inserted': 0, 'error': str(e)} 
+        return {'records_inserted': 0, 'error': str(e)}
+
+def classify_active_sites_in_db(db_path: str) -> Dict[str, Any]:
+    """
+    Classifies sites as active or historic based on recent chemical data.
+    
+    A site is "active" if it has a chemical reading within one year of the
+    most recent reading date across all sites. Otherwise, it is "historic".
+    
+    Args:
+        db_path: Path to the SQLite database file
+        
+    Returns:
+        Dictionary with classification results and counts
+    """
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        
+        # Step 1: Find the most recent chemical reading date across all sites
+        cursor.execute("""
+            SELECT MAX(collection_date) 
+            FROM chemical_collection_events
+        """)
+        
+        result = cursor.fetchone()
+        if not result or not result[0]:
+            logger.warning("No chemical data found - cannot classify active sites")
+            return {'error': 'No chemical data found', 'sites_classified': 0}
+            
+        most_recent_date = result[0]
+        
+        # Step 2: Calculate cutoff date (1 year before most recent reading)
+        from datetime import datetime, timedelta
+        most_recent_dt = datetime.strptime(most_recent_date, '%Y-%m-%d')
+        cutoff_date = most_recent_dt - timedelta(days=365)
+        cutoff_date_str = cutoff_date.strftime('%Y-%m-%d')
+        
+        # Step 3: Get the most recent chemical reading date for each site
+        cursor.execute("""
+            SELECT s.site_id, s.site_name, MAX(c.collection_date) as last_reading
+            FROM sites s
+            LEFT JOIN chemical_collection_events c ON s.site_id = c.site_id
+            GROUP BY s.site_id, s.site_name
+        """)
+        
+        sites_data = cursor.fetchall()
+        active_count = 0
+        historic_count = 0
+        
+        # Step 4: Update each site's active status
+        for site_id, site_name, last_reading in sites_data:
+            if last_reading and last_reading >= cutoff_date_str:
+                cursor.execute("""
+                    UPDATE sites 
+                    SET active = 1, last_chemical_reading_date = ?
+                    WHERE site_id = ?
+                """, (last_reading, site_id))
+                active_count += 1
+            else:
+                cursor.execute("""
+                    UPDATE sites 
+                    SET active = 0, last_chemical_reading_date = ?
+                    WHERE site_id = ?
+                """, (last_reading, site_id))
+                historic_count += 1
+        
+        conn.commit()
+        conn.close()
+        
+        logger.info(f"Site classification complete: {active_count} active, {historic_count} historic")
+        
+        return {
+            'sites_classified': len(sites_data),
+            'active_count': active_count,
+            'historic_count': historic_count,
+            'cutoff_date': cutoff_date_str,
+            'most_recent_date': most_recent_date
+        }
+        
+    except Exception as e:
+        logger.error(f"Error classifying active sites: {e}")
+        return {'error': str(e), 'sites_classified': 0} 

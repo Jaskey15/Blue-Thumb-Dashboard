@@ -267,11 +267,18 @@ def survey123_daily_sync(request):
             if not db_manager.download_database(temp_db.name):
                 raise Exception("Failed to download database")
             
-            from chemical_processor import insert_processed_data_to_db
+            from chemical_processor import insert_processed_data_to_db, classify_active_sites_in_db
             insert_result = insert_processed_data_to_db(processed_data, temp_db.name)
             
             if 'error' in insert_result:
                 raise Exception(f"Database insertion failed: {insert_result['error']}")
+            
+            # Reclassify active/historic sites after inserting new data
+            classification_result = classify_active_sites_in_db(temp_db.name)
+            if 'error' in classification_result:
+                logger.warning(f"Site classification failed: {classification_result['error']}")
+            else:
+                logger.info(f"Site classification updated: {classification_result['active_count']} active, {classification_result['historic_count']} historic")
             
             if not db_manager.upload_database(temp_db.name):
                 raise Exception("Failed to upload updated database")
@@ -288,6 +295,14 @@ def survey123_daily_sync(request):
             'last_sync': last_sync.isoformat(),
             'current_sync': start_time.isoformat()
         }
+        
+        # Add site classification results if available
+        if 'error' not in classification_result:
+            result['site_classification'] = {
+                'sites_classified': classification_result.get('sites_classified', 0),
+                'active_count': classification_result.get('active_count', 0),
+                'historic_count': classification_result.get('historic_count', 0)
+            }
         
         logger.info(f"Sync completed successfully: {result}")
         return result
