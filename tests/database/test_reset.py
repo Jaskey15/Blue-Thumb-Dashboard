@@ -4,15 +4,16 @@ Tests the complete database reset process including file deletion, schema recrea
 """
 
 import os
-import pytest
 import sqlite3
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
+
 from database.reset_database import (
     delete_database_file,
     recreate_schema,
     reload_all_data,
-    reset_database
+    reset_database,
 )
+
 
 class TestDatabaseDeletion:
     """Test database file deletion functionality."""

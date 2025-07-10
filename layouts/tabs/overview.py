@@ -4,9 +4,12 @@ Overview tab layout for the dashboard
 
 import dash_bootstrap_components as dbc
 from dash import dcc, html
-from utils import load_markdown_content, create_image_with_caption
-from ..constants import PARAMETER_OPTIONS, TAB_STYLES
+
+from utils import load_markdown_content
+
 from ..components.chatbot import create_floating_chatbot
+from ..constants import PARAMETER_OPTIONS
+
 
 def create_overview_tab():
     """

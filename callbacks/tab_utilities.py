@@ -3,18 +3,40 @@ Tab-specific visualization and UI components for data exploration.
 """
 
 import dash
-from dash import html, dcc
 import dash_bootstrap_components as dbc
-from layouts.ui_data import FISH_DATA, MACRO_DATA, CHEMICAL_DIAGRAMS, CHEMICAL_DIAGRAM_CAPTIONS
+from dash import dcc, html
+
+from data_processing.data_queries import (
+    get_fish_dataframe,
+    get_macroinvertebrate_dataframe,
+)
 from layouts.helpers import create_species_gallery
-from utils import setup_logging, load_markdown_content, create_image_with_caption
-from .helper_functions import create_empty_state, create_error_state, get_parameter_name, get_parameter_label
+from layouts.ui_data import (
+    CHEMICAL_DIAGRAM_CAPTIONS,
+    CHEMICAL_DIAGRAMS,
+    FISH_DATA,
+    MACRO_DATA,
+)
+from utils import (
+    create_image_with_caption,
+    get_parameter_label,
+    get_parameter_name,
+    load_markdown_content,
+    setup_logging,
+)
+from visualizations.chemical_viz import (
+    create_all_parameters_view,
+    create_time_series_plot,
+)
+from visualizations.fish_viz import create_fish_metrics_accordion, create_fish_viz
+from visualizations.habitat_viz import (
+    create_habitat_metrics_accordion,
+    create_habitat_viz,
+)
+from visualizations.macro_viz import create_macro_metrics_accordion, create_macro_viz
 from visualizations.map_viz import COLORS
-from visualizations.fish_viz import create_fish_viz, create_fish_metrics_accordion
-from visualizations.macro_viz import create_macro_viz, create_macro_metrics_accordion
-from visualizations.chemical_viz import create_time_series_plot, create_all_parameters_view
-from visualizations.habitat_viz import create_habitat_viz, create_habitat_metrics_accordion
-from data_processing.data_queries import get_fish_dataframe, get_macroinvertebrate_dataframe
+
+from .helper_functions import create_empty_state, create_error_state
 
 logger = setup_logging("tab_utilities", category="callbacks")
 

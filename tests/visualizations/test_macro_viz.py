@@ -3,29 +3,29 @@ Test suite for macroinvertebrate visualization functionality.
 Tests the logic in visualizations.macro_viz module.
 """
 
-import unittest
-import pandas as pd
-import numpy as np
-import plotly.graph_objects as go
 import os
 import sys
-from unittest.mock import patch, MagicMock
+import unittest
+from unittest.mock import patch
+
+import pandas as pd
+import plotly.graph_objects as go
 
 # Add project root to path
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, project_root)
 
-from visualizations.macro_viz import (
-    create_macro_viz,
-    create_macro_metrics_table_for_season,
-    create_macro_metrics_accordion,
-    format_macro_metrics_table,
-    CONDITION_THRESHOLDS,
-    CONDITION_COLORS,
-    MACRO_METRIC_ORDER,
-    MACRO_SUMMARY_LABELS
-)
 from utils import setup_logging
+from visualizations.macro_viz import (
+    CONDITION_COLORS,
+    CONDITION_THRESHOLDS,
+    MACRO_METRIC_ORDER,
+    MACRO_SUMMARY_LABELS,
+    create_macro_metrics_accordion,
+    create_macro_metrics_table_for_season,
+    create_macro_viz,
+    format_macro_metrics_table,
+)
 
 # Set up logging for tests
 logger = setup_logging("test_macro_viz", category="testing")

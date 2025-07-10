@@ -8,23 +8,23 @@ This file tests application configuration including:
 - Default value management
 """
 
-import unittest
 import os
 import sys
-from unittest.mock import patch, MagicMock
+import unittest
+from unittest.mock import patch
 
 # Add project root to path
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, project_root)
 
 from config.gcp_config import (
-    get_environment,
-    get_asset_base_url,
-    get_database_path,
-    get_log_level,
     get_app_config,
+    get_asset_base_url,
+    get_environment,
+    get_log_level,
     is_gcp_environment,
 )
+
 
 class TestConfigurationLoading(unittest.TestCase):
     """Test configuration loading functionality."""

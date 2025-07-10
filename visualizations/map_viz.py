@@ -21,14 +21,14 @@ Status Categories:
 import pandas as pd
 import plotly.graph_objects as go
 
-from database.database import get_connection, close_connection
+from database.database import close_connection, get_connection
 from utils import setup_logging
-
 from visualizations.map_queries import (
     get_latest_chemical_data_for_maps,
     get_latest_fish_data_for_maps,
+    get_latest_habitat_data_for_maps,
     get_latest_macro_data_for_maps,
-    get_latest_habitat_data_for_maps
+    get_sites_for_maps,
 )
 
 logger = setup_logging("map_viz", category="visualization")
@@ -90,8 +90,6 @@ def create_basic_site_map(active_only=False):
     Create base map with active/historic site differentiation using batch operations.
     """
     try:
-        from visualizations.map_queries import get_sites_for_maps
-        
         sites_df = get_sites_for_maps(active_only=active_only)
         
         if sites_df.empty:
@@ -161,8 +159,6 @@ def add_parameter_colors_to_map(fig, param_type, param_name, sites_df=None, acti
         (updated_figure, sites_with_data_count, total_sites_count)
     """
     try:        
-        from visualizations.map_queries import get_sites_for_maps
-        
         if sites_df is None:
             sites_df = get_sites_for_maps(active_only=active_only)
         
@@ -499,9 +495,6 @@ def add_data_markers(fig, sites, data_type, parameter_name=None, season=None, fi
     Returns:
         (updated_figure, sites_with_data_count, total_sites_count)
     """
-    import pandas as pd
-    import plotly.graph_objects as go
-    
     latest_data = get_latest_data_by_type(data_type)
 
     if latest_data.empty:

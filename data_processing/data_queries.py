@@ -5,12 +5,13 @@ This module centralizes all data retrieval operations for chemical, biological,
 and habitat data, providing a consistent interface for other parts of the application.
 """
 
-import pandas as pd
 import sqlite3
-import os
-from database.database import get_connection, close_connection
-from data_processing.chemical_utils import KEY_PARAMETERS
+
+import pandas as pd
+
 from data_processing import setup_logging
+from data_processing.chemical_utils import KEY_PARAMETERS
+from database.database import close_connection, get_connection
 
 logger = setup_logging("data_queries", category="processing")
 

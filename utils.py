@@ -2,11 +2,12 @@
 This module contains reusable helper functions used across the dashboard.
 """
 
-import dash_bootstrap_components as dbc
 import os
-import pandas as pd
 import traceback
-from dash import html, dcc
+
+import dash_bootstrap_components as dbc
+import pandas as pd
+from dash import dcc, html
 
 # Common style configurations
 CAPTION_STYLE = {
@@ -27,9 +28,9 @@ def setup_logging(module_name, category="general"):
     """
     Configure component-specific logging with organized directory structure.
     """
-    import os
     import logging
-    
+    import os
+
     # Project root discovery
     def find_project_root():
         current_dir = os.getcwd()
@@ -160,7 +161,7 @@ def get_sites_with_data(data_type):
     """
     Get sites that have actual data measurements for filtering purposes.
     """
-    from database.database import get_connection, close_connection
+    from database.database import close_connection, get_connection
 
     logger = setup_logging("get_sites_with_data", category="utils")
     
@@ -296,3 +297,13 @@ def format_value(value, precision=2, unit=None):
         return formatted
     except:
         return "N/A"
+
+def get_parameter_label(param_type, param_name):
+    """Format parameter names for axis labels and titles."""
+    from config.shared_constants import PARAMETER_AXIS_LABELS
+    return PARAMETER_AXIS_LABELS.get(param_name, param_name.replace('_', ' ').title())
+
+def get_parameter_name(parameter):
+    """Convert parameter codes to human-readable display names."""
+    from config.shared_constants import PARAMETER_DISPLAY_NAMES
+    return PARAMETER_DISPLAY_NAMES.get(parameter, parameter)

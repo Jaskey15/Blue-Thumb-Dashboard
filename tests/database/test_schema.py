@@ -9,10 +9,12 @@ This module tests:
 - Reference data population
 """
 
-import pytest
 import sqlite3
+
+import pytest
+
 from database.db_schema import create_tables, populate_chemical_reference_data
-from database.database import get_connection
+
 
 def verify_column_exists(cursor, table_name, column_name):
     """Helper function to verify column exists in table."""

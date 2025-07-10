@@ -8,12 +8,17 @@ final data for database insertion.
 """
 
 import os
+
 import pandas as pd
-from data_processing.chemical_utils import (
-    apply_bdl_conversions, validate_chemical_data, calculate_soluble_nitrogen, 
-    remove_empty_chemical_rows, insert_chemical_data
-)
+
 from data_processing import setup_logging
+from data_processing.chemical_utils import (
+    apply_bdl_conversions,
+    calculate_soluble_nitrogen,
+    insert_chemical_data,
+    remove_empty_chemical_rows,
+    validate_chemical_data,
+)
 
 logger = setup_logging("updated_chemical_processing", category="processing")
 

@@ -5,10 +5,12 @@ This file tests the habitat callback functions including state management,
 dropdown population, navigation handling, and content display logic.
 """
 
-import pytest
+from unittest.mock import patch
+
 import dash
-from unittest.mock import Mock, patch, MagicMock
 import pandas as pd
+import pytest
+
 
 class TestHabitatStateManagement:
     """Test habitat state management logic."""

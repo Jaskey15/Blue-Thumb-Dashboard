@@ -2,11 +2,12 @@
 Shared utilities for processing, validating, and inserting chemical water quality data.
 """
 
-import pandas as pd
 import numpy as np
-from database.database import get_connection, close_connection
-from utils import round_parameter_value
+import pandas as pd
+
 from data_processing import setup_logging
+from database.database import close_connection, get_connection
+from utils import round_parameter_value
 
 logger = setup_logging("chemical_utils", category="processing")
 

@@ -2,10 +2,9 @@
 Shared UI components and utilities for consistent user experience across tabs.
 """
 
-import dash
 from dash import html
+
 from utils import setup_logging
-from config.shared_constants import PARAMETER_DISPLAY_NAMES, PARAMETER_AXIS_LABELS
 
 # Initialize callback logging
 logger = setup_logging("helper_callbacks", category="callbacks")
@@ -142,10 +141,3 @@ def get_parameter_legend(param_type, param_name):
     # Default legend if parameter not found
     return [{"color": "#666", "label": "No data available"}]
 
-def get_parameter_label(param_type, param_name):
-    """Format parameter names for axis labels and titles."""
-    return PARAMETER_AXIS_LABELS.get(param_name, param_name.replace('_', ' ').title())
-
-def get_parameter_name(parameter):
-    """Convert parameter codes to human-readable display names."""
-    return PARAMETER_DISPLAY_NAMES.get(parameter, parameter)

@@ -3,27 +3,27 @@ Test suite for fish data processing functionality.
 Tests the logic in data_processing.fish_processing module.
 """
 
-import unittest
-import pandas as pd
-import numpy as np
 import os
 import sys
-from unittest.mock import patch, MagicMock
+import unittest
+from unittest.mock import MagicMock, patch
+
+import numpy as np
+import pandas as pd
 
 # Add project root to path
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, project_root)
 
+from data_processing.biological_utils import (
+    convert_columns_to_numeric,
+    remove_invalid_biological_values,
+)
 from data_processing.fish_processing import (
-    process_fish_csv_data,
-    validate_ibi_scores,
     insert_fish_collection_events,
     insert_metrics_data,
-    load_fish_data
-)
-from data_processing.biological_utils import (
-    remove_invalid_biological_values,
-    convert_columns_to_numeric
+    load_fish_data,
+    validate_ibi_scores,
 )
 from utils import setup_logging
 

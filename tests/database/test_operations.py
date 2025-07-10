@@ -10,10 +10,12 @@ This module tests:
 - Query performance
 """
 
-import pytest
 import sqlite3
-from unittest.mock import patch, MagicMock
-from database.database import get_connection, close_connection, execute_query
+
+import pytest
+
+from database.database import close_connection, execute_query, get_connection
+
 
 class TestBasicOperations:
     """Test basic database operations."""

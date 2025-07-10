@@ -3,8 +3,10 @@
 Test script for new date-based replicate detection
 """
 
-import pandas as pd
 import difflib
+
+import pandas as pd
+
 
 def clean_site_name(site_name):
     """Simple site name cleaning function"""

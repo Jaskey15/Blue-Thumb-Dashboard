@@ -9,10 +9,11 @@ This script runs a two-phase pipeline:
 
 import os
 import sys
+
 import pandas as pd
 
-from data_processing.data_loader import clean_site_name
 from data_processing import setup_logging
+from data_processing.data_loader import clean_site_name
 
 logger = setup_logging("consolidate_sites", category="processing")
 

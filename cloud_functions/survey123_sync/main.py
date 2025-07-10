@@ -12,16 +12,16 @@ Environment Variables:
 - SURVEY123_FORM_ID: Survey123 form identifier
 """
 
-import os
 import json
 import logging
+import os
 import tempfile
 from datetime import datetime, timedelta
-from typing import Dict, Any, Optional
+
+import functions_framework
 import pandas as pd
 import requests
 from google.cloud import storage
-import functions_framework
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -267,7 +267,10 @@ def survey123_daily_sync(request):
             if not db_manager.download_database(temp_db.name):
                 raise Exception("Failed to download database")
             
-            from chemical_processor import insert_processed_data_to_db, classify_active_sites_in_db
+            from chemical_processor import (
+                classify_active_sites_in_db,
+                insert_processed_data_to_db,
+            )
             insert_result = insert_processed_data_to_db(processed_data, temp_db.name)
             
             if 'error' in insert_result:

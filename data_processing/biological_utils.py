@@ -3,6 +3,7 @@ Shared utilities for validating, inserting, and cleaning biological data.
 """
 
 import pandas as pd
+
 from data_processing import setup_logging
 
 # Configure logging

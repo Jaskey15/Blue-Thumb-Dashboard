@@ -2,12 +2,13 @@
 Tests for ArcGIS authentication functionality.
 """
 
-import unittest
-from unittest.mock import patch, MagicMock
-from datetime import datetime, timedelta
-import requests
-import sys
 import os
+import sys
+import unittest
+from datetime import datetime, timedelta
+from unittest.mock import MagicMock, patch
+
+import requests
 
 # Add project root to path for imports
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

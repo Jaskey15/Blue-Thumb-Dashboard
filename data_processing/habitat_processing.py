@@ -6,13 +6,19 @@ duplicate entries by averaging, calculating habitat grades from total scores,
 and inserting the final data into the database.
 """
 
-import pandas as pd
 import sqlite3
 from datetime import datetime
-from database.database import get_connection, close_connection
-from data_processing.data_loader import load_csv_data, clean_column_names, save_processed_data
-from data_processing.data_queries import get_habitat_dataframe
+
+import pandas as pd
+
 from data_processing import setup_logging
+from data_processing.data_loader import (
+    clean_column_names,
+    load_csv_data,
+    save_processed_data,
+)
+from data_processing.data_queries import get_habitat_dataframe
+from database.database import close_connection, get_connection
 
 logger = setup_logging("habitat_processing", category="processing")
 

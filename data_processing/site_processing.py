@@ -7,11 +7,13 @@ and removing sites that have no associated monitoring data.
 """
 
 import os
-import pandas as pd
 from datetime import datetime, timedelta
-from data_processing.data_loader import PROCESSED_DATA_DIR
-from database.database import get_connection, close_connection
+
+import pandas as pd
+
 from data_processing import setup_logging
+from data_processing.data_loader import PROCESSED_DATA_DIR
+from database.database import close_connection, get_connection
 
 logger = setup_logging("site_processing", category="processing")
 

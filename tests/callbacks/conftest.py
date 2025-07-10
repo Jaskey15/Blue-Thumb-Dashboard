@@ -2,12 +2,13 @@
 Shared fixtures for callback testing.
 """
 
-import pytest
-import dash
-from dash import html, dcc
-from unittest.mock import Mock, patch
-import sys
 import os
+import sys
+from unittest.mock import patch
+
+import dash
+import pytest
+from dash import html
 
 # Add the project root to the Python path so we can import our modules
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))

@@ -3,13 +3,20 @@ Chemical callbacks for the Tenmile Creek Water Quality Dashboard.
 """
 
 import dash
-from dash import html, Input, Output, State, dcc
-import pandas as pd
-from utils import setup_logging, get_sites_with_data
-from data_processing.data_queries import get_chemical_data_from_db, get_chemical_date_range
+from dash import Input, Output, State, dcc, html
+
 from data_processing.chemical_utils import KEY_PARAMETERS, get_reference_values
-from .tab_utilities import create_all_parameters_visualization, create_single_parameter_visualization
+from data_processing.data_queries import (
+    get_chemical_data_from_db,
+    get_chemical_date_range,
+)
+from utils import get_sites_with_data, setup_logging
+
 from .helper_functions import create_empty_state, create_error_state
+from .tab_utilities import (
+    create_all_parameters_visualization,
+    create_single_parameter_visualization,
+)
 
 # Configure logging
 logger = setup_logging("chemical_callbacks", category="callbacks")

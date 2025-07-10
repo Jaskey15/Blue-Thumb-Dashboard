@@ -14,21 +14,25 @@ Integrity Classes:
 - Excellent (0.97+), Good (0.76+), Fair (0.60+), Poor (0.47+)
 """
 
-import plotly.graph_objects as go
 import pandas as pd
-
+import plotly.graph_objects as go
 from dash import html
-from data_processing.data_queries import get_fish_dataframe, get_fish_metrics_data_for_table
+
+from data_processing.data_queries import (
+    get_fish_dataframe,
+    get_fish_metrics_data_for_table,
+)
 from utils import create_metrics_accordion, setup_logging
+
 from .visualization_utils import (
-    DEFAULT_COLORS, 
-    create_table_styles,
+    DEFAULT_COLORS,
+    add_reference_lines,
     create_data_table,
     create_empty_figure,
     create_error_figure,
-    add_reference_lines,
+    create_table_styles,
+    create_trace,
     update_layout,
-    create_trace
 )
 
 logger = setup_logging("fish_viz", category="visualization")

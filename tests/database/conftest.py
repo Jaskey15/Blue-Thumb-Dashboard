@@ -9,20 +9,21 @@ This module provides pytest fixtures for database testing, including:
 """
 
 import os
-import tempfile
-import pytest
-import sqlite3
-from pathlib import Path
-from unittest.mock import patch, MagicMock
 
 # Add project root to path if needed
 import sys
+import tempfile
+from unittest.mock import patch
+
+import pytest
+
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
 from database.database import get_connection
 from database.db_schema import create_tables
+
 
 @pytest.fixture(scope="function")
 def temp_db_path():

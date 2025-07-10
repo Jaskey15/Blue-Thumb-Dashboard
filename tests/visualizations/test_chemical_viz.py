@@ -3,30 +3,31 @@ Test suite for chemical visualization functionality.
 Tests the logic in visualizations.chemical_viz module.
 """
 
-import unittest
-import pandas as pd
-import numpy as np
-import plotly.graph_objects as go
 import os
 import sys
-from unittest.mock import patch, MagicMock
+import unittest
+from unittest.mock import patch
+
+import numpy as np
+import pandas as pd
+import plotly.graph_objects as go
 
 # Add project root to path
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, project_root)
 
+from utils import setup_logging
 from visualizations.chemical_viz import (
-    _add_threshold_plot,
-    _add_standard_plot,
-    _format_date_axes,
-    _add_parameter_reference_lines,
-    create_time_series_plot,
-    create_all_parameters_view,
     COLORS,
-    MARKER_SIZES
+    MARKER_SIZES,
+    _add_parameter_reference_lines,
+    _add_standard_plot,
+    _add_threshold_plot,
+    _format_date_axes,
+    create_all_parameters_view,
+    create_time_series_plot,
 )
 from visualizations.visualization_utils import create_empty_figure, create_error_figure
-from utils import setup_logging
 
 # Set up logging for tests
 logger = setup_logging("test_chemical_viz", category="testing")
@@ -238,7 +239,7 @@ class TestChemicalViz(unittest.TestCase):
     def test_add_standard_plot_dashboard_mode(self):
         """Test standard plot in dashboard mode (smaller markers)."""
         from plotly.subplots import make_subplots
-        
+
         # Create subplot figure for dashboard mode testing
         fig = make_subplots(rows=1, cols=1)
         df = self.sample_chemical_data

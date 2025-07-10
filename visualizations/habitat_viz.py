@@ -4,20 +4,24 @@ Habitat assessment visualization with grade-based thresholds and metrics display
 
 import pandas as pd
 import plotly.graph_objects as go
-
 from dash import html
-from data_processing.data_queries import get_habitat_dataframe, get_habitat_metrics_data_for_table
+
+from data_processing.data_queries import (
+    get_habitat_dataframe,
+    get_habitat_metrics_data_for_table,
+)
 from utils import create_metrics_accordion, setup_logging
+
 from .visualization_utils import (
     DEFAULT_COLORS,
-    format_metrics_table,
-    create_table_styles,
+    add_reference_lines,
     create_data_table,
     create_empty_figure,
     create_error_figure,
-    add_reference_lines,
+    create_table_styles,
+    create_trace,
+    format_metrics_table,
     update_layout,
-    create_trace
 )
 
 logger = setup_logging("habitat_viz", category="visualization")

@@ -11,12 +11,13 @@ The preferred site is determined using a priority system:
 3. The site with the longest name (as a fallback).
 """
 
-import pandas as pd
 import os
+
+import pandas as pd
+
 from data_processing import setup_logging
 from data_processing.data_loader import clean_site_name
-from database.database import get_connection, close_connection
-
+from database.database import close_connection, get_connection
 
 logger = setup_logging("merge_sites", category="processing")
 

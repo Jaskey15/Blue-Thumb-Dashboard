@@ -8,25 +8,21 @@ This file tests end-to-end navigation workflows including:
 - User interaction workflows
 """
 
-import unittest
+import json
 import os
 import sys
-from unittest.mock import patch, MagicMock, call
+import unittest
+from unittest.mock import patch
+
 import dash
-from dash import html, dcc, callback_context
 import pandas as pd
-import json
+from dash import dcc, html
 
 # Add project root to path
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, project_root)
 
 # Import modules to test
-from callbacks.shared_callbacks import register_shared_callbacks
-from callbacks.chemical_callbacks import register_chemical_callbacks
-from callbacks.biological_callbacks import register_biological_callbacks
-from callbacks.habitat_callbacks import register_habitat_callbacks
-from callbacks.overview_callbacks import register_overview_callbacks
 
 
 class TestMapToTabNavigation(unittest.TestCase):
@@ -502,7 +498,7 @@ class TestUserInteractionWorkflows(unittest.TestCase):
         # Step 3: Extract navigation data
         hover_text = map_click_data['points'][0]['text']
         site_name = hover_text.split('<br>')[0].replace('<b>Site:</b> ', '')
-        parameter_value = hover_text.split('<br>')[1]
+        hover_text.split('<br>')[1]
         
         # Step 4: Navigate to chemical tab
         navigation_state = {
@@ -771,7 +767,7 @@ class TestNavigationErrorHandling(unittest.TestCase):
         corrupted_json = '{"active_tab": "chemical-tab", "invalid_json":'
         
         try:
-            parsed_state = json.loads(corrupted_json)
+            json.loads(corrupted_json)
         except json.JSONDecodeError:
             recovery_state = {
                 'active_tab': 'overview-tab',
@@ -890,7 +886,7 @@ class TestNavigationPerformance(unittest.TestCase):
     def test_navigation_response_time(self):
         """Test navigation response time benchmarks."""
         import time
-        
+
         # Test simple navigation timing
         start_time = time.time()
         
@@ -934,7 +930,7 @@ class TestNavigationPerformance(unittest.TestCase):
         
         # Process complex navigation
         for key, value in complex_navigation.items():
-            processed_value = value if not isinstance(value, list) else json.dumps(value)
+            value if not isinstance(value, list) else json.dumps(value)
         
         end_time = time.time()
         complex_navigation_time = end_time - start_time
@@ -945,7 +941,7 @@ class TestNavigationPerformance(unittest.TestCase):
     def test_state_loading_performance(self):
         """Test state loading performance with large state objects."""
         import time
-        
+
         # Create large state object
         large_state = {
             'active_tab': 'chemical-tab',
@@ -986,7 +982,7 @@ class TestNavigationPerformance(unittest.TestCase):
         """Test handling of concurrent navigation requests."""
         import threading
         import time
-        
+
         # Shared state for concurrent testing
         shared_state = {'active_tab': 'overview-tab', 'counter': 0}
         state_lock = threading.Lock()

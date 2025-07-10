@@ -3,28 +3,28 @@ Test suite for fish visualization functionality.
 Tests the logic in visualizations.fish_viz module.
 """
 
-import unittest
-import pandas as pd
-import numpy as np
-import plotly.graph_objects as go
 import os
 import sys
-from unittest.mock import patch, MagicMock
+import unittest
+from unittest.mock import patch
+
+import pandas as pd
+import plotly.graph_objects as go
 
 # Add project root to path
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, project_root)
 
-from visualizations.fish_viz import (
-    create_fish_viz,
-    create_fish_metrics_table,
-    create_fish_metrics_accordion,
-    INTEGRITY_THRESHOLDS,
-    INTEGRITY_COLORS,
-    FISH_METRIC_ORDER,
-    FISH_SUMMARY_LABELS
-)
 from utils import setup_logging
+from visualizations.fish_viz import (
+    FISH_METRIC_ORDER,
+    FISH_SUMMARY_LABELS,
+    INTEGRITY_COLORS,
+    INTEGRITY_THRESHOLDS,
+    create_fish_metrics_accordion,
+    create_fish_metrics_table,
+    create_fish_viz,
+)
 
 # Set up logging for tests
 logger = setup_logging("test_fish_viz", category="testing")

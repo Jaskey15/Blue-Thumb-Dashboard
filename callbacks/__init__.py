@@ -3,12 +3,13 @@ Main callback registration for the Blue Thumb Stream Health Dashboard.
 This file orchestrates all callbacks for the dashboard.
 """
 
-from .overview_callbacks import register_overview_callbacks
-from .chemical_callbacks import register_chemical_callbacks
 from .biological_callbacks import register_biological_callbacks
-from .habitat_callbacks import register_habitat_callbacks
-from .shared_callbacks import register_shared_callbacks
 from .chatbot_callbacks import register_chatbot_callbacks
+from .chemical_callbacks import register_chemical_callbacks
+from .habitat_callbacks import register_habitat_callbacks
+from .overview_callbacks import register_overview_callbacks
+from .shared_callbacks import register_shared_callbacks
+
 
 def register_callbacks(app):
     """Register all callbacks for the dashboard."""

@@ -5,12 +5,21 @@ Interactive map visualization and parameter exploration callbacks.
 import dash
 import plotly.graph_objects as go
 from dash import Input, Output, State
-from .tab_utilities import get_parameter_legend, get_site_count_message, create_map_legend_html
-from .helper_functions import create_error_state
-from utils import setup_logging
-from visualizations.map_viz import create_basic_site_map, add_parameter_colors_to_map, get_total_site_count
 
-# Initialize callback logging
+from utils import setup_logging
+from visualizations.map_viz import (
+    add_parameter_colors_to_map,
+    create_basic_site_map,
+    get_total_site_count,
+)
+
+from .helper_functions import create_error_state
+from .tab_utilities import (
+    create_map_legend_html,
+    get_parameter_legend,
+    get_site_count_message,
+)
+
 logger = setup_logging("overview_callbacks", category="callbacks")
 
 def register_overview_callbacks(app):

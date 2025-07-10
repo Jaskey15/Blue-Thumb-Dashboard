@@ -5,9 +5,6 @@ This file tests the overview callback functions including state management,
 map initialization, parameter selection, and legend generation logic.
 """
 
-import pytest
-import dash
-from unittest.mock import Mock, patch, MagicMock
 
 class TestOverviewStateManagement:
     """Test overview state management logic."""
@@ -195,7 +192,6 @@ class TestParameterSelectionLogic:
         """Test basic map fallback when no parameter selected."""
         # Test no parameter selected
         parameter_value = None
-        active_only_toggle = False
         
         should_show_basic_map = not parameter_value
         assert should_show_basic_map is True, "Should show basic map when no parameter selected"

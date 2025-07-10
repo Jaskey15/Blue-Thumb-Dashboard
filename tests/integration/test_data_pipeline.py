@@ -8,27 +8,22 @@ This file tests end-to-end data processing workflows including:
 - Data consistency across modules
 """
 
-import unittest
 import os
+import shutil
+import sqlite3
 import sys
 import tempfile
-import shutil
+import unittest
+from unittest.mock import MagicMock, patch
+
 import pandas as pd
-import sqlite3
-from unittest.mock import patch, MagicMock, call
-from io import StringIO
 
 # Add project root to path
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, project_root)
 
 # Import modules to test
-from data_processing.chemical_processing import load_chemical_data_to_db
-from data_processing.fish_processing import load_fish_data
-from data_processing.macro_processing import load_macroinvertebrate_data
-from data_processing.habitat_processing import load_habitat_data
 from data_processing.site_processing import process_site_data
-from database.db_schema import create_tables
 
 
 class TestCompleteDataPipeline(unittest.TestCase):
@@ -260,7 +255,6 @@ class TestCrossModuleDataFlow(unittest.TestCase):
         mock_calc.return_value = self.sample_raw_data
         
         # Test data flow
-        from data_processing.chemical_processing import process_chemical_data_from_csv
         
         with patch('data_processing.chemical_processing.process_chemical_data_from_csv') as mock_process:
             mock_process.return_value = (self.sample_raw_data, [], {})
@@ -296,7 +290,6 @@ class TestCrossModuleDataFlow(unittest.TestCase):
         mock_get_data.return_value = self.sample_raw_data
         
         # Test visualization data retrieval
-        from visualizations.chemical_viz import create_time_series_plot
         
         with patch('visualizations.chemical_viz.create_time_series_plot') as mock_viz:
             mock_viz.return_value = MagicMock()  # Mock plotly figure
@@ -314,7 +307,6 @@ class TestCrossModuleDataFlow(unittest.TestCase):
         mock_get_sites.return_value = ['Test Site']
         
         # Test callback data handling
-        from callbacks.chemical_callbacks import register_chemical_callbacks
         
         with patch('callbacks.chemical_callbacks.register_chemical_callbacks') as mock_callbacks:
             mock_callbacks.return_value = None
@@ -374,10 +366,10 @@ class TestErrorPropagation(unittest.TestCase):
     def test_visualization_errors(self):
         """Test error handling in visualization phase."""
         # Test with invalid data
-        invalid_data = pd.DataFrame()
+        pd.DataFrame()
         
         from visualizations.visualization_utils import create_empty_figure
-        
+
         # Test empty figure creation for error cases
         fig = create_empty_figure("No data available")
         
@@ -433,7 +425,7 @@ class TestDataConsistency(unittest.TestCase):
         }
         
         # Mock the helper functions to test parameter mapping logic
-        with patch('callbacks.helper_functions.get_parameter_label') as mock_get_label:
+        with patch('utils.get_parameter_label') as mock_get_label:
             for param, expected_label in test_params.items():
                 if param == 'pH':
                     # pH is a special case
@@ -477,7 +469,7 @@ class TestPipelinePerformance(unittest.TestCase):
     def test_large_dataset_processing(self):
         """Test processing performance with large datasets."""
         import time
-        
+
         # Test processing time
         start_time = time.time()
         
@@ -496,9 +488,10 @@ class TestPipelinePerformance(unittest.TestCase):
     def test_memory_usage_during_processing(self):
         """Test memory usage during data processing."""
         try:
-            import psutil
             import os
-            
+
+            import psutil
+
             # Get initial memory usage
             process = psutil.Process(os.getpid())
             initial_memory = process.memory_info().rss / 1024 / 1024  # MB
@@ -523,12 +516,12 @@ class TestPipelinePerformance(unittest.TestCase):
     def test_processing_time_benchmarks(self):
         """Test processing time benchmarks for different operations."""
         import time
-        
+
         # Test data loading benchmark
         start_time = time.time()
         with patch('data_processing.data_loader.load_csv_data') as mock_load:
             mock_load.return_value = self.large_dataset
-            result = mock_load('test.csv')
+            mock_load('test.csv')
         load_time = time.time() - start_time
         
         # Test validation benchmark

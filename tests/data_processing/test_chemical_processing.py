@@ -3,39 +3,37 @@ Test suite for chemical data processing functionality.
 Tests the logic in data_processing.chemical_processing module.
 """
 
-import unittest
-import pandas as pd
-import numpy as np
 import os
 import sys
-from unittest.mock import patch, MagicMock
+import unittest
+from unittest.mock import patch
+
+import numpy as np
+import pandas as pd
 
 # Add project root to path
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, project_root)
 
-from data_processing.chemical_processing import (
-    process_chemical_data_from_csv,
-    load_chemical_data_to_db
-)
-from data_processing.updated_chemical_processing import (
-    parse_sampling_dates,
-    get_greater_value,
-    get_conditional_nutrient_value,
-    process_conditional_nutrient,
-    process_simple_nutrients,
-    format_to_database_schema,
-    process_updated_chemical_data,
-    get_ph_worst_case
-)
+from data_processing.chemical_processing import process_chemical_data_from_csv
+
 # Note: chemical_duplicates functionality was removed - tests for that functionality are no longer needed
 from data_processing.chemical_utils import (
-    validate_chemical_data,
-    determine_status,
     apply_bdl_conversions,
     calculate_soluble_nitrogen,
     convert_bdl_value,
-    remove_empty_chemical_rows
+    remove_empty_chemical_rows,
+    validate_chemical_data,
+)
+from data_processing.updated_chemical_processing import (
+    format_to_database_schema,
+    get_conditional_nutrient_value,
+    get_greater_value,
+    get_ph_worst_case,
+    parse_sampling_dates,
+    process_conditional_nutrient,
+    process_simple_nutrients,
+    process_updated_chemical_data,
 )
 from utils import setup_logging
 

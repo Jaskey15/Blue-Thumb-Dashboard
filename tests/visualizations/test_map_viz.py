@@ -3,45 +3,35 @@ Test suite for map visualization functionality.
 Tests the logic in visualizations.map_viz module.
 """
 
-import unittest
-import pandas as pd
-import numpy as np
-import plotly.graph_objects as go
 import os
 import sys
-from unittest.mock import patch, MagicMock
+import unittest
+from unittest.mock import MagicMock, patch
+
+import numpy as np
+import pandas as pd
+import plotly.graph_objects as go
 
 # Add project root to path
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, project_root)
 
-from visualizations.map_viz import (
-    # Core helper functions
+# Import optimized functions from map_queries
+from utils import setup_logging
+from visualizations.map_viz import (  # Core helper functions; UI helper functions; Map layout helper functions; Main visualization functions; Constants
+    COLORS,
+    MAP_PARAMETER_LABELS,
+    PARAMETER_LABELS,
+    _create_base_map_layout,
+    add_data_markers,
+    add_parameter_colors_to_map,
+    create_basic_site_map,
+    create_error_map,
+    create_hover_text,
     get_latest_data_by_type,
     get_status_color,
     get_total_site_count,
-    
-    # UI helper functions
-    create_hover_text,
-    
-    # Map layout helper functions
-    _create_base_map_layout,
-    create_error_map,
-    
-    # Main visualization functions
-    add_data_markers,
-    create_basic_site_map,
-    add_parameter_colors_to_map,
-    
-    # Constants
-    COLORS,
-    PARAMETER_LABELS,
-    MAP_PARAMETER_LABELS
 )
-
-# Import optimized functions from map_queries
-from visualizations.map_queries import get_sites_for_maps
-from utils import setup_logging
 
 # Set up logging for tests
 logger = setup_logging("test_map_viz", category="testing")
@@ -519,7 +509,7 @@ class TestMapViz(unittest.TestCase):
         # Should include all sites even those without data
         self.assertEqual(total_sites, len(self.sample_sites))
 
-    @patch('visualizations.map_queries.get_sites_for_maps')
+    @patch('visualizations.map_viz.get_sites_for_maps')
     def test_create_basic_site_map_all_sites(self, mock_get_sites):
         """Test creation of basic site map with all sites."""
         # Create DataFrame from sample sites for mocking
@@ -547,7 +537,7 @@ class TestMapViz(unittest.TestCase):
         # Should have map layout
         self.assertIsNotNone(fig.layout.map)
 
-    @patch('visualizations.map_queries.get_sites_for_maps')
+    @patch('visualizations.map_viz.get_sites_for_maps')
     def test_create_basic_site_map_active_only(self, mock_get_sites):
         """Test creation of basic site map with active sites only."""
         # Create DataFrame with only active sites
@@ -573,7 +563,7 @@ class TestMapViz(unittest.TestCase):
         # Should have one trace with active sites only
         self.assertEqual(len(fig.data), 1)
 
-    @patch('visualizations.map_queries.get_sites_for_maps')
+    @patch('visualizations.map_viz.get_sites_for_maps')
     def test_create_basic_site_map_no_sites(self, mock_get_sites):
         """Test creation of basic site map with no sites."""
         mock_get_sites.return_value = pd.DataFrame()  # Empty DataFrame
@@ -587,7 +577,7 @@ class TestMapViz(unittest.TestCase):
         self.assertEqual(total_count, 0)
 
     @patch('visualizations.map_viz.add_data_markers')
-    @patch('visualizations.map_queries.get_sites_for_maps')
+    @patch('visualizations.map_viz.get_sites_for_maps')
     def test_add_parameter_colors_to_map_chemical(self, mock_get_sites, mock_add_markers):
         """Test adding parameter colors for chemical data."""
         # Mock sites DataFrame
@@ -616,7 +606,7 @@ class TestMapViz(unittest.TestCase):
         self.assertEqual(total_sites, 10)
 
     @patch('visualizations.map_viz.add_data_markers')
-    @patch('visualizations.map_queries.get_sites_for_maps')
+    @patch('visualizations.map_viz.get_sites_for_maps')
     def test_add_parameter_colors_to_map_fish(self, mock_get_sites, mock_add_markers):
         """Test adding parameter colors for fish data."""
         sites_df = pd.DataFrame([
@@ -638,7 +628,7 @@ class TestMapViz(unittest.TestCase):
         self.assertEqual(call_args[0][2], 'fish')  # data_type
 
     @patch('visualizations.map_viz.add_data_markers')
-    @patch('visualizations.map_queries.get_sites_for_maps')
+    @patch('visualizations.map_viz.get_sites_for_maps')
     def test_add_parameter_colors_to_map_macro(self, mock_get_sites, mock_add_markers):
         """Test adding parameter colors for macro data."""
         sites_df = pd.DataFrame([
@@ -660,7 +650,7 @@ class TestMapViz(unittest.TestCase):
         self.assertEqual(call_args[0][2], 'macro')  # data_type
 
     @patch('visualizations.map_viz.add_data_markers')
-    @patch('visualizations.map_queries.get_sites_for_maps')
+    @patch('visualizations.map_viz.get_sites_for_maps')
     def test_add_parameter_colors_to_map_habitat(self, mock_get_sites, mock_add_markers):
         """Test adding parameter colors for habitat data."""
         sites_df = pd.DataFrame([
@@ -682,7 +672,7 @@ class TestMapViz(unittest.TestCase):
         self.assertEqual(call_args[0][2], 'habitat')  # data_type
 
     @patch('visualizations.map_viz.add_data_markers')
-    @patch('visualizations.map_queries.get_sites_for_maps')
+    @patch('visualizations.map_viz.get_sites_for_maps')
     def test_add_parameter_colors_to_map_default_sites(self, mock_get_sites, mock_add_markers):
         """Test adding parameter colors when no sites are provided (loads from database)."""
         sites_df = pd.DataFrame([
@@ -776,7 +766,7 @@ class TestMapViz(unittest.TestCase):
     # =============================================================================
 
     @patch('visualizations.map_viz.get_latest_data_by_type')
-    @patch('visualizations.map_queries.get_sites_for_maps')
+    @patch('visualizations.map_viz.get_sites_for_maps')
     def test_full_workflow_chemical_map(self, mock_get_sites, mock_get_data):
         """Test complete workflow for creating a chemical parameter map."""
         # Mock sites DataFrame

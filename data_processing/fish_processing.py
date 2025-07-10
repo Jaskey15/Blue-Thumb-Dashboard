@@ -6,13 +6,27 @@ between true replicates and data entry errors using the `bt_fieldwork_validator`
 It validates IBI scores, inserts collection events, and loads detailed metrics.
 """
 
-import pandas as pd
 import sqlite3
-from database.database import get_connection, close_connection
-from data_processing.data_loader import load_csv_data, clean_column_names, save_processed_data
-from data_processing.biological_utils import insert_collection_events, remove_invalid_biological_values, convert_columns_to_numeric
-from data_processing.bt_fieldwork_validator import load_bt_field_work_dates, categorize_and_process_duplicates, correct_collection_dates
+
+import pandas as pd
+
 from data_processing import setup_logging
+from data_processing.biological_utils import (
+    convert_columns_to_numeric,
+    insert_collection_events,
+    remove_invalid_biological_values,
+)
+from data_processing.bt_fieldwork_validator import (
+    categorize_and_process_duplicates,
+    correct_collection_dates,
+    load_bt_field_work_dates,
+)
+from data_processing.data_loader import (
+    clean_column_names,
+    load_csv_data,
+    save_processed_data,
+)
+from database.database import close_connection, get_connection
 
 logger = setup_logging("fish_processing", category="processing")
 

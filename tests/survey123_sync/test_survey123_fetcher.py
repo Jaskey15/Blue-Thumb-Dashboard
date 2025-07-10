@@ -2,13 +2,14 @@
 Tests for Survey123 data fetching functionality.
 """
 
+import os
+import sys
 import unittest
-from unittest.mock import patch, MagicMock
-from datetime import datetime, timedelta
+from datetime import datetime
+from unittest.mock import MagicMock, patch
+
 import pandas as pd
 import requests
-import sys
-import os
 
 # Add project root to path for imports
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -20,7 +21,7 @@ sys.modules['functions_framework'] = MagicMock()
 sys.modules['google.cloud'] = MagicMock() 
 sys.modules['google.cloud.storage'] = MagicMock()
 
-from main import Survey123DataFetcher, ArcGISAuthenticator
+from main import ArcGISAuthenticator, Survey123DataFetcher
 
 
 class TestSurvey123DataFetcher(unittest.TestCase):

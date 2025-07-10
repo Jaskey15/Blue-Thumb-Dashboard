@@ -13,20 +13,21 @@ Test Coverage:
 """
 
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
+
 import pandas as pd
 import plotly.graph_objects as go
 from dash import dash_table, html
 
 # Import the module under test
 from visualizations.habitat_viz import (
-    create_habitat_viz,
-    create_habitat_metrics_table,
-    create_habitat_metrics_accordion,
-    HABITAT_GRADE_THRESHOLDS,
     HABITAT_GRADE_COLORS,
+    HABITAT_GRADE_THRESHOLDS,
     HABITAT_METRIC_ORDER,
-    HABITAT_SUMMARY_LABELS
+    HABITAT_SUMMARY_LABELS,
+    create_habitat_metrics_accordion,
+    create_habitat_metrics_table,
+    create_habitat_viz,
 )
 
 

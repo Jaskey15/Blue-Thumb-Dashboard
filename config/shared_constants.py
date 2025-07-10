@@ -1,24 +1,29 @@
 """
-Shared constants for the Tenmile Creek Water Quality Dashboard.
-This file contains constants used by both layout and callback modules.
+Shared constants and configuration values for the Blue Thumb Dashboard.
 """
 
-# Dictionary mapping parameter codes to their display names
+# Parameter display names for user-friendly labels
 PARAMETER_DISPLAY_NAMES = {
     'do_percent': 'Dissolved Oxygen',
     'pH': 'pH',
-    'soluble_nitrogen': 'Nitrogen',
+    'soluble_nitrogen': 'Soluble Nitrogen',
     'Phosphorus': 'Phosphorus',
     'Chloride': 'Chloride',
+    'fish_ibi': 'Fish IBI',
+    'macro_score': 'Macroinvertebrate Score',
+    'habitat_score': 'Habitat Score'
 }
 
-# Dictionary mapping parameter codes to their y-axis labels
+# Parameter axis labels for charts
 PARAMETER_AXIS_LABELS = {
-    'do_percent': 'DO Saturation (%)',
+    'do_percent': 'Dissolved Oxygen (%)',
     'pH': 'pH',
     'soluble_nitrogen': 'Soluble Nitrogen (mg/L)',
     'Phosphorus': 'Phosphorus (mg/L)',
     'Chloride': 'Chloride (mg/L)',
+    'fish_ibi': 'Fish IBI Score',
+    'macro_score': 'Macroinvertebrate Score',
+    'habitat_score': 'Habitat Score'
 }
 
 # Season to month mapping for the month selection buttons

@@ -2,9 +2,10 @@
 Shared visualization utilities for consistent styling and data presentation across modules.
 """
 
-import plotly.graph_objects as go
 import pandas as pd
+import plotly.graph_objects as go
 from dash import dash_table, html
+
 from utils import setup_logging
 
 logger = setup_logging("visualization_utils", category="visualization")

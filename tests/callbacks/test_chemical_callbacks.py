@@ -5,9 +5,6 @@ This file tests the chemical callback functions including complex state manageme
 multi-control navigation, filtering logic, month selection, and data visualization.
 """
 
-import pytest
-import dash
-from unittest.mock import Mock, patch, MagicMock
 
 class TestChemicalStateManagement:
     """Test chemical state management logic with multiple controls."""
@@ -615,7 +612,7 @@ class TestErrorHandling:
         try:
             # Simulate error in getting sites data
             raise Exception("Database connection failed")
-        except Exception as e:
+        except Exception:
             error_response = []  # Empty options
             error_handled = True
         
@@ -672,7 +669,6 @@ class TestErrorHandling:
         """Test error handling in data processing."""
         # Test with exception in data processing
         selected_site = "Test Site"
-        selected_parameter = "do_percent"
         
         try:
             # Simulate error in data processing
@@ -755,7 +751,6 @@ class TestIntegrationScenarios:
         }
         
         # Step 2: Tab activation without navigation
-        active_tab = 'chemical-tab'
         nav_data = None
         trigger_id = 'main-tabs'
         
@@ -860,7 +855,6 @@ class TestIntegrationScenarios:
             
             # Step 3: User tries to visualize without site
             selected_site = None
-            selected_parameter = "do_percent"
             
             # Step 4: Validation catches error
             if not selected_site:

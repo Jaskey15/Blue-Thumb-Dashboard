@@ -15,20 +15,25 @@ Biological Conditions:
 - Supports both Summer and Winter seasonal data
 """
 
-import plotly.graph_objects as go
 import pandas as pd
-
+import plotly.graph_objects as go
 from dash import html
-from data_processing.data_queries import get_macroinvertebrate_dataframe, get_macro_metrics_data_for_table
+
+from data_processing.data_queries import (
+    get_macro_metrics_data_for_table,
+    get_macroinvertebrate_dataframe,
+)
 from utils import create_metrics_accordion, setup_logging
+
 from .visualization_utils import (
     DEFAULT_COLORS,
+    add_reference_lines,
     create_data_table,
     create_empty_figure,
     create_error_figure,
-    add_reference_lines,
+    create_table_styles,
+    generate_hover_text,
     update_layout,
-    generate_hover_text
 )
 
 logger = setup_logging("macro_viz", category="visualization")
@@ -319,11 +324,10 @@ def create_macro_table_styles(metrics_table, habitat_row):
     """
     Create consistent styling for macro metrics tables with habitat emphasis.
     """
-    from .visualization_utils import create_table_styles
     styles = create_table_styles(metrics_table)
     
     habitat_row_index = 0
-    metrics_start_index = len(habitat_row)
+    len(habitat_row)
     summary_start_index = len(habitat_row) + len(metrics_table)
     
     styles['style_data_conditional'] = [

@@ -12,28 +12,35 @@ This file tests the utility functions including:
 - Utility calculations (safe_div, format_value)
 """
 
-import unittest
+import logging
 import os
+import shutil
+import sqlite3
 import sys
 import tempfile
-import shutil
-import logging
-import sqlite3
-from unittest.mock import patch, MagicMock, mock_open
-from pathlib import Path
+import unittest
+from unittest.mock import MagicMock, mock_open, patch
 
 # Add project root to path
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
 
+import dash_bootstrap_components as dbc
+from dash import dcc, html
+
 # Import utils functions
 from utils import (
-    setup_logging, load_markdown_content, get_sites_with_data,
-    round_parameter_value, create_metrics_accordion, create_image_with_caption,
-    safe_div, format_value, CAPTION_STYLE, DEFAULT_IMAGE_STYLE
+    CAPTION_STYLE,
+    DEFAULT_IMAGE_STYLE,
+    create_image_with_caption,
+    create_metrics_accordion,
+    format_value,
+    get_sites_with_data,
+    load_markdown_content,
+    round_parameter_value,
+    safe_div,
+    setup_logging,
 )
-from dash import html, dcc
-import dash_bootstrap_components as dbc
 
 
 class TestLoggingSetup(unittest.TestCase):
@@ -601,7 +608,7 @@ class TestParameterRounding(unittest.TestCase):
     def test_round_invalid_values(self):
         """Test rounding with invalid values."""
         import pandas as pd
-        
+
         # Test None values
         self.assertIsNone(round_parameter_value('pH', None, 'chemical'))
         
@@ -613,7 +620,7 @@ class TestParameterRounding(unittest.TestCase):
         # The function has a bug - it references 'logger' which is not defined
         # So this will raise a NameError, not return None as intended
         with self.assertRaises(NameError):
-            result = round_parameter_value('pH', 'invalid', 'chemical')
+            round_parameter_value('pH', 'invalid', 'chemical')
 
 
 class TestUIComponents(unittest.TestCase):

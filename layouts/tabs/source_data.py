@@ -4,9 +4,9 @@ Source Data tab layout for the dash
 
 import dash_bootstrap_components as dbc
 from dash import html
-from utils import load_markdown_content
-from ..constants import TAB_STYLES
+
 from ..components.chatbot import create_floating_chatbot
+
 
 def create_source_data_tab():
     """

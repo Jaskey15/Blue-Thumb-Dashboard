@@ -3,31 +3,31 @@ Test suite for data_loader.py - Core CSV loading and utilities.
 Tests the foundational data loading functionality used across all data processing modules.
 """
 
-import unittest
-import pandas as pd
-import tempfile
 import os
 import sys
-from unittest.mock import patch, MagicMock
+import unittest
+from unittest.mock import patch
+
+import pandas as pd
 
 # Add project root to path
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, project_root)
 
+from data_processing import setup_logging
 from data_processing.data_loader import (
-    load_csv_data,
+    check_file_exists,
+    clean_column_names,
     clean_site_name,
     clean_site_names_column,
-    clean_column_names,
-    filter_data_by_site,
-    get_unique_sites,
     convert_bdl_values,
+    filter_data_by_site,
     get_date_range,
     get_file_path,
-    check_file_exists,
-    save_processed_data
+    get_unique_sites,
+    load_csv_data,
+    save_processed_data,
 )
-from data_processing import setup_logging
 
 # Set up logging for tests
 logger = setup_logging("test_data_loader", category="testing")

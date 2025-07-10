@@ -3,44 +3,44 @@ Test suite for site management functionality.
 Tests site consolidation, duplicate merging, and database management.
 """
 
-import unittest
-import pandas as pd
-import tempfile
 import os
 import sys
-from unittest.mock import patch, MagicMock, PropertyMock
+import tempfile
+import unittest
+from unittest.mock import MagicMock, PropertyMock, patch
+
+import pandas as pd
 
 # Add project root to path
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, project_root)
 
+from data_processing import setup_logging
+
 # Import functions from consolidate_sites.py
 from data_processing.consolidate_sites import (
-    extract_sites_from_csv, 
-    detect_conflicts, 
     consolidate_sites,
-    save_consolidated_data
+    detect_conflicts,
+    extract_sites_from_csv,
+    save_consolidated_data,
 )
 
 # Import functions from merge_sites.py
 from data_processing.merge_sites import (
-    find_duplicate_coordinate_groups,
-    determine_preferred_site,
     analyze_coordinate_duplicates,
-    merge_duplicate_sites,
-    transfer_site_data
+    determine_preferred_site,
+    find_duplicate_coordinate_groups,
+    transfer_site_data,
 )
 
 # Import functions from site_processing.py
 from data_processing.site_processing import (
-    load_site_data,
-    insert_sites_into_db,
-    process_site_data,
+    classify_active_sites,
     cleanup_unused_sites,
-    classify_active_sites
+    insert_sites_into_db,
+    load_site_data,
+    process_site_data,
 )
-
-from data_processing import setup_logging
 
 # Set up logging for tests
 logger = setup_logging("test_site_management", category="testing")

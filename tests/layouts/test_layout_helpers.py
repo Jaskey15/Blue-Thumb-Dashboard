@@ -14,22 +14,22 @@ TODO: Implement the following test classes:
 - TestComponentStyling
 """
 
-import unittest
 import os
 import sys
-from unittest.mock import patch, MagicMock
-from dash import html, dcc
+import unittest
+
 import dash_bootstrap_components as dbc
+from dash import dcc, html
 
 # Add project root to path
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, project_root)
 
 from layouts.helpers import (
-    create_species_gallery,
     create_action_card,
     create_dropdown_row,
-    create_season_month_selectors
+    create_season_month_selectors,
+    create_species_gallery,
 )
 
 

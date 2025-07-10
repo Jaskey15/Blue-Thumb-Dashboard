@@ -7,15 +7,20 @@ and inserting the final, validated data into the database.
 """
 
 import os
+
 import pandas as pd
-from data_processing.data_loader import clean_column_names, save_processed_data
-from utils import get_sites_with_data
-from data_processing.chemical_utils import (
-    validate_chemical_data, apply_bdl_conversions, calculate_soluble_nitrogen,
-    remove_empty_chemical_rows, KEY_PARAMETERS,
-    insert_chemical_data, get_reference_values
-)
+
 from data_processing import setup_logging
+from data_processing.chemical_utils import (
+    KEY_PARAMETERS,
+    apply_bdl_conversions,
+    calculate_soluble_nitrogen,
+    get_reference_values,
+    insert_chemical_data,
+    remove_empty_chemical_rows,
+    validate_chemical_data,
+)
+from data_processing.data_loader import clean_column_names, save_processed_data
 
 logger = setup_logging("chemical_processing", category="processing")
 

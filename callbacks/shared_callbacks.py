@@ -4,9 +4,9 @@ Core callbacks shared across the dashboard.
 
 import dash
 from dash.dependencies import Input, Output, State
+
 from utils import setup_logging
 
-# Initialize callback logging
 logger = setup_logging("shared_callbacks", category="callbacks")
 
 def register_shared_callbacks(app):

@@ -2,16 +2,18 @@
 Chemical parameter visualization with status-based coloring and threshold analysis.
 """
 
-import plotly.express as px
-import plotly.graph_objects as go
 import pandas as pd
-
+import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from data_processing.data_queries import get_chemical_data_from_db
+
 from data_processing.chemical_utils import KEY_PARAMETERS, get_reference_values
-from callbacks.helper_functions import get_parameter_label, get_parameter_name
-from visualizations.visualization_utils import create_empty_figure, create_error_figure, FONT_SIZES
-from utils import setup_logging
+from data_processing.data_queries import get_chemical_data_from_db
+from utils import get_parameter_label, get_parameter_name, setup_logging
+from visualizations.visualization_utils import (
+    FONT_SIZES,
+    create_empty_figure,
+    create_error_figure,
+)
 
 logger = setup_logging("chemical_viz", category="visualization")
 

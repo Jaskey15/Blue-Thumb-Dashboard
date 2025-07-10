@@ -4,8 +4,9 @@ Biological tab layout for the dashboard
 
 import dash_bootstrap_components as dbc
 from dash import dcc, html
-from utils import load_markdown_content
+
 from ..components.chatbot import create_floating_chatbot
+
 
 def create_biological_tab():
     """Create the biological data tab layout with searchable dropdown for site selection."""

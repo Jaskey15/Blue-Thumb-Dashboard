@@ -3,27 +3,26 @@ Test suite for habitat processing functionality.
 Tests the logic in data_processing.habitat_processing module.
 """
 
-import unittest
-import pandas as pd
-import numpy as np
 import os
 import sys
-from unittest.mock import patch, MagicMock
+import unittest
+from unittest.mock import MagicMock, patch
+
+import numpy as np
+import pandas as pd
 
 # Add project root to path
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, project_root)
 
+from data_processing.biological_utils import convert_columns_to_numeric
 from data_processing.habitat_processing import (
+    calculate_habitat_grade,
+    insert_habitat_assessments,
+    insert_metrics_data,
+    load_habitat_data,
     process_habitat_csv_data,
     resolve_habitat_duplicates,
-    calculate_habitat_grade,
-    load_habitat_data,
-    insert_habitat_assessments,
-    insert_metrics_data
-)
-from data_processing.biological_utils import (
-    convert_columns_to_numeric
 )
 from utils import setup_logging
 

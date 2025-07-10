@@ -2,10 +2,12 @@
 Validates fish collection dates and identifies replicates using Blue Thumb field data.
 """
 
-import pandas as pd
 import difflib
-from data_processing.data_loader import clean_site_name
+
+import pandas as pd
+
 from data_processing import setup_logging
+from data_processing.data_loader import clean_site_name
 
 logger = setup_logging("bt_fieldwork_validator", category="processing")
 
@@ -222,9 +224,9 @@ def categorize_and_process_duplicates(fish_df, bt_df):
         return fish_processed
     
     if bt_df.empty or 'Site_Clean' not in bt_df.columns:
-        bt_sites = set()
+        pass
     else:
-        bt_sites = set(bt_df['Site_Clean'].unique())
+        set(bt_df['Site_Clean'].unique())
     
     rep_groups_processed = 0
     duplicate_groups_averaged = 0
@@ -244,7 +246,7 @@ def categorize_and_process_duplicates(fish_df, bt_df):
     for _, group_info in unique_duplicate_groups.iterrows():
         site_name = group_info['site_name']
         year = group_info['year']
-        sample_count = group_info['sample_count']
+        group_info['sample_count']
         
         group_samples = fish_df[
             (fish_df['site_name'] == site_name) & 

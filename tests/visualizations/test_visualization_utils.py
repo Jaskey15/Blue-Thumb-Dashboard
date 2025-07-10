@@ -3,42 +3,32 @@ Test suite for visualization utilities.
 Tests the shared functions in visualizations.visualization_utils module.
 """
 
-import unittest
-import pandas as pd
-import numpy as np
-import plotly.graph_objects as go
 import os
 import sys
-from unittest.mock import patch, MagicMock
+import unittest
+
+import pandas as pd
+import plotly.graph_objects as go
 
 # Add project root to path
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, project_root)
 
-from visualizations.visualization_utils import (
-    # Core visualization functions
+from utils import setup_logging
+from visualizations.visualization_utils import (  # Core visualization functions; Data processing functions; Table and UI functions; Error handling functions; Constants
+    DEFAULT_COLORS,
+    FONT_SIZES,
     add_reference_lines,
-    update_layout,
-    create_trace,
-    generate_hover_text,
-    
-    # Data processing functions
     calculate_dynamic_y_range,
-    format_metrics_table,
-    
-    # Table and UI functions
-    create_table_styles,
     create_data_table,
-    
-    # Error handling functions
     create_empty_figure,
     create_error_figure,
-    
-    # Constants
-    DEFAULT_COLORS,
-    FONT_SIZES
+    create_table_styles,
+    create_trace,
+    format_metrics_table,
+    generate_hover_text,
+    update_layout,
 )
-from utils import setup_logging
 
 # Set up logging for tests
 logger = setup_logging("test_visualization_utils", category="testing")

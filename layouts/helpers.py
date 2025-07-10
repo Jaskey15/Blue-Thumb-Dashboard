@@ -4,7 +4,7 @@ Helper functions for the dashboard
 
 import dash_bootstrap_components as dbc
 from dash import dcc, html
-from utils import create_image_with_caption
+
 
 def create_species_gallery(species_type):
     """

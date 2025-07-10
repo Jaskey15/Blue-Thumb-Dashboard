@@ -6,8 +6,6 @@ components and logic paths rather than the full Dash callback integration.
 """
 
 import pytest
-import dash
-from unittest.mock import Mock, patch
 
 
 class TestModalLogic:

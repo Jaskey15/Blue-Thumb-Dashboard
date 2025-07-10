@@ -3,13 +3,18 @@ Callbacks for biological data visualization and interaction.
 """
 
 import dash
-from dash import html, Input, Output, State, dcc
 import pandas as pd
-from utils import setup_logging, get_sites_with_data
-from .tab_utilities import create_biological_community_info, create_biological_site_display, create_gallery_navigation_callback
-from .helper_functions import create_empty_state, create_error_state
+from dash import Input, Output, State, dcc, html
 
-# Initialize callback logging
+from utils import get_sites_with_data, setup_logging
+
+from .helper_functions import create_empty_state, create_error_state
+from .tab_utilities import (
+    create_biological_community_info,
+    create_biological_site_display,
+    create_gallery_navigation_callback,
+)
+
 logger = setup_logging("biological_callbacks", category="callbacks")
 
 def register_biological_callbacks(app):

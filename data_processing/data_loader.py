@@ -7,11 +7,13 @@ sources, and saving processed DataFrames.
 """
 
 import os
-import pandas as pd
 import re
 from difflib import SequenceMatcher
-from database.database import get_connection, close_connection
+
+import pandas as pd
+
 from data_processing import setup_logging
+from database.database import close_connection, get_connection
 
 logger = setup_logging("data_loader", category="processing")
 

@@ -1,16 +1,20 @@
-import os
 import pathlib
+import re
 import shutil
 import sys
-import re
 
 PROJECT_ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.append(str(PROJECT_ROOT))
 
 from layouts.ui_data import (
-    HOME_YARD_CARDS, RURAL_CARDS, RECREATION_CARDS, COMMUNITY_CARDS,
-    FISH_DATA, MACRO_DATA,
-    CHEMICAL_DIAGRAM_CAPTIONS, HABITAT_DIAGRAM_CAPTIONS
+    CHEMICAL_DIAGRAM_CAPTIONS,
+    COMMUNITY_CARDS,
+    FISH_DATA,
+    HABITAT_DIAGRAM_CAPTIONS,
+    HOME_YARD_CARDS,
+    MACRO_DATA,
+    RECREATION_CARDS,
+    RURAL_CARDS,
 )
 
 TEXT_DIR = PROJECT_ROOT / "text"

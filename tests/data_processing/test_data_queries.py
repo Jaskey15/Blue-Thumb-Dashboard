@@ -3,31 +3,31 @@ Test suite for data_queries.py - Database query utilities.
 Tests the database query functionality for retrieving monitoring data.
 """
 
-import unittest
-import pandas as pd
-import sqlite3
 import os
 import sys
-from unittest.mock import patch, MagicMock
+import unittest
+from unittest.mock import patch
+
+import pandas as pd
 
 # Add project root to path
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, project_root)
 
-from data_processing.data_queries import (
-    get_chemical_date_range,
-    get_chemical_data_from_db,
-    get_fish_date_range,
-    get_fish_dataframe,
-    get_fish_metrics_data_for_table,
-    get_macro_date_range,
-    get_macroinvertebrate_dataframe,
-    get_macro_metrics_data_for_table,
-    get_habitat_date_range,
-    get_habitat_dataframe,
-    get_habitat_metrics_data_for_table
-)
 from data_processing import setup_logging
+from data_processing.data_queries import (
+    get_chemical_data_from_db,
+    get_chemical_date_range,
+    get_fish_dataframe,
+    get_fish_date_range,
+    get_fish_metrics_data_for_table,
+    get_habitat_dataframe,
+    get_habitat_date_range,
+    get_habitat_metrics_data_for_table,
+    get_macro_date_range,
+    get_macro_metrics_data_for_table,
+    get_macroinvertebrate_dataframe,
+)
 
 # Set up logging for tests
 logger = setup_logging("test_data_queries", category="testing")

@@ -3,22 +3,23 @@ Test suite for score averaging functionality.
 Tests the logic for handling fish replicates vs duplicates and score averaging.
 """
 
-import unittest
-import pandas as pd
 import os
 import sys
+import unittest
 from datetime import datetime
 from unittest.mock import patch
+
+import pandas as pd
 
 # Add project root to path
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, project_root)
 
 from data_processing.bt_fieldwork_validator import (
-    load_bt_field_work_dates,
-    find_bt_site_match,
+    average_group_samples,
     categorize_and_process_duplicates,
-    average_group_samples
+    find_bt_site_match,
+    load_bt_field_work_dates,
 )
 from utils import setup_logging
 

@@ -2,14 +2,15 @@
 Tests for chemical processing adapter functionality.
 """
 
-import unittest
-from unittest.mock import patch, MagicMock
-import pandas as pd
-import numpy as np
-import sqlite3
-import tempfile
-import sys
 import os
+import sqlite3
+import sys
+import tempfile
+import unittest
+from unittest.mock import MagicMock, patch
+
+import numpy as np
+import pandas as pd
 
 # Add project root to path for imports
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -22,10 +23,10 @@ sys.modules['google.cloud'] = MagicMock()
 sys.modules['google.cloud.storage'] = MagicMock()
 
 from chemical_processor import (
+    classify_active_sites_in_db,
     get_reference_values_from_db,
-    process_survey123_chemical_data,
     insert_processed_data_to_db,
-    classify_active_sites_in_db
+    process_survey123_chemical_data,
 )
 
 

@@ -8,24 +8,25 @@ This file tests the tab layout creation functions including:
 - Content organization
 """
 
-import unittest
 import os
 import sys
-from unittest.mock import patch, MagicMock
-from dash import html, dcc
+import unittest
+from unittest.mock import patch
+
 import dash_bootstrap_components as dbc
+from dash import dcc, html
 
 # Add project root to path
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, project_root)
 
 from layouts.tabs import (
-    create_overview_tab,
-    create_chemical_tab,
     create_biological_tab,
+    create_chemical_tab,
     create_habitat_tab,
+    create_overview_tab,
     create_protect_our_streams_tab,
-    create_source_data_tab
+    create_source_data_tab,
 )
 
 

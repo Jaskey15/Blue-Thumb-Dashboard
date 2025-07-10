@@ -4,12 +4,13 @@ Callbacks for habitat assessment visualization and interaction.
 
 import dash
 import pandas as pd
-from dash import html, Input, Output, State, dcc
-from utils import setup_logging, get_sites_with_data
-from .tab_utilities import create_habitat_display
-from .helper_functions import create_empty_state, create_error_state
+from dash import Input, Output, State, dcc
 
-# Initialize callback logging
+from utils import get_sites_with_data, setup_logging
+
+from .helper_functions import create_empty_state, create_error_state
+from .tab_utilities import create_habitat_display
+
 logger = setup_logging("habitat_callbacks", category="callbacks")
 
 def register_habitat_callbacks(app):

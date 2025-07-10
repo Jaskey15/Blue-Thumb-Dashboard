@@ -4,10 +4,13 @@ Protect Our Streams tab layout for the dashboard
 
 import dash_bootstrap_components as dbc
 from dash import html
-from utils import load_markdown_content, create_image_with_caption
-from ..constants import TAB_STYLES
-from ..helpers import create_action_card
+
+from utils import create_image_with_caption, load_markdown_content
+
 from ..components.chatbot import create_floating_chatbot
+from ..helpers import create_action_card
+from ..ui_data import COMMUNITY_CARDS, HOME_YARD_CARDS, RECREATION_CARDS, RURAL_CARDS
+
 
 def create_protect_our_streams_tab():
     """
@@ -17,8 +20,6 @@ def create_protect_our_streams_tab():
         HTML layout for the Protect Our Streams tab
     """
     try:
-        from ..ui_data import HOME_YARD_CARDS, RURAL_CARDS, RECREATION_CARDS, COMMUNITY_CARDS
-        
         # Create action cards for each category
         home_yard_cards = [create_action_card(**card) for card in HOME_YARD_CARDS]
         rural_cards = [create_action_card(**card) for card in RURAL_CARDS]

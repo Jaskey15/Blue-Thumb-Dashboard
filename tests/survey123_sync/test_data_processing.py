@@ -2,11 +2,12 @@
 Tests for Survey123 data processing functions.
 """
 
+import os
+import sys
 import unittest
 from unittest.mock import MagicMock
+
 import pandas as pd
-import sys
-import os
 
 # Add project root to path for imports
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

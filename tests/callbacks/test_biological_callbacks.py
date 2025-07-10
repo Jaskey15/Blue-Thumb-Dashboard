@@ -5,9 +5,6 @@ This file tests the biological callback functions including state management,
 community selection, site dropdown population, navigation handling, and gallery functionality.
 """
 
-import pytest
-import dash
-from unittest.mock import Mock, patch, MagicMock
 
 class TestBiologicalStateManagement:
     """Test biological state management logic."""
@@ -329,7 +326,6 @@ class TestCommunitySelectionLogic:
         """Test handling of empty sites list for community."""
         # Test with no available sites
         available_sites = []
-        selected_community = "fish"
         
         if not available_sites:
             options = []
@@ -483,7 +479,7 @@ class TestErrorHandling:
         try:
             # Simulate error in getting sites data
             raise Exception("Database connection failed")
-        except Exception as e:
+        except Exception:
             error_response = (
                 target_community,  # Set community
                 [],  # No options
@@ -502,12 +498,11 @@ class TestErrorHandling:
     def test_state_restoration_error_handling(self):
         """Test error handling in state restoration."""
         # Test with exception in state restoration
-        saved_community = "fish"
         
         try:
             # Simulate error in getting sites data for restoration
             raise Exception("Sites data unavailable")
-        except Exception as e:
+        except Exception:
             # Should return dash.no_update for all outputs
             error_handled = True
             outputs_updated = False
@@ -518,12 +513,11 @@ class TestErrorHandling:
     def test_site_dropdown_error_handling(self):
         """Test error handling in site dropdown population."""
         # Test with exception in site dropdown logic
-        selected_community = "fish"
         
         try:
             # Simulate error in populating sites
             raise Exception("Site data error")
-        except Exception as e:
+        except Exception:
             error_response = (
                 {'display': 'block', 'marginBottom': '20px'},  # Show section
                 False,  # Enable dropdown

@@ -3,7 +3,8 @@ Floating chatbot component for Blue Thumb dashboard
 """
 
 import dash_bootstrap_components as dbc
-from dash import html, dcc
+from dash import dcc, html
+
 
 def create_floating_chatbot(tab_name):
     """

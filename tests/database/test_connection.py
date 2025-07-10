@@ -8,12 +8,13 @@ This module tests:
 - Resource cleanup
 """
 
-import os
-import pytest
 import sqlite3
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
+
+import pytest
 
 from database.database import get_connection
+
 
 def test_get_connection_success(mock_path_join):
     """Test successful database connection."""

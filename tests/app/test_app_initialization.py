@@ -8,13 +8,14 @@ This file tests the main application initialization including:
 - Server startup and configuration
 """
 
-import unittest
 import os
 import sys
-from unittest.mock import patch, MagicMock
+import unittest
+from unittest.mock import MagicMock, patch
+
 import dash
-from dash import html, dcc
 import dash_bootstrap_components as dbc
+from dash import html
 
 # Add project root to path
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -22,6 +23,7 @@ sys.path.insert(0, project_root)
 
 # We have to import the app after setting the path
 from app import app, server
+
 
 class TestDashAppCreation(unittest.TestCase):
     """Test Dash app creation and configuration."""
@@ -132,7 +134,6 @@ class TestServerConfiguration(unittest.TestCase):
             import app as my_app
             my_app.run(host='0.0.0.0', port=8000, debug=False)
             mock_run.assert_called_with(host='0.0.0.0', port=8000, debug=False)
-        pass
 
     def test_server_port_configuration(self):
         """Test server port configuration."""

@@ -2,16 +2,17 @@
 Callbacks for the chatbot functionality
 """
 
-import dash
-from dash import Input, Output, State, callback, html, MATCH
-import dash_bootstrap_components as dbc
-from datetime import datetime
 import os
+from datetime import datetime
+
+import dash
+import dash_bootstrap_components as dbc
+from dash import MATCH, Input, Output, State, html
 from google import genai
 from google.genai import types
+
 from utils import setup_logging
 
-# Initialize callback logging
 logger = setup_logging("chatbot_callbacks", category="callbacks")
 
 # --- Model Configuration ---

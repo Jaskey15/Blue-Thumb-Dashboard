@@ -12,9 +12,12 @@ Key Functions:
 - get_latest_*_data_for_maps(): Latest readings for chemical/biological/habitat data
 """
 
-import pandas as pd
 import sqlite3
-from database.database import get_connection, close_connection
+
+import pandas as pd
+
+from data_processing.chemical_utils import KEY_PARAMETERS
+from database.database import close_connection, get_connection
 from utils import setup_logging
 
 logger = setup_logging("map_queries", category="visualization")
@@ -77,8 +80,6 @@ def get_latest_chemical_data_for_maps(site_name=None):
     """
     Fetch latest chemical readings per site using window functions for efficiency.
     """
-    from data_processing.chemical_utils import KEY_PARAMETERS
-    
     conn = get_connection()
     try:
         # Window function to get most recent measurement per parameter

@@ -3,22 +3,22 @@ Test suite for shared biological data utilities.
 Tests the logic in data_processing.biological_utils module.
 """
 
-import unittest
-import pandas as pd
-import numpy as np
 import os
 import sys
-from unittest.mock import MagicMock, patch
+import unittest
+from unittest.mock import MagicMock
+
+import pandas as pd
 
 # Add project root to path
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, project_root)
 
 from data_processing.biological_utils import (
-    validate_collection_event_data,
-    insert_collection_events, 
+    convert_columns_to_numeric,
+    insert_collection_events,
     remove_invalid_biological_values,
-    convert_columns_to_numeric
+    validate_collection_event_data,
 )
 from utils import setup_logging
 
