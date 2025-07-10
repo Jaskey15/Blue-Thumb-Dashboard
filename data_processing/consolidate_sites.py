@@ -1,9 +1,10 @@
 """
-consolidate_sites.py - Site Consolidation Pipeline
+Cleans raw data and consolidates site information from multiple CSV files.
 
-This script first cleans all raw CSV files with standardized site names, then consolidates 
-sites from all cleaned CSV files using name-based consolidation.
-Creates a master sites table with best available metadata from priority sources.
+This script runs a two-phase pipeline:
+1.  Cleans all raw CSV files by standardizing site names.
+2.  Consolidates sites into a master list, taking metadata from the
+    highest-priority source file available and flagging any conflicts.
 """
 
 import os
@@ -13,20 +14,17 @@ import pandas as pd
 from data_processing.data_loader import clean_site_name
 from data_processing import setup_logging
 
-# Set up logging
-logger = setup_logging("consolidate_sites", category="preprocessing")
+logger = setup_logging("consolidate_sites", category="processing")
 
-# Define directories
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RAW_DATA_DIR = os.path.join(BASE_DIR, 'data', 'raw')
 INTERIM_DATA_DIR = os.path.join(BASE_DIR, 'data', 'interim')
 PROCESSED_DATA_DIR = os.path.join(BASE_DIR, 'data', 'processed')
 
-# Ensure directories exist
 os.makedirs(INTERIM_DATA_DIR, exist_ok=True)
 os.makedirs(PROCESSED_DATA_DIR, exist_ok=True)
 
-# CSV file configurations in priority order (highest to lowest priority)
+# Defines CSV files and their configurations, ordered from highest to lowest priority for data consolidation.
 CSV_CONFIGS = [
     {
         'file': 'cleaned_site_data.csv',
@@ -92,13 +90,10 @@ CSV_CONFIGS = [
 
 def clean_all_csvs():
     """
-    Clean all CSV files by standardizing site names.
-    
-    This function processes all raw CSV files, cleans site names by stripping
-    whitespace and normalizing spaces, then saves cleaned versions to the interim folder.
+    Cleans all raw CSVs by standardizing site names and saves them to the interim directory.
     
     Returns:
-        bool: True if all files processed successfully
+        True if all files were processed successfully, False otherwise.
     """
     logger.info("=" * 60)
     logger.info("PHASE 1: CSV CLEANING")
@@ -106,7 +101,6 @@ def clean_all_csvs():
     logger.info(f"Input: {RAW_DATA_DIR}")
     logger.info(f"Output: {INTERIM_DATA_DIR}")
     
-    # List of CSV files to process
     csv_files = [
         'site_data.csv',
         'chemical_data.csv', 
@@ -116,15 +110,13 @@ def clean_all_csvs():
         'habitat_data.csv',
     ]
     
-    # Initialize summary counters
     total_changes = 0
     total_sites = 0
     processed_files = []
     
-    # Process each CSV file
     for input_file in csv_files:
         try:
-            # Handle special cases
+            # The 'updated_chemical_data.csv' file has a different structure and encoding.
             if input_file == 'updated_chemical_data.csv':
                 site_column = 'Site Name'
                 encoding = 'cp1252'
@@ -132,7 +124,6 @@ def clean_all_csvs():
                 site_column = 'SiteName'
                 encoding = None
             
-            # Auto-generate output filename and description
             output_file = f'cleaned_{input_file}'
             description = input_file.replace('_', ' ').replace('.csv', ' data')
             
@@ -141,26 +132,24 @@ def clean_all_csvs():
             
             logger.info(f"Processing {description}: {input_file}")
             
-            # Load the CSV with appropriate encoding
             if encoding:
                 df = pd.read_csv(input_path, encoding=encoding, low_memory=False)
             else:
                 df = pd.read_csv(input_path, low_memory=False)
             
-            # Clean site names and count changes
             original_sites = df[site_column].copy()
             df[site_column] = df[site_column].str.strip().str.replace(r'\s+', ' ', regex=True)
             
-            # Count changes made
             changes_mask = (original_sites != df[site_column]) & original_sites.notna()
             site_changes = changes_mask.sum()
             
-            # Save cleaned CSV
             df.to_csv(output_path, index=False, encoding='utf-8')
             
-            # Log results and update counters
             unique_sites = df[site_column].nunique()
-            logger.info(f"  ✓ {len(df)} rows, {site_changes} names cleaned, {unique_sites} unique sites")
+            if site_changes > 0:
+                logger.info(f"  ✓ {len(df)} rows, {site_changes} names cleaned, {unique_sites} unique sites")
+            else:
+                logger.info(f"  ✓ {len(df)} rows, {unique_sites} unique sites")
             
             total_changes += site_changes
             total_sites += unique_sites
@@ -170,11 +159,9 @@ def clean_all_csvs():
             logger.error(f"Failed to process {input_file}: {e}")
             return False
     
-    # Generate summary
     logger.info(f"\n🎉 Successfully cleaned all {len(processed_files)} CSV files!")
     logger.info(f"Total: {total_changes} site name changes, {total_sites} unique sites across all files")
     
-    # List output files
     logger.info("\nCleaned files created:")
     for filename in processed_files:
         logger.info(f"  - {filename}")
@@ -183,13 +170,13 @@ def clean_all_csvs():
 
 def extract_sites_from_csv(config):
     """
-    Extract unique sites and their metadata from a single CSV file.
+    Extracts unique sites and their metadata from a single cleaned CSV file.
     
     Args:
-        config: Configuration dictionary for the CSV file
+        config: A dictionary defining the configuration for the CSV file.
         
     Returns:
-        DataFrame with unique sites and their metadata
+        A DataFrame containing unique sites and their associated metadata.
     """
     file_path = os.path.join(INTERIM_DATA_DIR, config['file'])
     
@@ -199,21 +186,16 @@ def extract_sites_from_csv(config):
     
     try:
         df = pd.read_csv(file_path, low_memory=False)
-        logger.info(f"Loaded {len(df)} rows from {config['file']}")
         
-        # Check if site column exists
         if config['site_column'] not in df.columns:
             logger.error(f"Site column '{config['site_column']}' not found in {config['file']}")
             return pd.DataFrame()
         
-        # Extract unique sites
         unique_sites = df.drop_duplicates(subset=[config['site_column']])
         
-        # Build the site metadata DataFrame
         site_data = pd.DataFrame()
         site_data['site_name'] = unique_sites[config['site_column']].apply(clean_site_name)
         
-        # Extract metadata columns if they exist
         for metadata_field, column_name in [
             ('latitude', config['lat_column']),
             ('longitude', config['lon_column']),
@@ -226,14 +208,11 @@ def extract_sites_from_csv(config):
             else:
                 site_data[metadata_field] = None
         
-        # Add source tracking
         site_data['source_file'] = config['file']
         site_data['source_description'] = config['description']
         
-        # Remove any sites with null/empty names
         site_data = site_data[site_data['site_name'].notna() & (site_data['site_name'] != '')]
         
-        logger.info(f"Extracted {len(site_data)} unique sites from {config['file']}")
         return site_data
         
     except Exception as e:
@@ -242,24 +221,26 @@ def extract_sites_from_csv(config):
 
 def detect_conflicts(site_name, existing_site, new_site):
     """
-    Check if two site records have conflicting metadata.
+    Compares two site records and identifies any conflicting metadata.
+    
+    A conflict is flagged only when a metadata field has a non-null but different
+    value in both the existing and new records.
     
     Args:
-        site_name: Name of the site being compared
-        existing_site: Series with existing site data
-        new_site: Series with new site data
+        site_name: The name of the site being compared.
+        existing_site: A pandas Series with the existing site data.
+        new_site: A pandas Series with the new site data.
         
     Returns:
-        List of conflict descriptions, empty if no conflicts
+        A list of strings describing any conflicts found.
     """
     conflicts = []
     
-    # Check each metadata field for conflicts
     for field in ['latitude', 'longitude', 'county', 'river_basin', 'ecoregion']:
         existing_val = existing_site.get(field)
         new_val = new_site.get(field)
         
-        # Only flag as conflict if both values exist and are different
+        # A conflict occurs only if both values exist and are different.
         if (pd.notna(existing_val) and pd.notna(new_val) and 
             existing_val != new_val):
             conflicts.append(f"{field}: '{existing_val}' vs '{new_val}'")
@@ -268,10 +249,14 @@ def detect_conflicts(site_name, existing_site, new_site):
 
 def consolidate_sites():
     """
-    Main function to consolidate sites from all cleaned CSV files.
+    Consolidates site information from all cleaned CSV files based on priority.
+    
+    This function iterates through the CSV files in their priority order, adding new
+    sites and updating existing ones with metadata from higher-priority sources.
+    It also identifies and logs any conflicting metadata for manual review.
     
     Returns:
-        Tuple of (consolidated_sites_df, conflicts_df)
+        A tuple containing the consolidated sites DataFrame and a DataFrame of any conflicts found.
     """
     logger.info("\n" + "=" * 60)
     logger.info("PHASE 2: SITE CONSOLIDATION")
@@ -281,11 +266,9 @@ def consolidate_sites():
     consolidated_sites = pd.DataFrame()
     conflicts_list = []
     
-    # Process each CSV file in priority order
     for i, config in enumerate(CSV_CONFIGS):
         logger.info(f"\nProcessing priority {i+1}: {config['description']}")
         
-        # Extract sites from this CSV
         csv_sites = extract_sites_from_csv(config)
         
         if csv_sites.empty:
@@ -296,21 +279,18 @@ def consolidate_sites():
         sites_updated = 0
         conflicts_found = 0
         
-        # Process each site from this CSV
         for _, new_site in csv_sites.iterrows():
             site_name = new_site['site_name']
             
-            # Check if site already exists in consolidated data
             if not consolidated_sites.empty and site_name in consolidated_sites['site_name'].values:
-                # Site exists - check for conflicts and update missing metadata
+                # If site exists, check for conflicts and update missing metadata.
                 existing_idx = consolidated_sites[consolidated_sites['site_name'] == site_name].index[0]
                 existing_site = consolidated_sites.loc[existing_idx]
                 
-                # Check for conflicts
                 conflicts = detect_conflicts(site_name, existing_site, new_site)
                 
                 if conflicts:
-                    # Record conflict for manual review
+                    # Records a conflict if metadata differs between sources.
                     conflict_record = {
                         'site_name': site_name,
                         'conflicts': conflicts,
@@ -321,9 +301,8 @@ def consolidate_sites():
                     }
                     conflicts_list.append(conflict_record)
                     conflicts_found += 1
-                    logger.warning(f"Conflict detected for '{site_name}': {', '.join(conflicts)}")
                 else:
-                    # No conflicts - update missing metadata from lower priority source
+                    # If no conflicts, fill in any missing metadata from the new source.
                     updated = False
                     for field in ['latitude', 'longitude', 'county', 'river_basin', 'ecoregion']:
                         if (pd.isna(existing_site[field]) and pd.notna(new_site[field])):
@@ -334,10 +313,9 @@ def consolidate_sites():
                     if updated:
                         sites_updated += 1
             else:
-                # New site - add to consolidated data
+                # If site is new, add it to the consolidated data.
                 new_record = new_site.copy()
                 
-                # Add source tracking for each field
                 for field in ['latitude', 'longitude', 'county', 'river_basin', 'ecoregion']:
                     if pd.notna(new_site[field]):
                         new_record[f'{field}_source'] = new_site['source_file']
@@ -347,12 +325,9 @@ def consolidate_sites():
                 consolidated_sites = pd.concat([consolidated_sites, new_record.to_frame().T], ignore_index=True)
                 sites_added += 1
         
-        logger.info(f"  Added: {sites_added} new sites")
-        logger.info(f"  Updated: {sites_updated} existing sites")
-        if conflicts_found > 0:
-            logger.warning(f"  Conflicts: {conflicts_found} sites flagged for review")
+        if sites_added > 0 or sites_updated > 0 or conflicts_found > 0:
+            logger.info(f"  Added: {sites_added}, Updated: {sites_updated}, Conflicts: {conflicts_found}")
     
-    # Create conflicts DataFrame
     conflicts_df = pd.DataFrame(conflicts_list) if conflicts_list else pd.DataFrame()
     
     logger.info(f"\nConsolidation complete!")
@@ -363,55 +338,137 @@ def consolidate_sites():
 
 def save_consolidated_data(consolidated_sites, conflicts_df):
     """
-    Save the consolidated sites and conflicts to CSV files.
+    Saves the consolidated site data and any conflicts to CSV files.
     
     Args:
-        consolidated_sites: DataFrame with consolidated site data
-        conflicts_df: DataFrame with conflicts that need manual review
+        consolidated_sites: A DataFrame with the consolidated site data.
+        conflicts_df: A DataFrame with any conflicts that require manual review.
+        
+    Returns:
+        True if all files saved successfully, False otherwise.
     """
-    # Save master sites file to processed directory (for site processing)
-    master_path = os.path.join(PROCESSED_DATA_DIR, 'master_sites.csv')
-    consolidated_sites.to_csv(master_path, index=False, encoding='utf-8')
-    logger.info(f"Saved master sites to: master_sites.csv")
+    try:
+        # Save the master sites file, which is used for final site processing.
+        master_path = os.path.join(PROCESSED_DATA_DIR, 'master_sites.csv')
+        consolidated_sites.to_csv(master_path, index=False, encoding='utf-8')
+        logger.info(f"Saved master sites to: master_sites.csv")
+        
+        # Save the full consolidated sites file, including source tracking, to the interim directory.
+        consolidated_path = os.path.join(INTERIM_DATA_DIR, 'consolidated_sites.csv')
+        consolidated_sites.to_csv(consolidated_path, index=False, encoding='utf-8')
+        logger.info(f"Saved consolidated sites to: consolidated_sites.csv")
+        
+        if not conflicts_df.empty:
+            conflicts_path = os.path.join(INTERIM_DATA_DIR, 'site_conflicts_for_review.csv')
+            conflicts_df.to_csv(conflicts_path, index=False, encoding='utf-8')
+            logger.warning(f"Saved {len(conflicts_df)} conflicts to: site_conflicts_for_review.csv")
+            logger.warning("⚠️  Manual review required for conflicting sites!")
+        else:
+            logger.info("✓ No conflicts detected - all sites consolidated cleanly")
+            
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error saving consolidated data: {e}")
+        return False
+
+def verify_cleaned_csvs():
+    """
+    Verify that all required cleaned CSV files exist and are readable.
     
-    # Save full consolidated sites file to interim directory (with source tracking)
-    consolidated_path = os.path.join(INTERIM_DATA_DIR, 'consolidated_sites.csv')
-    consolidated_sites.to_csv(consolidated_path, index=False, encoding='utf-8')
-    logger.info(f"Saved consolidated sites to: consolidated_sites.csv")
+    Returns:
+        True if all files are present and accessible, False otherwise.
+    """
+    logger.info("Verifying cleaned CSV files...")
     
-    # Save conflicts if any exist
-    if not conflicts_df.empty:
-        conflicts_path = os.path.join(INTERIM_DATA_DIR, 'site_conflicts_for_review.csv')
-        conflicts_df.to_csv(conflicts_path, index=False, encoding='utf-8')
-        logger.warning(f"Saved {len(conflicts_df)} conflicts to: site_conflicts_for_review.csv")
-        logger.warning("⚠️  Manual review required for conflicting sites!")
-    else:
-        logger.info("✓ No conflicts detected - all sites consolidated cleanly")
+    required_files = [config['file'] for config in CSV_CONFIGS]
+    missing_files = []
+    corrupted_files = []
+    
+    for filename in required_files:
+        file_path = os.path.join(INTERIM_DATA_DIR, filename)
+        
+        if not os.path.exists(file_path):
+            missing_files.append(filename)
+            continue
+            
+        try:
+            # Try to read the file to verify it's accessible
+            df = pd.read_csv(file_path, nrows=1, low_memory=False)
+        except Exception as e:
+            logger.error(f"✗ {filename} is corrupted: {e}")
+            corrupted_files.append(filename)
+    
+    if missing_files:
+        logger.error(f"Missing cleaned CSV files: {missing_files}")
+        logger.error("Run 'clean_all_csvs()' first to generate cleaned files")
+        return False
+        
+    if corrupted_files:
+        logger.error(f"Corrupted cleaned CSV files: {corrupted_files}")
+        return False
+    
+    logger.info(f"All {len(required_files)} cleaned CSV files verified")
+    return True
+
+def consolidate_sites_from_csvs():
+    """
+    Consolidate sites from all cleaned CSV files into master sites list.
+    
+    This function calls the main consolidation process and ensures the
+    master_sites.csv file is created properly.
+    
+    Returns:
+        True if consolidation completed successfully, False otherwise.
+    """
+    logger.info("Consolidating sites from all cleaned CSV files...")
+    
+    try:
+        # Verify files exist first
+        if not verify_cleaned_csvs():
+            return False
+        
+        # Run the main consolidation process
+        consolidated_sites, conflicts_df = consolidate_sites()
+        
+        if consolidated_sites.empty:
+            logger.error("Site consolidation produced no results")
+            return False
+        
+        # Save the consolidated data
+        save_success = save_consolidated_data(consolidated_sites, conflicts_df)
+        
+        if save_success:
+            logger.info(f"Site consolidation completed: {len(consolidated_sites)} sites, {len(conflicts_df)} conflicts")
+            return True
+        else:
+            logger.error("Failed to save consolidated site data")
+            return False
+            
+    except Exception as e:
+        logger.error(f"Error during site consolidation: {e}")
+        return False
 
 def main():
     """
-    Main execution function.
+    Executes the full site consolidation pipeline.
     """
     logger.info("=" * 60)
     logger.info("SITE CONSOLIDATION PIPELINE")
     logger.info("=" * 60)
     
-    # Phase 1: Clean all CSV files
     if not clean_all_csvs():
         logger.error("CSV cleaning failed. Check input files.")
         return False
     
-    # Phase 2: Run consolidation
     consolidated_sites, conflicts_df = consolidate_sites()
     
     if consolidated_sites.empty:
         logger.error("No sites were consolidated. Check input files.")
         return False
     
-    # Save results
     save_consolidated_data(consolidated_sites, conflicts_df)
     
-    # Summary
     logger.info("\n" + "=" * 60)
     logger.info("PIPELINE SUMMARY")
     logger.info("=" * 60)

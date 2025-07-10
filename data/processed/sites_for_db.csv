@@ -340,39 +340,43 @@ Wolf Creek: US Hwy 46,36.32638889,-99.76080556,Ellis,Canadian R.,Southwestern Ta
 Wolf Creek: Gore Blvd.,34.60876,-98.44398,Comanche,Upper Red R.,Central Great Plains
 "Woods Creek: Hwy 63, Whitesboro",34.69272222,-94.88238889,LeFlore,Little R.,Ouachita Mountains
 Yashoo Creek: Little River NWR,33.9486944,-94.7345,McCurtain,Little R.,South Central Plains
+Big Spring Trib of Bitter Creek: Big Spring Picni,35.93325,-98.44216667,Blaine,Cimarron R.,Central Great Plains
 Bird Creek: Avant,36.48522,-96.061,Osage,Arkansas R.,
-Little Deep Creek: Weatherford,35.51852778,-98.70008333,Custer,Canadian R.,
-Chisholm Creek: 33rd & Western,35.6233,-97.5335,Oklahoma,,
-Trib to Coody Creek: Robison Park,35.7318,-95.3565,Muskogee,,
-Boomer Creek: 3rd Ave,36.1190586,-97.0518204,Payne,,
-Cloudy Creek: Glass,34.3037,-95.2874,Pushmataha,,
-Coffee Creek: N. Sooner Rd.,35.68991,-97.425225,Oklahoma,,
-Coal Creek: N. Sara Rd.,35.2967,-97.7063,Grady,,
-"Little Deep Creek: Weatherford, Upstream of Treat",35.51852778,-98.70008333,Custer,,
-Crutcho Creek: First Baptist Church,35.401388,-97.4232,Oklahoma,,
-Little River: N. Porter Ave.,35.2688,-97.44136,Cleveland,,
-Shell Branch: Pruitt,35.93278,-94.5992,Adair,,
-Brush Creek: 460 Road,36.4053,-94.7955,Delaware,,
-Cat Creek: Park on Muskogee Ave.,36.302753,-95.615872,Rogers,,
-East Cache Creek: Rodgers Lane,34.63778,-98.3618,Comanche,,
+Boomer Creek: 3rd Ave,36.1191,-97.0518,Payne,Cimarron R.,Cross Timbers
+Boomer Creek: S. Perkins,36.1122395,-97.0515,Payne,Cimarron R.,Central Great Plains
+Brush Creek: 460 Road,36.4054,-94.7956,Delaware,Arkansas R.,Ouachita Mountains
+Cat Creek: Park on Muskogee Ave.,36.302753,-95.615872,.,Arkansas R.,Central Irregular Plains
+Chisholm Creek: 33rd & Western,35.6233,-97.5335,Oklahoma,Cimarron R.,Cross Timbers
+Cloudy Creek: Glass,34.303745,-95.2874818,Pushmataha,Little R.,Ouachita Mountains
+Coal Creek: N. Sara Rd.,35.296694,-97.706278,Grady,Canadian R.,Central Great Plains
+Coffee Creek: N. Sooner Rd.,35.6899,-97.42504,Oklahoma,Canadian R.,Cross Timbers
+Crutcho Creek: First Baptist Church,35.4014,-97.4232,Oklahoma,Canadian R.,Cross Timbers
+East Cache Creek: Rodgers Lane,34.63778,-98.3618,Comanche,Upper Red R.,Central Great Plains
+Hager Creek: E 91st St S,36.0319444,-95.9980555,Tulsa,Arkansas R.,
+Haikey Creek Trib: Wolf Creek Park Bridge,36.024557,-95.822941,Tulsa,Arkansas R.,Central Irregular Plains
+Hog Creek: SE 149th,35.3195,-97.2497,Cleveland,Canadian R.,Cross Timbers
+Horse Creek: S 540 Road,36.677748,-94.908947,Ottawa,Arkansas R.,Central Irregular Plains
+"Little Deep Creek: Weatherford, Upstream of Treat",35.51852778,-98.70008333,Custer,Canadian R.,Central Great Plains
+Little River: N. Porter Ave.,35.26878,-97.44136,Cleveland,Canadian R.,
+Northeast Creek: MetroTech,35.511583,-97.478173,Oklahoma,Canadian R.,Cross Timbers
+Rock Creek: Garretts Lake Road,35.40571,-96.88651,Pottawatomie,Canadian R.,Cross Timbers
+Sanborn-Hazen Lake Creek: Strickland Park,36.12532927,-97.05840955,Payne,Cimarron R.,Central Great Plains
+Shell Branch: Pruitt,35.932776,-94.599158,Adair,Illinois R.,Ozark Highlands
+Silver Creek: Spencer Rd.,35.518167,-97.379424,Oklahoma,Canadian R.,
+Tahlequah Ross Branch: Town Confluence,35.89618,-94.97092,Cherokee,Illinois R.,Ouachita Mountains
+Trib to Coody Creek: Robison Park,35.7318,-95.3565,Muskogee,Arkansas R.,Central Irregular Plains
+West Captain Trib: Harrah Road,35.58083333,-97.15866667,Oklahoma,Canadian R.,Cross Timbers
+West Elm Creek: S. Douglas,35.31817,-97.3706,Cleveland,Canadian R.,Cross Timbers
 Haikey Tributary: 101st Street South,36.0172777,-95.8605555,Tulsa,,
-Sanborn-Hazen Lake Creek: Strickland Park,36.125329,-97.05840954,Payne,,
-Horse Creek: S 540 Road,36.677748,-94.908947,Ottawa,,
 Sandy Creek: Bennett,34.650789,-98.79465,Comanche,,
-West Elm Creek: S. Douglas,35.318175,-97.3706,Cleveland,,
-Northeast Creek: MetroTech,35.511583,-97.478173,Oklahoma,,
-Silver Creek: Spencer Rd.,35.518167,-97.379424,Oklahoma,,
 Twin Hills Creek: E 121st St. S.,35.98365,-95.895308,Tulsa,,
-Boomer Creek: S. Perkins,36.1122395,-97.0515,Payne,,
 Crow Creek: Casica Hall,36.126994,-95.966,Tulsa,,
 Arkansas Trib: Harris,36.164808,-96.20892,Osage,,
 Spring Creek: Evans,36.13431,-94.932584,Cherokee,,
-Haikey Creek Trib: Wolf Creek Park Bridge,36.024557,-95.8229,Tulsa,,
 Town Creek: Paul Mathies Dr.,35.063401,-94.628861,LeFlore,,
 Jessie Creek: Hwy 123,36.704841,-96.006563,Osage,,
 Sandy Creek,36.836846,-98.202871,Alfalfa,,
 Clear Creek: Renfrow Rd.,34.622506,-97.849966,Stephens,,
-Mooser Creek: Riverfield,36.07944444,-96.018,Tulsa,,
 Stillwater Creek: Lakeview Rd.,36.144673,-97.316338,Payne,,
 Spring Creek: I-36,35.66854976,-96.93424741,Oklahoma,,
 Soldier Creek: Hwy 67,35.64237005,-97.04029616,Oklahoma,,
@@ -386,8 +390,6 @@ Twin Hills Creek: Hunter Park,36.031085,-95.911058,Tulsa,,
 Pepper Creek: Jeffords,36.29723,-96.86024,Pawnee,,
 Haikey Creek Trib: Houston,36.046422,-95.839697,Tulsa,,
 Mingo Creek: Hicks Park,36.11361111,-95.865,Tulsa,,
-Tahlequah Ross Branch: Town Confluence,35.89618,-94.97092,Cherokee,,
-Rock Creek: Garretts Lake Road,35.40571,-96.88651,Pottawatomie,,
 Little Lee Creek,35.631122,-94.580975,Sequoyah,,
 Soldier Creek: Reno Avenue,35.4644,-97.3804,Oklahoma,,
 Coweta Creek: Roland Park,35.960193,-95.662992,Wagoner,,
@@ -400,15 +402,11 @@ Salt Branch,36.327403,-95.305193,Mayes,,
 Skeleton Creek: E. Southgate Road,36.361655,-97.8006,Garfield,,
 Boggy Creek: S. 30th Street,36.390171,-97.836942,Garfield,,
 Mingo Creek: 61st,36.07567,-95.870893,Tulsa,,
-Hager Creek: E 91st St S,36.031944,-95.998055,Tulsa,,
 Baron Fork: Dean,35.908187,-94.528896,Adair,,
 Fourteenmile Creek,35.9591,-95.1825,Cherokee,,
-Hog Creek: SE 149th,35.319135,-97.249651,Cleveland,,
 Vensel Creek: 91st Street South,36.03197222,-95.93666667,Tulsa,,
 Walnut Creek: W Hefner Rd,35.5808,-97.6609,Oklahoma,,
 Polecat Creek: Taft Ave,35.988207,-96.082219,Creek,,
-Big Spring Trib of Bitter Creek: Big Spring Picni,35.93325,-98.44216667,Blaine,,
 Chouteau Creek: Bryant Rd,35.072835,-97.321311,Cleveland,,
 North Fork Little River: S. Veterans Park,35.327185,-97.45899,Cleveland,,
-West Captain Trib: Harrah Road,35.58083333,-97.15866667,Oklahoma,,
 Wildhorse Creek,34.6091,-97.9229,Stephens,,

@@ -1,7 +1,9 @@
 # Site Processing Pipeline
 
 ## Overview
-The site processing pipeline manages the complete workflow from raw CSV files with inconsistent site data to a clean, consolidated database of unique monitoring sites. This three-phase process handles site name standardization, duplicate detection, metadata consolidation, and database management.
+The site processing pipeline implements a **"Sites First"** approach that manages the complete workflow from raw CSV files with inconsistent site data to a clean, consolidated database of unique monitoring sites. This three-phase process handles site name standardization, duplicate detection, metadata consolidation, and database management.
+
+The pipeline ensures that all sites are properly established in the database before any monitoring data is loaded, eliminating foreign key constraint issues and enabling reliable data processing.
 
 ## Complete Workflow
 
@@ -13,6 +15,23 @@ The site processing pipeline manages the complete workflow from raw CSV files wi
 
 ### Phase 3: Database Site Management (`site_processing.py`)
 **Master sites → Database loading → Site classification**
+
+---
+
+## Sites First Approach
+
+### Core Principle
+**All sites must exist in the database before any monitoring data is loaded.** This approach:
+
+1. **Prevents Foreign Key Errors**: Sites are guaranteed to exist when referenced by monitoring data
+2. **Enables Data Validation**: Site matching can be validated before data insertion
+3. **Improves Reliability**: Pipeline failures are caught early in the process
+4. **Simplifies Debugging**: Clear separation between site management and data loading
+
+### Pipeline Order
+1. **Site Processing**: Complete all three phases of site consolidation and management
+2. **Data Loading**: Load chemical, biological, and habitat monitoring data
+3. **Final Classification**: Update site active/historic status based on loaded data
 
 ---
 
@@ -151,6 +170,27 @@ database_columns = ['site_name', 'latitude', 'longitude', 'county', 'river_basin
 
 ---
 
+## Data Processing After Sites
+
+### Chemical Data Processing
+Once sites are established, chemical data is processed with the following approach:
+
+**Multiple Events per Site-Date**: The system allows multiple chemical collection events for the same site and date combination. This preserves all original scientific data including any replicate samples.
+
+**Data Preservation**: All chemical measurements are retained in their original form. If replicate samples exist for the same site and date, they remain as separate collection events in the database.
+
+**Analysis Flexibility**: Having separate replicate events allows for:
+- Statistical analysis of measurement variability
+- Quality control assessment of sampling procedures
+- Transparency in data collection methods
+
+### Data Quality Considerations
+- **Validation**: All chemical data is validated against existing sites before insertion
+- **Site Matching**: 95% site match rate required before data loading proceeds
+- **Error Handling**: Failed site matches are logged and reported for manual review
+
+---
+
 ## Usage Examples
 
 ### Complete Pipeline Execution
@@ -165,6 +205,9 @@ python data_processing/merge_sites.py  # Analysis mode
 
 # Phase 3: Load sites and classify
 python data_processing/site_processing.py
+
+# Data Loading: Load monitoring data
+python database/reset_database.py
 ```
 
 ### Individual Phase Usage
@@ -207,6 +250,11 @@ classify_active_sites()
 - **Solution**: 1-year recency cutoff based on chemical monitoring data
 - **Impact**: Dashboard can focus on active monitoring while preserving historical context
 
+### Sites First Implementation
+- **Problem**: Foreign key constraint violations during data loading
+- **Solution**: Ensure all sites exist before loading any monitoring data
+- **Impact**: Reliable, error-free data loading with comprehensive validation
+
 ---
 
 ## Impact on Data Quality
@@ -216,6 +264,7 @@ classify_active_sites()
 - Duplicate sites for same physical locations
 - Mixed metadata quality and completeness
 - No distinction between active and historic sites
+- Foreign key constraint errors during data loading
 
 ### After Pipeline:
 - Standardized site names with clean database
@@ -223,6 +272,7 @@ classify_active_sites()
 - Best available metadata with source tracking
 - Clear active/historic classification
 - Complete monitoring data preservation
+- Reliable, error-free data loading process
 
 ### Key Benefits:
 1. **Data Integrity**: All monitoring data is preserved during consolidation
@@ -230,12 +280,15 @@ classify_active_sites()
 3. **Efficiency**: Eliminates duplicate data entry and confusion
 4. **Transparency**: Source tracking shows where each piece of metadata originated
 5. **Usability**: Active site classification improves dashboard performance
+6. **Reliability**: Sites First approach prevents database constraint violations
+7. **Scalability**: Pipeline can handle new data sources and large datasets
 
 ### Quality Assurance:
 - Conflict detection ensures metadata inconsistencies are flagged for review
 - Analysis modes allow preview before making irreversible changes
 - Comprehensive logging tracks all decisions and changes made
 - Data transfer validation ensures no monitoring records are lost
+- Site validation requires 95% match rate before data loading proceeds
 
 ---
 
@@ -253,4 +306,10 @@ classify_active_sites()
 ### Phase 3 Outputs:
 - Fully populated sites table in database
 - Active/historic classification for all sites
-- Clean database ready for dashboard and analysis use 
+- Clean database ready for monitoring data loading
+
+### Final Database State:
+- Complete site registry with consolidated metadata
+- All monitoring data loaded and validated
+- Active/historic site classification
+- Ready for dashboard and analysis use 

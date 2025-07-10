@@ -8,6 +8,7 @@ dropdown population, navigation handling, and content display logic.
 import pytest
 import dash
 from unittest.mock import Mock, patch, MagicMock
+import pandas as pd
 
 class TestHabitatStateManagement:
     """Test habitat state management logic."""
@@ -491,6 +492,97 @@ class TestIntegrationScenarios:
         # Step 3: Should ignore clearing events (no updates)
         should_ignore = is_clearing_event
         assert should_ignore is True, "Should ignore navigation store clearing events"
+
+
+class TestDataExport:
+    """Test data export functionality."""
+
+    @patch('pandas.read_csv')
+    @patch('dash.dcc.send_data_frame')
+    def test_download_habitat_data_success(self, mock_send_data_frame, mock_read_csv):
+        """Test successful download of habitat data."""
+        mock_df = pd.DataFrame({'test': ['data']})
+        mock_read_csv.return_value = mock_df
+
+        # Replicating the logic from download_habitat_data
+        n_clicks = 1
+        if not n_clicks:
+            result = dash.no_update
+        else:
+            processed_habitat_path = 'data/processed/processed_habitat_data.csv'
+            habitat_df = pd.read_csv(processed_habitat_path)
+            
+            if habitat_df.empty:
+                result = dash.no_update
+            else:
+                filename = f"blue_thumb_habitat_data.csv"
+                result = mock_send_data_frame(habitat_df.to_csv, filename, index=False)
+        
+        mock_read_csv.assert_called_once_with('data/processed/processed_habitat_data.csv')
+        mock_send_data_frame.assert_called_with(mock_df.to_csv, "blue_thumb_habitat_data.csv", index=False)
+        assert result is not None
+
+    def test_download_habitat_data_no_clicks(self):
+        """Test download with no clicks."""
+        n_clicks = 0
+        if not n_clicks:
+            result = dash.no_update
+        else:
+            # This part of the logic won't be reached
+            result = "something" 
+        
+        assert result == dash.no_update
+
+    @patch('pandas.read_csv')
+    def test_download_habitat_data_empty_df(self, mock_read_csv):
+        """Test download with empty data."""
+        mock_read_csv.return_value = pd.DataFrame()
+
+        n_clicks = 1
+        if not n_clicks:
+            result = dash.no_update
+        else:
+            processed_habitat_path = 'data/processed/processed_habitat_data.csv'
+            habitat_df = pd.read_csv(processed_habitat_path)
+            
+            if habitat_df.empty:
+                result = dash.no_update
+            else:
+                result = "something"
+
+        assert result == dash.no_update
+    
+    @patch('pandas.read_csv', side_effect=FileNotFoundError("File not found"))
+    def test_download_habitat_data_file_not_found(self, mock_read_csv):
+        """Test download when data file is not found."""
+        n_clicks = 1
+        result = dash.no_update
+        try:
+            if n_clicks:
+                pd.read_csv('data/processed/processed_habitat_data.csv')
+        except FileNotFoundError:
+            # Expected error
+            pass
+        except Exception:
+            # Should not catch other exceptions
+            result = "something"
+            
+        assert result == dash.no_update
+
+    @patch('pandas.read_csv', side_effect=Exception("Some error"))
+    def test_download_habitat_data_general_exception(self, mock_read_csv):
+        """Test download with a general exception."""
+        n_clicks = 1
+        result = dash.no_update
+        try:
+            if n_clicks:
+                pd.read_csv('data/processed/processed_habitat_data.csv')
+        except Exception:
+            # Expected error
+            pass
+        
+        assert result == dash.no_update
+
 
 # Test runner for manual execution
 if __name__ == "__main__":

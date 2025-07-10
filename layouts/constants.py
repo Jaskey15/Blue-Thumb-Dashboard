@@ -1,5 +1,5 @@
 """
-Layout constants for the Tenmile Creek Water Quality Dashboard.
+Layout constants for the dashboard.
 """
 
 # Overview tab parameter options

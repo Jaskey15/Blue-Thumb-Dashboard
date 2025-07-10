@@ -1,5 +1,5 @@
 """
-fish_viz.py - Fish Community Assessment Data Visualization
+Fish community visualization with IBI scoring and integrity class thresholds.
 
 This module creates visualizations for fish community Index of Biotic Integrity (IBI) 
 data including line charts with integrity class reference lines and data tables for 
@@ -33,7 +33,6 @@ from .visualization_utils import (
 
 logger = setup_logging("fish_viz", category="visualization")
 
-# Fish-specific configuration
 INTEGRITY_THRESHOLDS = {
     'Excellent': 0.97,
     'Good': 0.76,
@@ -62,41 +61,28 @@ FISH_SUMMARY_LABELS = ['Total Score', 'Comparison to Reference', 'Integrity Clas
 
 def format_fish_metrics_table(metrics_df, summary_df):
     """
-    Format fish metrics data into a table structure that shows ALL collections
-    including replicates with (REP) notation.
+    Format fish metrics with replicate handling.
     
-    Args:
-        metrics_df: DataFrame containing metrics data
-        summary_df: DataFrame containing summary scores
-    
-    Returns:
-        Tuple of (metrics_table, summary_rows) DataFrames
+    Preserves collection replicates with (REP) notation and maintains year grouping.
     """
     try:
         if metrics_df.empty or summary_df.empty:
             return (pd.DataFrame({'Metric': FISH_METRIC_ORDER}), 
                    pd.DataFrame({'Metric': ['No Data']}))
-        
-        # Get unique collections
+
         unique_collections = summary_df.drop_duplicates(subset=['event_id']).copy()
         unique_collections['collection_date'] = pd.to_datetime(unique_collections['collection_date'])
         
-        # Group by year and process each year separately
         collections = []
         
         for year, year_group in unique_collections.groupby('year'):
-            # Sort within each year by collection date
             year_group = year_group.sort_values('collection_date')
             
-            # Assign REP notation within each year
             for idx, (_, row) in enumerate(year_group.iterrows()):
                 event_id = row.get('event_id', None)
                 
-                # Create column name with REP notation for second+ samples in same year
-                if idx == 0:
-                    column_name = str(year)
-                else:
-                    column_name = f"{year} (REP)"
+                # Mark subsequent samples in same year as replicates
+                column_name = str(year) if idx == 0 else f"{year} (REP)"
                 
                 collections.append({
                     'event_id': event_id,
@@ -105,25 +91,20 @@ def format_fish_metrics_table(metrics_df, summary_df):
                     'collection_date': row['collection_date']
                 })
         
-        # Sort collections by year, then by whether it's REP (original first, then REP)
         collections.sort(key=lambda x: (x['year'], '(REP)' in x['column_name']))
         
         if not collections:
             return (pd.DataFrame({'Metric': FISH_METRIC_ORDER}), 
                    pd.DataFrame({'Metric': ['No Data']}))
         
-        # Create table data dictionary starting with metrics
         table_data = {'Metric': FISH_METRIC_ORDER}
         
-        # Add columns for each collection in proper order
         for collection in collections:
             column_name = collection['column_name']
             event_id = collection['event_id']
             
-            # Get metrics for this specific collection using event_id
             collection_metrics = metrics_df[metrics_df['event_id'] == event_id]
             
-            # Add scores for this collection
             scores = []
             for metric in FISH_METRIC_ORDER:
                 metric_row = collection_metrics[collection_metrics['metric_name'] == metric]
@@ -139,13 +120,10 @@ def format_fish_metrics_table(metrics_df, summary_df):
             
             table_data[column_name] = scores
         
-        # Create metrics table
         metrics_table = pd.DataFrame(table_data)
         
-        # Create summary rows
         summary_rows = pd.DataFrame({'Metric': FISH_SUMMARY_LABELS})
         
-        # Add summary data for each collection in proper order
         for collection in collections:
             column_name = collection['column_name']
             event_id = collection['event_id']
@@ -175,32 +153,22 @@ def format_fish_metrics_table(metrics_df, summary_df):
 
 def create_fish_viz(site_name=None):
     """
-    Create fish community visualization with date-based plotting and year labels.
-    
-    Args:
-        site_name: Optional site name to filter data for
-    
-    Returns:
-        Plotly figure: Line plot showing IBI scores over time with actual collection dates.
+    Generate fish community visualization with integrity thresholds.
     """
     try:
-        # Get fish data from the database
         fish_df = get_fish_dataframe(site_name)
         
         if fish_df.empty:
             return create_empty_figure(site_name, "fish")
 
-        # Create figure
         fig = go.Figure()
         
-        # Define hover fields for fish data
         hover_fields = {
             'Collection Date': 'collection_date',
             'IBI Score': 'comparison_to_reference',
             'Integrity Class': 'integrity_class'
         }
         
-        # Create trace using shared utility
         trace = create_trace(
             fish_df,
             date_column='collection_date',
@@ -210,13 +178,10 @@ def create_fish_viz(site_name=None):
             hover_fields=hover_fields
         )
         
-        # Add trace to figure
         fig.add_trace(trace)
         
-        # Set up title
         title = f"IBI Scores Over Time for {site_name}" if site_name else "IBI Scores Over Time"
         
-        # Update layout using shared utility
         fig = update_layout(
             fig,
             fish_df,
@@ -227,7 +192,6 @@ def create_fish_viz(site_name=None):
             has_legend=False
         )
         
-        # Add integrity reference lines using shared utility
         fig = add_reference_lines(fig, fish_df, INTEGRITY_THRESHOLDS, INTEGRITY_COLORS)
 
         return fig
@@ -238,30 +202,20 @@ def create_fish_viz(site_name=None):
 
 def create_fish_metrics_table(metrics_df, summary_df):
     """
-    Create a metrics table for fish data that shows ALL samples including replicates.
-    
-    Args:
-        metrics_df: DataFrame containing metrics data
-        summary_df: DataFrame containing summary scores
-    
-    Returns:
-        Dash DataTable component with footnote
+    Create metrics table with replicate handling.
     """
     try:
-        # Format the data using fish-specific logic
         metrics_table, summary_rows = format_fish_metrics_table(
             metrics_df, 
             summary_df
         )
         
-        # Combine metrics and summary rows
         full_table = pd.concat([metrics_table, summary_rows], ignore_index=True)
     
         styles = create_table_styles(metrics_table)
         
         table = create_data_table(full_table, 'fish-metrics-table', styles)
         
-        # Add footnote for REP notation
         footnote = html.P(
             "*(REP) indicates a replicate sample collected in the same year",
             style={'font-style': 'italic', 'margin-top': '10px', 'font-size': '12px'}
@@ -275,25 +229,16 @@ def create_fish_metrics_table(metrics_df, summary_df):
 
 def create_fish_metrics_accordion(site_name=None):
     """
-    Create an accordion layout for fish metrics table.
-    
-    Args:
-        site_name: Optional site name to filter data for
-    
-    Returns:
-        HTML Div containing accordion component with metrics table
+    Create collapsible view of fish metrics.
     """
     try:
-        # Get the data with site filtering
         metrics_df, summary_df = get_fish_metrics_data_for_table(site_name)
         
         if metrics_df.empty or summary_df.empty:
             return html.Div("No data available")
         
-        # Get the table component
         table = create_fish_metrics_table(metrics_df, summary_df)
         
-        # Use the reusable accordion function
         return create_metrics_accordion(table, "Fish Collection Metrics", "fish-accordion")
     
     except Exception as e:

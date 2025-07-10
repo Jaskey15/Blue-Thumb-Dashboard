@@ -25,12 +25,10 @@ from data_processing.updated_chemical_processing import (
     process_conditional_nutrient,
     process_simple_nutrients,
     format_to_database_schema,
-    process_updated_chemical_data
+    process_updated_chemical_data,
+    get_ph_worst_case
 )
-from data_processing.chemical_duplicates import (
-    get_worst_case_value,
-    identify_replicate_samples
-)
+# Note: chemical_duplicates functionality was removed - tests for that functionality are no longer needed
 from data_processing.chemical_utils import (
     validate_chemical_data,
     determine_status,
@@ -257,6 +255,32 @@ class TestChemicalProcessing(unittest.TestCase):
         # Check that intermediate column was removed
         self.assertNotIn('parsed_datetime', result_df.columns)
 
+    def test_get_ph_worst_case(self):
+        """Test logic for selecting pH value furthest from neutral."""
+        # Test case where pH #2 is further from 7 (more acidic)
+        row1 = pd.Series({'pH #1': 7.5, 'pH #2': 6.0})
+        self.assertEqual(get_ph_worst_case(row1), 6.0)
+
+        # Test case where pH #1 is further from 7 (more basic)
+        row2 = pd.Series({'pH #1': 8.5, 'pH #2': 7.2})
+        self.assertEqual(get_ph_worst_case(row2), 8.5)
+
+        # Test case with equidistant values (prefers pH #1 as tie-breaker)
+        row3 = pd.Series({'pH #1': 6.0, 'pH #2': 8.0})
+        self.assertEqual(get_ph_worst_case(row3), 6.0)
+
+        # Test case with one null value
+        row4 = pd.Series({'pH #1': 7.8, 'pH #2': np.nan})
+        self.assertEqual(get_ph_worst_case(row4), 7.8)
+
+        # Test case with both null values
+        row5 = pd.Series({'pH #1': None, 'pH #2': None})
+        self.assertIsNone(get_ph_worst_case(row5))
+
+        # Test case with invalid string data
+        row6 = pd.Series({'pH #1': 'invalid', 'pH #2': 7.9})
+        self.assertEqual(get_ph_worst_case(row6), 7.9)
+
     def test_get_greater_value(self):
         """Test logic for selecting greater of two values."""
         # Create test row
@@ -375,17 +399,18 @@ class TestChemicalProcessing(unittest.TestCase):
         """Test formatting of data to match database schema."""
         # Create test data
         test_df = pd.DataFrame({
-            'Site Name': ['Site1', 'Site2'],
-            'Date': pd.to_datetime(['2023-01-01', '2023-01-02']),
-            'Year': [2023, 2023],
-            'Month': [1, 2],
-            '% Oxygen Saturation': [95.5, 88.0],
-            'pH #1': [7.2, 6.8],
-            'Nitrate': [0.5, 1.2],
-            'Nitrite': [0.05, 0.1],
-            'Ammonia': [0.1, 0.3],
-            'Orthophosphate': [0.02, 0.15],
-            'Chloride': [25.0, 45.0]
+            'Site Name': ['Site1', 'Site2', 'Site3'],
+            'Date': pd.to_datetime(['2023-01-01', '2023-01-02', '2023-01-03']),
+            'Year': [2023, 2023, 2023],
+            'Month': [1, 1, 1],
+            '% Oxygen Saturation': [95.5, 88.0, 90.0],
+            'pH #1': [7.2, 6.8, 8.0],
+            'pH #2': [7.5, 6.5, 6.0],
+            'Nitrate': [0.5, 1.2, 0.8],
+            'Nitrite': [0.05, 0.1, 0.2],
+            'Ammonia': [0.1, 0.3, 0.4],
+            'Orthophosphate': [0.02, 0.15, 0.1],
+            'Chloride': [25.0, 45.0, 30.0]
         })
         
         result_df = format_to_database_schema(test_df)
@@ -394,6 +419,11 @@ class TestChemicalProcessing(unittest.TestCase):
         self.assertIn('Site_Name', result_df.columns)
         self.assertIn('do_percent', result_df.columns)
         self.assertIn('Phosphorus', result_df.columns)
+        
+        # Check pH calculation (worst case)
+        self.assertEqual(result_df['pH'].iloc[0], 7.5)  # 7.5 is further from 7 than 7.2
+        self.assertEqual(result_df['pH'].iloc[1], 6.5)  # 6.5 is further from 7 than 6.8
+        self.assertEqual(result_df['pH'].iloc[2], 8.0)  # Equidistant, should prefer pH #1
         
         # Check that soluble nitrogen was calculated
         self.assertIn('soluble_nitrogen', result_df.columns)
@@ -408,59 +438,11 @@ class TestChemicalProcessing(unittest.TestCase):
             self.assertIn(col, result_df.columns)
 
     # =============================================================================
-    # DUPLICATE HANDLING TESTS
+    # NOTE: DUPLICATE HANDLING TESTS REMOVED
     # =============================================================================
-
-    def test_get_worst_case_value(self):
-        """Test worst case value selection for different parameters."""
-        # Test pH (furthest from neutral)
-        ph_values = [6.5, 7.5, 8.5]
-        self.assertEqual(get_worst_case_value(ph_values, 'pH'), 8.5)  # Furthest from 7.0
-        
-        # Test DO (lowest value)
-        do_values = [95.5, 88.0, 110.2]
-        self.assertEqual(get_worst_case_value(do_values, 'do_percent'), 88.0)  # Lowest value
-        
-        # Test nutrients (highest value)
-        nutrient_values = [0.5, 1.2, 0.8]
-        self.assertEqual(get_worst_case_value(nutrient_values, 'Nitrate'), 1.2)  # Highest value
-        
-        # Test with null values
-        mixed_values = [0.5, None, 1.2]
-        self.assertEqual(get_worst_case_value(mixed_values, 'Nitrate'), 1.2)  # Highest non-null
-        
-        # Test all null values
-        null_values = [None, None, None]
-        self.assertIsNone(get_worst_case_value(null_values, 'Nitrate'))
-
-    @patch('database.database.close_connection')
-    @patch('database.database.get_connection')
-    def test_identify_replicate_samples(self, mock_get_connection, mock_close_connection):
-        """Test identification of replicate samples."""
-        # Mock database connection and cursor
-        mock_conn = MagicMock()
-        mock_get_connection.return_value = mock_conn
-        
-        # Mock pandas read_sql_query to return sample data
-        with patch('pandas.read_sql_query') as mock_read_sql:
-            mock_read_sql.return_value = pd.DataFrame({
-                'site_name': ['Site1', 'Site2'],
-                'collection_date': ['2023-01-01', '2023-01-02'],
-                'event_count': [2, 3],
-                'event_ids': ['1,2', '3,4,5']
-            })
-            
-            # Call function
-            result = identify_replicate_samples()
-            
-            # Check results
-            self.assertEqual(len(result), 2)
-            self.assertEqual(result[0]['site_name'], 'Site1')
-            self.assertEqual(result[0]['event_count'], 2)
-            self.assertEqual(result[0]['event_ids'], [1, 2])
-            self.assertEqual(result[1]['site_name'], 'Site2')
-            self.assertEqual(result[1]['event_count'], 3)
-            self.assertEqual(result[1]['event_ids'], [3, 4, 5])
+    # Chemical duplicate consolidation functionality was removed from the project.
+    # All replicate samples are now preserved as separate collection events,
+    # maintaining complete data integrity for scientific analysis.
 
     # =============================================================================
     # INTEGRATION TESTS
@@ -509,7 +491,7 @@ class TestChemicalProcessing(unittest.TestCase):
     def test_updated_processing_pipeline(self, mock_load_data):
         """Test the complete updated chemical processing pipeline."""
         # Mock data loading
-        mock_load_data.return_value = self.sample_updated_data
+        mock_load_data.return_value = self.sample_updated_data.copy()
         
         # Process the data
         result_df = process_updated_chemical_data()
@@ -528,9 +510,10 @@ class TestChemicalProcessing(unittest.TestCase):
         
         # Check that values were processed correctly
         self.assertEqual(result_df['do_percent'].iloc[0], 95.5)
-        self.assertEqual(result_df['pH'].iloc[0], 7.2)
+        self.assertEqual(result_df['pH'].iloc[0], 7.3)  # pH #2 is further from 7 (7.3 vs 7.2)
+        self.assertEqual(result_df['pH'].iloc[1], 8.1)  # pH #1 is further from 7 (8.1 vs 8.0)
         self.assertEqual(result_df['Nitrate'].iloc[0], 0.6)  # Greater of 0.5 and 0.6
-        self.assertEqual(result_df['Nitrite'].iloc[0], 0.05)  # Greater of 0.05 and 0.04
+        self.assertEqual(result_df['Nitrite'].iloc[1], 0.12)  # Greater of 0.1 and 0.12
 
     # =============================================================================
     # EDGE CASES

@@ -1,7 +1,5 @@
 """
-Helper functions for the Tenmile Creek Water Quality Dashboard callbacks.
-This file contains reusable helper functions used across different callback modules.
-Only shared functionality that is used by multiple tabs is included here.
+Shared UI components and utilities for consistent user experience across tabs.
 """
 
 import dash
@@ -9,24 +7,13 @@ from dash import html
 from utils import setup_logging
 from config.shared_constants import PARAMETER_DISPLAY_NAMES, PARAMETER_AXIS_LABELS
 
-# Configure logging
+# Initialize callback logging
 logger = setup_logging("helper_callbacks", category="callbacks")
 
-# ===========================================================================================
 # SHARED UI STATE FUNCTIONS
-# ===========================================================================================
 
 def create_empty_state(message, min_height='300px'):
-    """
-    Create a consistent empty state display across all tabs.
-    
-    Args:
-        message: Message to display to the user
-        min_height: Minimum height for the container (default: '300px')
-        
-    Returns:
-        Dash HTML component with consistent empty state styling
-    """
+    """Provide consistent feedback when no data is available to display."""
     return html.Div(
         html.P(message, className="text-center text-muted mt-5"),
         style={
@@ -38,23 +25,12 @@ def create_empty_state(message, min_height='300px'):
     )
 
 def create_error_state(title, message, error_details=None):
-    """
-    Create a consistent error state display across all tabs.
-    
-    Args:
-        title: Error title/heading
-        message: User-friendly error message
-        error_details: Optional technical error details for debugging
-        
-    Returns:
-        Dash HTML component with consistent error state styling
-    """
+    """Display user-friendly errors with optional technical details for debugging."""
     error_components = [
         html.H4(title, className="text-danger"),
         html.P(message, className="mb-3")
     ]
     
-    # Add expandable error details if provided
     if error_details:
         error_components.append(
             html.Details([
@@ -76,15 +52,7 @@ def create_error_state(title, message, error_details=None):
     return html.Div(error_components, className="mt-3")
 
 def create_loading_state(message="Loading data..."):
-    """
-    Create a consistent loading state display across all tabs.
-    
-    Args:
-        message: Loading message to display
-        
-    Returns:
-        Dash HTML component with consistent loading state styling
-    """
+    """Show loading feedback during data fetching and processing."""
     return html.Div([
         html.Div([
             html.I(className="fas fa-spinner fa-spin fa-2x text-primary mb-3"),
@@ -98,17 +66,7 @@ def create_loading_state(message="Loading data..."):
     })
 
 def create_info_state(title, message, icon_class="fas fa-info-circle"):
-    """
-    Create a consistent info state display across all tabs.
-    
-    Args:
-        title: Info title/heading
-        message: Informational message
-        icon_class: CSS class for the icon (default: info circle)
-        
-    Returns:
-        Dash HTML component with consistent info state styling
-    """
+    """Display informational messages and help text to guide users."""
     return html.Div([
         html.Div([
             html.I(className=f"{icon_class} fa-2x text-info mb-3"),
@@ -122,23 +80,17 @@ def create_info_state(title, message, icon_class="fas fa-info-circle"):
         'justifyContent': 'center'
     })
 
-# ===========================================================================================
 # PARAMETER AND LEGEND UTILITIES (USED BY OVERVIEW TAB)
-# ===========================================================================================
 
 def get_parameter_legend(param_type, param_name):
     """
-    Return legend items specific to the selected parameter type and name.
-    Used primarily by the overview tab for map legends.
+    Define color-coded ranges for parameter visualization.
     
-    Args:
-        param_type: Type of parameter ('chem', 'bio', or 'habitat')
-        param_name: Specific parameter name
-        
-    Returns:
-        List of dictionaries with color and label for each legend item
+    Maps parameter values to meaningful color ranges based on:
+    - Chemical: Normal, Caution, Poor ranges
+    - Biological: Impairment levels
+    - Habitat: Quality assessment scores
     """
-    # Chemical parameter legends
     if param_type == 'chem':
         if param_name == 'do_percent':
             return [
@@ -171,7 +123,6 @@ def get_parameter_legend(param_type, param_name):
                 {"color": "#e74c3c", "label": "Poor (>400 mg/L)"}
             ]
     
-    # Biological parameter legends
     elif param_type == 'bio':
         return [
             {"color": "#1e8449", "label": "Non-impaired (>0.79)"},
@@ -180,7 +131,6 @@ def get_parameter_legend(param_type, param_name):
             {"color": "#8b0000", "label": "Severely Impaired (<0.40)"}
         ]
     
-    # Habitat parameter legends
     elif param_type == 'habitat':
         return [
             {"color": "#1e8449", "label": "Excellent (16-20)"},
@@ -193,28 +143,9 @@ def get_parameter_legend(param_type, param_name):
     return [{"color": "#666", "label": "No data available"}]
 
 def get_parameter_label(param_type, param_name):
-    """
-    Get the appropriate y-axis label for a parameter.
-    Used by visualization functions across tabs.
-    
-    Args:
-        param_type: Type of parameter ('chem', 'bio', or 'habitat')
-        param_name: Specific parameter name
-        
-    Returns:
-        str: Y-axis label for the parameter
-    """
+    """Format parameter names for axis labels and titles."""
     return PARAMETER_AXIS_LABELS.get(param_name, param_name.replace('_', ' ').title())
 
 def get_parameter_name(parameter):
-    """
-    Get the human-readable name for a parameter code.
-    Used across tabs for display purposes.
-    
-    Args:
-        parameter: Parameter code
-        
-    Returns:
-        str: Human-readable name for the parameter
-    """
+    """Convert parameter codes to human-readable display names."""
     return PARAMETER_DISPLAY_NAMES.get(parameter, parameter)

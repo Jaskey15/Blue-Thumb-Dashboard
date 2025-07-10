@@ -1,22 +1,18 @@
 """
-Shared callbacks for the Tenmile Creek Water Quality Dashboard.
-This file contains callbacks that are used across the entire application.
+Core callbacks shared across the dashboard.
 """
 
 import dash
 from dash.dependencies import Input, Output, State
 from utils import setup_logging
 
-# Configure logging
+# Initialize callback logging
 logger = setup_logging("shared_callbacks", category="callbacks")
 
 def register_shared_callbacks(app):
-    """Register shared callbacks used across the entire dashboard."""
+    """Register shared callbacks for modals and navigation."""
     
-    # --------------------------------------------------------------------------------------
-    # ATTRIBUTION MODAL CALLBACKS
-    # --------------------------------------------------------------------------------------
-    
+    # Modal controls
     @app.callback(
         Output("attribution-modal", "is_open"),
         [Input("attribution-link", "n_clicks"), 
@@ -24,17 +20,7 @@ def register_shared_callbacks(app):
         [State("attribution-modal", "is_open")]
     )
     def toggle_attribution_modal(n1, n2, is_open):
-        """
-        Toggle the attribution modal open/closed.
-        
-        Args:
-            n1: Number of clicks on the attribution link
-            n2: Number of clicks on the close button
-            is_open: Current state of the modal
-            
-        Returns:
-            Boolean indicating whether the modal should be open
-        """
+        """Toggle attribution modal visibility."""
         if n1 or n2:
             return not is_open
         return is_open
@@ -46,25 +32,12 @@ def register_shared_callbacks(app):
         [State("image-credits-modal", "is_open")]
     )
     def toggle_image_credits_modal(n1, n2, is_open):
-        """
-        Toggle the image credits modal open/closed.
-        
-        Args:
-            n1: Number of clicks on the image credits link
-            n2: Number of clicks on the close button
-            is_open: Current state of the modal
-            
-        Returns:
-            Boolean indicating whether the modal should be open
-        """
+        """Toggle image credits modal visibility."""
         if n1 or n2:
             return not is_open
         return is_open
 
-    # --------------------------------------------------------------------------------------
-    # TAB NAVIGATION CALLBACKS
-    # --------------------------------------------------------------------------------------
-    
+    # Map and overview navigation
     @app.callback(
         [Output("main-tabs", "active_tab"),
          Output("navigation-store", "data")],
@@ -77,17 +50,10 @@ def register_shared_callbacks(app):
     )
     def handle_navigation(click_data, current_parameter, chemical_clicks, biological_clicks, habitat_clicks):
         """
-        Handle all navigation: map clicks and overview links.
+        Route user to appropriate tab based on map clicks and overview links.
         
-        Args:
-            click_data: Click data from the map
-            current_parameter: Currently selected parameter on the overview map
-            chemical_clicks: Number of clicks on chemical tab overview link
-            biological_clicks: Number of clicks on biological tab overview link  
-            habitat_clicks: Number of clicks on habitat tab overview link
-            
-        Returns:
-            Tuple of (target_tab, navigation_data)
+        Extracts site and parameter info from map clicks to navigate to the correct
+        detail tab. Overview links return to the main map view.
         """
         ctx = dash.callback_context
         
@@ -96,18 +62,18 @@ def register_shared_callbacks(app):
         
         trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
         
-        # Handle overview link clicks
+        # Return to overview map
         if trigger_id in ['chemical-overview-link', 'biological-overview-link', 'habitat-overview-link']:
             return "overview-tab", {'target_tab': None, 'target_site': None}
         
-        # Handle map clicks
+        # Handle map click navigation
         if trigger_id == 'site-map-graph' and click_data and current_parameter:
             try:
-                # Extract site name from click data
+                # Extract site from hover text
                 hover_text = click_data['points'][0]['text']
                 site_name = hover_text.split('<br>')[0].replace('<b>Site:</b> ', '')
                 
-                # Handle habitat navigation
+                # Route to habitat tab
                 if current_parameter == 'habitat:Habitat_Score':
                     logger.info(f"Navigating from habitat map to habitat tab for site: {site_name}")
                     return "habitat-tab", {
@@ -116,9 +82,8 @@ def register_shared_callbacks(app):
                         'source_parameter': current_parameter
                     }
                 
-                # Handle chemical navigation  
+                # Route to chemical tab with parameter context
                 elif current_parameter.startswith('chem:'):
-                    # Extract parameter name from the format 'chem:parameter_name'
                     parameter_name = current_parameter.split(':', 1)[1]
                     logger.info(f"Navigating from chemical map to chemical tab for site: {site_name}, parameter: {parameter_name}")
                     return "chemical-tab", {
@@ -128,7 +93,7 @@ def register_shared_callbacks(app):
                         'source_parameter': current_parameter
                     }
                 
-                # Handle biological navigation  
+                # Route to biological tab with community context
                 elif current_parameter.startswith('bio:'):
                     # Map parameter to community type
                     if current_parameter == 'bio:Fish_IBI':
@@ -147,7 +112,6 @@ def register_shared_callbacks(app):
                         'source_parameter': current_parameter
                     }
                 
-                # For other parameters, don't navigate yet
                 return dash.no_update, dash.no_update
                 
             except Exception as e:

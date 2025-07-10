@@ -237,7 +237,7 @@ class TestVisualizationUtils(unittest.TestCase):
         self.assertIn('Collection Date', first_text)
         self.assertIn('IBI Score', first_text)
         self.assertIn('Integrity Class', first_text)
-        self.assertIn('2020-09-15', first_text)  # Date formatting
+        self.assertIn('09-15-2020', first_text)  # Date formatting
         self.assertIn('0.85', first_text)  # Score formatting
 
     def test_generate_hover_text_habitat_data(self):

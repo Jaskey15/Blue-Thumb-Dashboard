@@ -1,5 +1,5 @@
 """
-Layout functions for the Tenmile Creek Water Quality Dashboard.
+Layout functions for the dashboard.
 """
 
 # Import all tab creation functions
@@ -13,7 +13,7 @@ from .tabs.source_data import create_source_data_tab
 # Import modal creation functions
 from .modals import create_icon_attribution_modal, create_image_credits_modal
 
-# Import constants and helpers (for internal use within the package)
+# Import constants and helpers for internal use
 from .constants import *
 from .helpers import *
 

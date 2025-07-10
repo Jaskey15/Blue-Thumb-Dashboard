@@ -1,11 +1,12 @@
 """
-Source Data tab layout for the Tenmile Creek Water Quality Dashboard.
+Source Data tab layout for the dash
 """
 
 import dash_bootstrap_components as dbc
 from dash import html
 from utils import load_markdown_content
 from ..constants import TAB_STYLES
+from ..components.chatbot import create_floating_chatbot
 
 def create_source_data_tab():
     """
@@ -15,7 +16,7 @@ def create_source_data_tab():
         HTML layout for the Source Data tab
     """
     try:
-        # Create data source cards
+        # Data source cards
         data_source_cards = [
             # Historical Data Card
             dbc.Card([
@@ -91,7 +92,6 @@ def create_source_data_tab():
         ]
         
         tab_content = html.Div([
-            # Main title
             dbc.Row([
                 dbc.Col([
                     html.H3("Source Data", className="mb-4")
@@ -106,7 +106,10 @@ def create_source_data_tab():
             ], className="mb-4")
         ], className="tab-content-wrapper")
         
-        return tab_content
+        return html.Div([
+            tab_content,
+            create_floating_chatbot('source_data')
+        ])
         
     except Exception as e:
         print(f"Error creating source data tab: {e}")

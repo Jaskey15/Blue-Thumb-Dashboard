@@ -1,18 +1,10 @@
 """
-updated_chemical_processing.py - Updated Chemical Data Processing
+Processes updated chemical data with complex, multi-range readings.
 
-This module processes the updated chemical data CSV file that contains more recent water quality 
-measurements with complex multi-range readings. Handles conditional logic for selecting values 
-based on range selections and processes nutrients with low/mid/high range measurements.
-
-Key Functions:
-- process_updated_chemical_data(): Main processing pipeline for updated chemical data
-- load_updated_chemical_data_to_db(): Load processed data into database
-- get_conditional_nutrient_value(): Handle range-based nutrient value selection
-- parse_sampling_dates(): Extract dates from datetime strings
-
-Usage:
-- Import functions for use in the main data pipeline
+This module handles a specific chemical data format where nutrients are
+measured across low, mid, or high ranges. It includes logic to select the
+appropriate value based on a "range selection" column and formats the
+final data for database insertion.
 """
 
 import os
@@ -23,10 +15,9 @@ from data_processing.chemical_utils import (
 )
 from data_processing import setup_logging
 
-# Set up logging
 logger = setup_logging("updated_chemical_processing", category="processing")
 
-# Nutrient column mappings
+# Defines the column mappings for nutrients that have multiple measurement ranges.
 NUTRIENT_COLUMN_MAPPINGS = {
     'ammonia': {
         'range_selection': 'Ammonia Nitrogen Range Selection',
@@ -55,10 +46,10 @@ NUTRIENT_COLUMN_MAPPINGS = {
 
 def load_updated_chemical_data():
     """
-    Load the CLEANED updated chemical data CSV file.
+    Loads the cleaned, updated chemical data from its interim CSV file.
     
     Returns:
-        DataFrame: Raw data from the cleaned updated chemical CSV
+        A DataFrame containing the raw, updated chemical data.
     """
     try:
         cleaned_file_path = os.path.join(
@@ -70,7 +61,6 @@ def load_updated_chemical_data():
             logger.error("cleaned_updated_chemical_data.csv not found. Run CSV cleaning first.")
             return pd.DataFrame()
         
-        # Load the CSV 
         df = pd.read_csv(cleaned_file_path, low_memory=False) 
         
         logger.info(f"Successfully loaded {len(df)} rows from cleaned updated chemical data")
@@ -83,33 +73,30 @@ def load_updated_chemical_data():
 
 def parse_sampling_dates(df):
     """
-    Parse the sampling date column that contains both date and time.
-    Extract just the date portion for consistency with existing data.
+    Extracts the date from a 'Sampling Date' column containing date and time.
     
     Args:
-        df: DataFrame with 'Sampling Date' column
+        df: A DataFrame with a 'Sampling Date' column.
         
     Returns:
-        DataFrame: DataFrame with parsed 'Date' column
+        The DataFrame with a parsed 'Date' column.
     """
     try:
-        # Parse the datetime string (format appears to be "m/d/yyyy, h:mm AM/PM")
+        # The source format includes both date and time, but only the date is needed.
         df['parsed_datetime'] = pd.to_datetime(df['Sampling Date'], format='%m/%d/%Y, %I:%M %p')
         
-        # Extract just the date portion
         df['Date'] = df['parsed_datetime'].dt.date
         
-        # Convert back to datetime for consistency with existing processing
+        # Convert back to datetime for consistency with other data processing steps.
         df['Date'] = pd.to_datetime(df['Date'])
         
-        # Add year and month columns (following your existing pattern)
+        # Add year and month for easier filtering and analysis.
         df['Year'] = df['Date'].dt.year
         df['Month'] = df['Date'].dt.month
         
         logger.info(f"Successfully parsed {len(df)} dates")
         logger.info(f"Date range: {df['Date'].min()} to {df['Date'].max()}")
         
-        # Drop the intermediate column
         df = df.drop(columns=['parsed_datetime'])
         
         return df
@@ -120,33 +107,32 @@ def parse_sampling_dates(df):
 
 def get_greater_value(row, col1, col2, tiebreaker='col1'):
     """
-    Get the greater value between two columns, with tiebreaker logic.
+    Selects the greater of two numeric values from a row.
+    
+    This handles cases where one or both values might be null or non-numeric.
     
     Args:
-        row: Pandas Series (row of DataFrame)
-        col1: Name of first column to compare
-        col2: Name of second column to compare  
-        tiebreaker: Which column to prefer if values are equal ('col1' or 'col2')
+        row: A row from a Pandas DataFrame.
+        col1: The name of the first column to compare.
+        col2: The name of the second column to compare.  
+        tiebreaker: Which column to prefer if values are equal.
         
     Returns:
-        float: The greater value, or None if both are null/invalid
+        The greater numeric value, or None if both are invalid.
     """
     try:
-        # Get values and convert to numeric, handling non-numeric values
         val1 = pd.to_numeric(row[col1], errors='coerce') if pd.notna(row[col1]) else None
         val2 = pd.to_numeric(row[col2], errors='coerce') if pd.notna(row[col2]) else None
         
-        # If both are null, return None
         if val1 is None and val2 is None:
             return None
             
-        # If one is null, return the other
         if val1 is None:
             return val2
         if val2 is None:
             return val1
             
-        # If both have values, return the greater 
+        # If both values are valid, return the greater one.
         if val1 > val2:
             return val1
         elif val2 > val1:
@@ -160,29 +146,27 @@ def get_greater_value(row, col1, col2, tiebreaker='col1'):
 
 def get_conditional_nutrient_value(row, range_selection_col, low_col1, low_col2, mid_col1=None, mid_col2=None, high_col1=None, high_col2=None):
     """
-    Get nutrient value based on range selection with conditional logic.
+    Selects a nutrient value based on a specified measurement range.
     
     Args:
-        row: Pandas Series (row of DataFrame)
-        range_selection_col: Column name that determines which range to use
-        low_col1, low_col2: Column names for low range readings
-        mid_col1, mid_col2: Column names for mid range readings (optional)
-        high_col1, high_col2: Column names for high range readings (optional)
+        row: A row from a Pandas DataFrame.
+        range_selection_col: The column indicating which range to use ('Low', 'Mid', 'High').
+        low_col1, low_col2: Columns for the low-range readings.
+        mid_col1, mid_col2: Optional columns for the mid-range readings.
+        high_col1, high_col2: Optional columns for the high-range readings.
         
     Returns:
-        float: The selected nutrient value, or None if no valid reading
+        The selected nutrient value, or None if no valid reading is found.
     """
     try:
         range_selection = row[range_selection_col]
         
-        # Handle null/empty range selection
         if pd.isna(range_selection) or range_selection == '':
             return None
             
-        # Convert to string and clean up
         range_selection = str(range_selection).strip()
         
-        # Select appropriate columns based on range
+        # Select the correct pair of columns based on the range identifier.
         if 'Low' in range_selection:
             return get_greater_value(row, low_col1, low_col2, tiebreaker='col1')
         elif 'Mid' in range_selection and mid_col1 and mid_col2:
@@ -199,14 +183,14 @@ def get_conditional_nutrient_value(row, range_selection_col, low_col1, low_col2,
 
 def process_conditional_nutrient(df, nutrient_name):
     """
-    Process any conditional nutrient using the mapping dictionary.
+    Applies the conditional nutrient logic for a specified nutrient.
     
     Args:
-        df: DataFrame with nutrient columns
-        nutrient_name: Name of nutrient in NUTRIENT_COLUMN_MAPPINGS
+        df: The DataFrame containing nutrient columns.
+        nutrient_name: The key from the NUTRIENT_COLUMN_MAPPINGS dictionary.
         
     Returns:
-        Series: Processed nutrient values
+        A Pandas Series with the processed nutrient values.
     """
     try:
         mapping = NUTRIENT_COLUMN_MAPPINGS[nutrient_name]
@@ -231,19 +215,17 @@ def process_conditional_nutrient(df, nutrient_name):
 
 def process_simple_nutrients(df):
     """
-    Process nutrients that use simple "greater of two" logic.
+    Processes nutrients that only require selecting the greater of two values.
     
     Args:
-        df: DataFrame with nutrient columns
+        df: The DataFrame containing nutrient columns.
         
     Returns:
-        DataFrame: DataFrame with processed Nitrate and Nitrite columns
+        The DataFrame with processed 'Nitrate' and 'Nitrite' columns.
     """
     try:
-        # Process Nitrate (simple greater of two)
         df['Nitrate'] = df.apply(lambda row: get_greater_value(row, 'Nitrate #1', 'Nitrate #2'), axis=1)
         
-        # Process Nitrite (simple greater of two)  
         df['Nitrite'] = df.apply(lambda row: get_greater_value(row, 'Nitrite #1', 'Nitrite #2'), axis=1)
         
         logger.info("Successfully processed Nitrate and Nitrite values")
@@ -253,42 +235,81 @@ def process_simple_nutrients(df):
         logger.error(f"Error processing simple nutrients: {e}")
         return df
 
-def format_to_database_schema(df):
+def get_ph_worst_case(row):
     """
-    Format the processed data to match the existing database schema.
-    
+    Selects the pH value that is furthest from the neutral value of 7.
+
+    This approach is used because deviations in either direction (acidic or
+    basic) are equally significant for water quality assessment.
+
     Args:
-        df: DataFrame with processed nutrient data
-        
+        row: A row from a Pandas DataFrame.
+
     Returns:
-        DataFrame: DataFrame formatted for database insertion
+        The selected pH value, or None if no valid readings exist.
     """
     try:
-        # Start with a copy of the existing dataframe
+        ph1 = pd.to_numeric(row['pH #1'], errors='coerce')
+        ph2 = pd.to_numeric(row['pH #2'], errors='coerce')
+
+        if pd.isna(ph1) and pd.isna(ph2):
+            return None
+        if pd.isna(ph1):
+            return ph2
+        if pd.isna(ph2):
+            return ph1
+
+        dist1 = abs(ph1 - 7)
+        dist2 = abs(ph2 - 7)
+
+        if dist2 > dist1:
+            return ph2
+        else:
+            return ph1
+
+    except Exception as e:
+        logger.warning(f"Error processing pH values: {e}")
+        return None
+
+def format_to_database_schema(df):
+    """
+    Formats the processed data to align with the database schema.
+    
+    This involves renaming columns, calculating derived values like pH and
+    soluble nitrogen, and selecting the final set of columns for insertion.
+    
+    Args:
+        df: The DataFrame with processed nutrient data.
+        
+    Returns:
+        A DataFrame formatted and ready for database insertion.
+    """
+    try:
         formatted_df = df.copy()
         
-        # Remap columns that actually need to change
+        # Calculate final pH using the "worst-case" (furthest from 7) logic.
+        formatted_df['pH'] = formatted_df.apply(get_ph_worst_case, axis=1)
+
+        # Rename columns to match the existing database schema.
         column_mappings = {
             'Site Name': 'Site_Name',
-            '% Oxygen Saturation': 'do_percent', 
-            'pH #1': 'pH',
+            '% Oxygen Saturation': 'do_percent',
             'Orthophosphate': 'Phosphorus'
         }
         
-        # Apply the mappings
         formatted_df = formatted_df.rename(columns=column_mappings)
         
-        # Add calculated soluble nitrogen using shared utility
+        # Calculate soluble nitrogen from its components.
         formatted_df = calculate_soluble_nitrogen(formatted_df)
         
-        # Select only the columns we need for the database
+        # Select and order columns to match the database table exactly.
         required_columns = ['Site_Name', 'Date', 'Year', 'Month', 'do_percent', 'pH', 
                            'Nitrate', 'Nitrite', 'Ammonia', 'Phosphorus', 'Chloride', 
                            'soluble_nitrogen']
         
         formatted_df = formatted_df[required_columns]
         
-        # Convert numeric columns to proper types
+        # Ensure all final data columns are in a numeric format.
         numeric_columns = ['do_percent', 'pH', 'Nitrate', 'Nitrite', 'Ammonia', 
                           'Phosphorus', 'Chloride', 'soluble_nitrogen']
         
@@ -306,35 +327,33 @@ def format_to_database_schema(df):
 
 def process_updated_chemical_data():
     """
-    Complete processing pipeline for updated chemical data.
+    Executes the full processing pipeline for the updated chemical data.
     
     Returns:
-        DataFrame: Fully processed data ready for database insertion
+        A DataFrame with the fully processed and validated data.
     """
     try:
         logger.info("Starting complete processing of updated chemical data...")
         
-        # Load and parse dates
         df = load_updated_chemical_data()
         if df.empty:
             return pd.DataFrame()
         
         df = parse_sampling_dates(df)
         
-        # Process all nutrients
-        df = process_simple_nutrients(df)  # Nitrate, Nitrite
+        # Process nutrients with different logic.
+        df = process_simple_nutrients(df)
         df['Ammonia'] = process_conditional_nutrient(df, 'ammonia')
         df['Orthophosphate'] = process_conditional_nutrient(df, 'orthophosphate') 
         df['Chloride'] = process_conditional_nutrient(df, 'chloride')
         
-        # Format to database schema
+        # Standardize the data to match the database schema.
         formatted_df = format_to_database_schema(df)
         
-        # Clean and validate 
+        # Apply final cleaning, validation, and BDL conversions.
         formatted_df = remove_empty_chemical_rows(formatted_df)
         formatted_df = validate_chemical_data(formatted_df, remove_invalid=True)
         
-        # Apply BDL conversions
         formatted_df = apply_bdl_conversions(formatted_df)
         
         logger.info(f"Complete processing finished: {len(formatted_df)} rows ready for database")
@@ -346,16 +365,14 @@ def process_updated_chemical_data():
 
 def load_updated_chemical_data_to_db():
     """
-    Complete pipeline: process updated chemical data and load into database.
+    Processes the updated chemical data and loads it into the database.
     
     Returns:
-        bool: True if successful, False otherwise
+        True if the pipeline runs successfully, False otherwise.
     """
     try:
         logger.info("Starting complete pipeline for updated chemical data...")
         
-        # Step 1: Process the updated chemical data
-        logger.info("Step 1: Processing updated chemical data...")
         processed_df = process_updated_chemical_data()
         
         if processed_df.empty:
@@ -364,8 +381,8 @@ def load_updated_chemical_data_to_db():
         
         logger.info(f"Successfully processed {len(processed_df)} records")
         
-        # Step 2: Use batch insertion function
-        logger.info(f"Step 2: Inserting {len(processed_df)} records into database...")
+        # Use the shared utility for batch insertion into the database.
+        logger.info(f"Inserting {len(processed_df)} records into database...")
         
         stats = insert_chemical_data(
             processed_df,

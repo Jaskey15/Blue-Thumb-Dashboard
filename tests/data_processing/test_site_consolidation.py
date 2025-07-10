@@ -8,7 +8,7 @@ import pandas as pd
 import tempfile
 import os
 import sys
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, PropertyMock
 
 # Add project root to path
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -466,18 +466,39 @@ class TestSiteManagement(unittest.TestCase):
         mock_get_connection.return_value = mock_conn
         mock_conn.cursor.return_value = mock_cursor
         
-        # Mock the count queries to return some data
+        # Mock the verification and count queries
         mock_cursor.fetchone.side_effect = [
-            (5,),  # chemical_collection_events
-            (3,),  # fish_collection_events  
-            (2,),  # macro_collection_events
-            (1,)   # habitat_assessments
+            ('Source Site',),  # Source site exists verification
+            ('Dest Site',),    # Destination site exists verification
+            (5,),  # chemical_collection_events count
+            (3,),  # fish_collection_events count
+            (2,),  # macro_collection_events count
+            (1,)   # habitat_assessments count
         ]
+        
+        # Mock rowcount for update operations to match the counts
+        # The function returns cursor.rowcount, not the original counts
+        mock_cursor.rowcount = MagicMock()
+        mock_cursor.rowcount.__iter__ = lambda x: iter([5, 3, 2, 1])  # Return matching rowcounts
+        
+        # Create a side effect that returns the expected rowcount for each update
+        rowcount_values = [5, 3, 2, 1]
+        call_count = 0
+        def rowcount_side_effect():
+            nonlocal call_count
+            if call_count < len(rowcount_values):
+                value = rowcount_values[call_count]
+                call_count += 1
+                return value
+            return 0
+        
+        # Use a property mock to simulate rowcount behavior
+        type(mock_cursor).rowcount = PropertyMock(side_effect=rowcount_side_effect)
         
         result = transfer_site_data(mock_cursor, from_site_id=2, to_site_id=1)
         
-        # Should return counts of transferred data
-        expected_total = 5 + 3 + 2 + 1
+        # Should return counts based on rowcount (actual rows affected)
+        expected_total = 5 + 3 + 2 + 1  # Sum of rowcounts
         total_transferred = sum(result.values())
         self.assertEqual(total_transferred, expected_total)
 
@@ -519,14 +540,18 @@ class TestSiteManagement(unittest.TestCase):
         mock_exists.return_value = True
         mock_read_csv.return_value = self.sample_master_sites
         
-        result = load_site_data()
-        
-        self.assertFalse(result.empty)
-        self.assertEqual(len(result), 2)
-        # Should have database schema columns
-        expected_columns = ['site_name', 'latitude', 'longitude', 'county', 'river_basin', 'ecoregion']
-        for col in expected_columns:
-            self.assertIn(col, result.columns)
+        with patch('data_processing.site_processing.pd.DataFrame.to_csv') as mock_to_csv:
+            result = load_site_data()
+            
+            self.assertFalse(result.empty)
+            self.assertEqual(len(result), 2)
+            # Should have database schema columns
+            expected_columns = ['site_name', 'latitude', 'longitude', 'county', 'river_basin', 'ecoregion']
+            for col in expected_columns:
+                self.assertIn(col, result.columns)
+            
+            # Ensure that the save to sites_for_db.csv was mocked and not actually called
+            mock_to_csv.assert_called_once()
 
     @patch('data_processing.site_processing.os.path.exists')
     def test_load_site_data_file_not_found(self, mock_exists):
@@ -546,10 +571,17 @@ class TestSiteManagement(unittest.TestCase):
         mock_get_conn.return_value = mock_conn
         mock_conn.cursor.return_value = mock_cursor
         
+        # Mock that sites exist (so they get updated rather than inserted)
+        mock_cursor.fetchone.side_effect = [
+            (1,),  # First site exists with ID 1
+            (2,)   # Second site exists with ID 2
+        ]
+        
         result = insert_sites_into_db(self.sample_master_sites)
         
-        self.assertEqual(result, 2)  # Should insert 2 sites
-        mock_cursor.executemany.assert_called_once()
+        self.assertEqual(result, 2)  # Should process 2 sites
+        # Should call execute (for updates) instead of executemany
+        self.assertGreaterEqual(mock_cursor.execute.call_count, 2)  # At least site checks + updates
         mock_conn.commit.assert_called_once()
 
     def test_insert_sites_into_db_empty_data(self):

@@ -1,5 +1,5 @@
 """
-Modal creation functions for the Tenmile Creek Water Quality Dashboard.
+Modal creation functions for the dashboard
 """
 
 import dash_bootstrap_components as dbc
@@ -30,7 +30,8 @@ def create_icon_attribution_modal():
                     html.Li([html.A("Slamlabs", href="https://www.flaticon.com/authors/slamlabs", target="_blank")]),
                     html.Li([html.A("Good Ware", href="https://www.flaticon.com/authors/good-ware", target="_blank")]),
                     html.Li([html.A("Catkuro", href="https://www.flaticon.com/free-icons/report", target="_blank")]),
-                    html.Li([html.A("Hajicon", href="https://www.flaticon.com/free-icons/analysis", target="_blank")])
+                    html.Li([html.A("Hajicon", href="https://www.flaticon.com/free-icons/analysis", target="_blank")]),
+                    html.Li([html.A("Vector Bazar", href="https://www.flaticon.com/free-icons/profile-picture", target="_blank")])
                 ]),
                 html.P([
                     "All icons from ",
@@ -53,7 +54,7 @@ def create_image_credits_modal():
     """
     # Image sources and attributions
     image_sources = [
-        ("Header Image", " Karim Sakhibgareev on Unsplash", 
+        ("Header Image", "Karim Sakhibgareev on Unsplash", 
          "https://unsplash.com/photos/green-trees-beside-body-of-water-fsc2v3jfxvk"),
         ("Dissolved Oxygen Graphic", "Queen Mary University of London", 
          "https://www.qmul.ac.uk/chesswatch/water-quality-sensors/dissolved-oxygen/"),
@@ -73,7 +74,6 @@ def create_image_credits_modal():
          "https://snohomishcd.org/whats-a-watershed")
     ]
     
-    # Create list items for each image source
     image_credits_list = [
         html.Li([
             f"{name}: ", 

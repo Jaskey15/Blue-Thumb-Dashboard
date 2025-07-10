@@ -17,10 +17,7 @@ logger = setup_logging("chemical_callbacks", category="callbacks")
 def register_chemical_callbacks(app):
     """Register all chemical-related callbacks in logical workflow order."""
     
-    # ===========================
-    # 1. STATE MANAGEMENT
-    # ===========================
-    
+    # STATE MANAGEMENT
     @app.callback(
         Output('chemical-tab-state', 'data'),
         [Input('chemical-site-dropdown', 'value'),
@@ -82,10 +79,7 @@ def register_chemical_callbacks(app):
                 'highlight_thresholds': None
             }
     
-    # ===========================
-    # 2. NAVIGATION AND DROPDOWN POPULATION
-    # ===========================
-    
+    # NAVIGATION AND DROPDOWN POPULATION
     @app.callback(
         [Output('chemical-site-dropdown', 'options'),
          Output('chemical-site-dropdown', 'value', allow_duplicate=True),
@@ -194,10 +188,8 @@ def register_chemical_callbacks(app):
             logger.error(f"Error in chemical navigation/state restoration: {e}")
             return [], dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
     
-    # ===========================
-    # 3. SITE SELECTION & CONTROLS
-    # ===========================
-    
+    # SITE SELECTION & CONTROLS
+
     @app.callback(
         [Output('chemical-controls-content', 'style'),
          Output('chemical-download-btn', 'style'),
@@ -215,10 +207,7 @@ def register_chemical_callbacks(app):
             return {'display': 'block'}, {'display': 'none'}, {'display': 'none'}
         return {'display': 'none'}, {'display': 'none'}, {'display': 'none'}
     
-    # ================================
-    # 4. DATA VISUALIZATION & FILTERS
-    # ================================
-    
+    # DATA VISUALIZATION & FILTERS
     @app.callback(
         Output('month-checklist', 'value'),
         [Input('select-all-months', 'n_clicks'),
@@ -358,10 +347,7 @@ def register_chemical_callbacks(app):
             )
             return error_state, html.Div(), html.Div()
 
-    # ===========================
-    # 5. DATA DOWNLOAD
-    # ===========================
-    
+    # DATA DOWNLOAD
     @app.callback(
         Output('chemical-download-component', 'data'),
         [Input('chemical-download-btn', 'n_clicks'),
@@ -374,7 +360,6 @@ def register_chemical_callbacks(app):
         if not all_clicks and not site_clicks:
             return dash.no_update
         
-        # Determine which button was clicked
         ctx = dash.callback_context
         if not ctx.triggered:
             return dash.no_update
@@ -388,20 +373,15 @@ def register_chemical_callbacks(app):
                     logger.warning("No site selected for site-specific download")
                     return dash.no_update
                 
-                # Get data from database (same source as dropdown and visualization)
                 site_df = get_chemical_data_from_db(selected_site)
                 
                 if site_df.empty:
                     logger.warning(f"No chemical data found for site: {selected_site}")
                     return dash.no_update
                 
-                # Remove status columns from export (keep only core data)
-                status_columns = [col for col in site_df.columns if col.endswith('_status')]
                 core_data_columns = [col for col in site_df.columns if not col.endswith('_status')]
                 site_df_export = site_df[core_data_columns].copy()
                 
-                # Generate site-specific filename
-                # Sanitize site name for filename (replace spaces and special chars with underscores)
                 site_name = selected_site.replace(' ', '_').replace(':', '').replace('(', '').replace(')', '').replace(',', '')
                 filename = f"{site_name}_chemical_data.csv"
                 
@@ -415,22 +395,23 @@ def register_chemical_callbacks(app):
             
             # Handle all data download
             elif button_id == 'chemical-download-btn':
-                logger.info("Downloading all chemical data from CSV")
+                logger.info("Downloading all chemical data from database")
                 
-                # Read the processed chemical data CSV for all data download
-                processed_chemical_path = 'data/processed/processed_chemical_data.csv'
-                chemical_df = pd.read_csv(processed_chemical_path)
+                chemical_df = get_chemical_data_from_db()
                 
                 if chemical_df.empty:
-                    logger.warning("No chemical data found in processed CSV")
+                    logger.warning("No chemical data found in database")
                     return dash.no_update
+                
+                core_data_columns = [col for col in chemical_df.columns if not col.endswith('_status')]
+                chemical_df_export = chemical_df[core_data_columns].copy()
                 
                 filename = f"blue_thumb_chemical_data.csv"
                 
-                logger.info(f"Successfully prepared chemical data export with {len(chemical_df)} records")
+                logger.info(f"Successfully prepared chemical data export with {len(chemical_df_export)} records")
                 
                 return dcc.send_data_frame(
-                    chemical_df.to_csv,
+                    chemical_df_export.to_csv,
                     filename,
                     index=False
                 )

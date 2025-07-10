@@ -1,11 +1,12 @@
 """
-Overview tab layout for the Tenmile Creek Water Quality Dashboard.
+Overview tab layout for the dashboard
 """
 
 import dash_bootstrap_components as dbc
 from dash import dcc, html
 from utils import load_markdown_content, create_image_with_caption
 from ..constants import PARAMETER_OPTIONS, TAB_STYLES
+from ..components.chatbot import create_floating_chatbot
 
 def create_overview_tab():
     """
@@ -15,16 +16,15 @@ def create_overview_tab():
         HTML layout for the Overview tab
     """
     try:
-        # Create the layout WITHOUT creating the map
         tab_content = html.Div([
-            # First row: Monitoring Site Locations section
+            # Monitoring site locations section
             dbc.Row([
                 dbc.Col([
                     load_markdown_content('monitoring_sites.md')
                 ], width=12)
             ]),
             
-            # Second row: Parameter selection dropdown
+            # Parameter selection
             dbc.Row([
                 dbc.Col([
                     html.Label(
@@ -47,7 +47,7 @@ def create_overview_tab():
                 ], width=12)
             ], className="mt-3 mb-3"),
 
-            # Third row: Active sites toggle - UPDATED TO MATCH CHEMICAL TAB STYLING
+            # Active sites toggle
             dbc.Row([
                 dbc.Col([
                     html.Label(
@@ -67,12 +67,12 @@ def create_overview_tab():
                 ], width=12)
             ], className="mb-3"),
             
-            # Fourth row: Map (empty initially, filled by callback)
+            # Map visualization
             dbc.Row([
                 dbc.Col([
                     dcc.Graph(
                         id='site-map-graph',
-                        figure={},  # Empty figure - callback will populate
+                        figure={},  # Empty figure - populated by callback
                         config={
                             'scrollZoom': True,
                             'displayModeBar': True,
@@ -82,7 +82,7 @@ def create_overview_tab():
                 ], width=12)
             ]),
             
-            # Fifth row: Dynamic Legend Container
+            # Dynamic legend container
             dbc.Row([
                 dbc.Col([
                     html.Div(id='map-legend-container', className="text-center mt-2 mb-4")
@@ -90,7 +90,10 @@ def create_overview_tab():
             ])
         ], className="tab-content-wrapper")
         
-        return tab_content
+        return html.Div([
+            tab_content,
+            create_floating_chatbot('overview')
+        ])
         
     except Exception as e:
         print(f"Error creating overview tab: {e}")
