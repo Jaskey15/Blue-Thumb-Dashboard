@@ -6,7 +6,7 @@ import dash
 from dash import html, Input, Output, State, dcc
 import pandas as pd
 from utils import setup_logging, get_sites_with_data
-from data_processing.data_queries import get_chemical_data_from_db
+from data_processing.data_queries import get_chemical_data_from_db, get_chemical_date_range
 from data_processing.chemical_utils import KEY_PARAMETERS, get_reference_values
 from .tab_utilities import create_all_parameters_visualization, create_single_parameter_visualization
 from .helper_functions import create_empty_state, create_error_state
@@ -246,7 +246,6 @@ def register_chemical_callbacks(app):
     )
     def update_year_dropdown_options(start_year, end_year):
         """Update year dropdown options to ensure end year >= start year."""
-        from data_processing.data_queries import get_chemical_date_range
         min_year, max_year = get_chemical_date_range()
         
         # Create all year options
@@ -289,7 +288,6 @@ def register_chemical_callbacks(app):
         
         # Validate year range - if None, get default range
         if start_year is None or end_year is None:
-            from data_processing.data_queries import get_chemical_date_range
             min_year, max_year = get_chemical_date_range()
             start_year = start_year if start_year is not None else min_year
             end_year = end_year if end_year is not None else max_year

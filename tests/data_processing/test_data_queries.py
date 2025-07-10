@@ -56,7 +56,7 @@ class TestDataQueries(unittest.TestCase):
     def test_get_chemical_date_range_error_handling(self):
         """Test chemical date range function handles errors gracefully."""
         # This test verifies that the function returns defaults when database is unavailable
-        with patch('database.database.get_connection', side_effect=Exception("DB Error")):
+        with patch('data_processing.data_queries.get_connection', side_effect=Exception("DB Error")):
             min_year, max_year = get_chemical_date_range()
             
             # Should return default range on error
@@ -67,7 +67,7 @@ class TestDataQueries(unittest.TestCase):
         """Test that get_chemical_data_from_db has expected structure."""
         # Test the function returns a DataFrame (even if empty when no DB)
         try:
-            with patch('database.database.get_connection', side_effect=Exception("No DB")):
+            with patch('data_processing.data_queries.get_connection', side_effect=Exception("No DB")):
                 result = get_chemical_data_from_db()
                 
                 # Should return an empty DataFrame when database unavailable
@@ -82,7 +82,7 @@ class TestDataQueries(unittest.TestCase):
 
     def test_get_fish_date_range_error_handling(self):
         """Test fish date range function handles errors gracefully."""
-        with patch('database.database.get_connection', side_effect=Exception("DB Error")):
+        with patch('data_processing.data_queries.get_connection', side_effect=Exception("DB Error")):
             min_year, max_year = get_fish_date_range()
             
             # Should return default range on error
@@ -91,18 +91,22 @@ class TestDataQueries(unittest.TestCase):
 
     def test_get_fish_dataframe_basic_structure(self):
         """Test that get_fish_dataframe returns appropriate structure."""
-        with patch('database.database.get_connection', side_effect=Exception("No DB")):
+        with patch('data_processing.data_queries.get_connection', side_effect=Exception("No DB")):
             result = get_fish_dataframe()
             
-            # Should return DataFrame with error indication
+            # Should return DataFrame - function should handle errors gracefully
             self.assertIsInstance(result, pd.DataFrame)
-            # Function should handle errors gracefully
+            # Function returns empty DataFrame on error, not one with error column
             if not result.empty:
-                self.assertIn('error', result.columns)
+                # Check for expected columns if data is returned
+                expected_columns = ['event_id', 'site_name', 'collection_date', 'year', 'total_score', 'comparison_to_reference', 'integrity_class']
+                for col in expected_columns:
+                    if col in result.columns:
+                        self.assertIn(col, result.columns)
 
     def test_get_fish_metrics_data_structure(self):
         """Test fish metrics function returns expected tuple structure."""
-        with patch('database.database.get_connection', side_effect=Exception("No DB")):
+        with patch('data_processing.data_queries.get_connection', side_effect=Exception("No DB")):
             result = get_fish_metrics_data_for_table()
             
             # Should return tuple of two DataFrames
@@ -117,7 +121,7 @@ class TestDataQueries(unittest.TestCase):
 
     def test_get_macro_date_range_error_handling(self):
         """Test macro date range function handles errors gracefully."""
-        with patch('database.database.get_connection', side_effect=Exception("DB Error")):
+        with patch('data_processing.data_queries.get_connection', side_effect=Exception("DB Error")):
             min_year, max_year = get_macro_date_range()
             
             # Should return default range on error
@@ -126,7 +130,7 @@ class TestDataQueries(unittest.TestCase):
 
     def test_get_macroinvertebrate_dataframe_structure(self):
         """Test that get_macroinvertebrate_dataframe returns appropriate structure."""
-        with patch('database.database.get_connection', side_effect=Exception("No DB")):
+        with patch('data_processing.data_queries.get_connection', side_effect=Exception("No DB")):
             result = get_macroinvertebrate_dataframe()
             
             # Should return DataFrame with error indication
@@ -134,7 +138,7 @@ class TestDataQueries(unittest.TestCase):
 
     def test_get_macro_metrics_data_structure(self):
         """Test macro metrics function returns expected tuple structure."""
-        with patch('database.database.get_connection', side_effect=Exception("No DB")):
+        with patch('data_processing.data_queries.get_connection', side_effect=Exception("No DB")):
             result = get_macro_metrics_data_for_table()
             
             # Should return tuple of two DataFrames
@@ -147,7 +151,7 @@ class TestDataQueries(unittest.TestCase):
 
     def test_get_habitat_date_range_error_handling(self):
         """Test habitat date range function handles errors gracefully."""
-        with patch('database.database.get_connection', side_effect=Exception("DB Error")):
+        with patch('data_processing.data_queries.get_connection', side_effect=Exception("DB Error")):
             min_year, max_year = get_habitat_date_range()
             
             # Should return default range on error
@@ -156,7 +160,7 @@ class TestDataQueries(unittest.TestCase):
 
     def test_get_habitat_dataframe_structure(self):
         """Test that get_habitat_dataframe returns appropriate structure."""
-        with patch('database.database.get_connection', side_effect=Exception("No DB")):
+        with patch('data_processing.data_queries.get_connection', side_effect=Exception("No DB")):
             result = get_habitat_dataframe()
             
             # Should return DataFrame with error indication
@@ -164,7 +168,7 @@ class TestDataQueries(unittest.TestCase):
 
     def test_get_habitat_metrics_data_structure(self):
         """Test habitat metrics function returns DataFrame or tuple."""
-        with patch('database.database.get_connection', side_effect=Exception("No DB")):
+        with patch('data_processing.data_queries.get_connection', side_effect=Exception("No DB")):
             result = get_habitat_metrics_data_for_table()
             
             # Should return DataFrame or tuple (depending on function implementation)

@@ -8,6 +8,7 @@ and removing sites that have no associated monitoring data.
 
 import os
 import pandas as pd
+from datetime import datetime, timedelta
 from data_processing.data_loader import PROCESSED_DATA_DIR
 from database.database import get_connection, close_connection
 from data_processing import setup_logging
@@ -250,7 +251,6 @@ def classify_active_sites():
         most_recent_date = result[0]
         
         # Step 2: Calculate cutoff date (1 year before most recent reading)
-        from datetime import datetime, timedelta
         most_recent_dt = datetime.strptime(most_recent_date, '%Y-%m-%d')
         cutoff_date = most_recent_dt - timedelta(days=365)
         cutoff_date_str = cutoff_date.strftime('%Y-%m-%d')

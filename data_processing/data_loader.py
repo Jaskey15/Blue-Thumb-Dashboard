@@ -9,6 +9,8 @@ sources, and saving processed DataFrames.
 import os
 import pandas as pd
 import re
+from difflib import SequenceMatcher
+from database.database import get_connection, close_connection
 from data_processing import setup_logging
 
 logger = setup_logging("data_loader", category="processing")
@@ -369,8 +371,6 @@ def get_site_lookup_dict():
     Returns:
         Dictionary mapping site_name to site_id
     """
-    from database.database import get_connection, close_connection
-    
     conn = get_connection()
     try:
         sites_df = pd.read_sql_query("SELECT site_name, site_id FROM sites", conn)
@@ -415,8 +415,6 @@ def find_site_id_by_name(site_name, strict=True):
     
     # Try fuzzy matching
     try:
-        from difflib import SequenceMatcher
-        
         best_match = None
         best_score = 0.0
         min_similarity = 0.85  # Require 85% similarity for fuzzy match

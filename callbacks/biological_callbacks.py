@@ -5,7 +5,7 @@ Callbacks for biological data visualization and interaction.
 import dash
 from dash import html, Input, Output, State, dcc
 import pandas as pd
-from utils import setup_logging
+from utils import setup_logging, get_sites_with_data
 from .tab_utilities import create_biological_community_info, create_biological_site_display, create_gallery_navigation_callback
 from .helper_functions import create_empty_state, create_error_state
 
@@ -81,7 +81,6 @@ def register_biological_callbacks(app):
             
             try:
                 # Validate available sites
-                from utils import get_sites_with_data
                 available_sites = get_sites_with_data(target_community)
                 
                 if not available_sites:
@@ -135,7 +134,6 @@ def register_biological_callbacks(app):
             
             try:
                 # Validate saved selections
-                from utils import get_sites_with_data
                 available_sites = get_sites_with_data(saved_community)
                 
                 if not available_sites:
@@ -181,7 +179,6 @@ def register_biological_callbacks(app):
         """Update available sites when community type changes."""
         if selected_community:
             try:
-                from utils import get_sites_with_data
                 available_sites = get_sites_with_data(selected_community)
                 
                 if not available_sites:

@@ -4,6 +4,8 @@ Shared utilities for processing, validating, and inserting chemical water qualit
 
 import pandas as pd
 import numpy as np
+from database.database import get_connection, close_connection
+from utils import round_parameter_value
 from data_processing import setup_logging
 
 logger = setup_logging("chemical_utils", category="processing")
@@ -286,8 +288,6 @@ def get_reference_values():
     Raises:
         Exception: If reference values cannot be retrieved from the database.
     """
-    from database.database import get_connection, close_connection
-    
     conn = get_connection()
     try:
         reference_values = {}
@@ -420,9 +420,6 @@ def insert_chemical_data(df, allow_duplicates=True, data_source="unknown"):
     Returns:
         A dictionary of statistics about the insertion process.
     """
-    from database.database import get_connection, close_connection
-    from utils import round_parameter_value
-    
     if df.empty:
         logger.warning(f"No data to process for {data_source}")
         return {

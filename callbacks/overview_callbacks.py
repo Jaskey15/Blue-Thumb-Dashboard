@@ -5,12 +5,10 @@ Interactive map visualization and parameter exploration callbacks.
 import dash
 import plotly.graph_objects as go
 from dash import Input, Output, State
-from .tab_utilities import (
-    get_parameter_legend, get_site_count_message, 
-    create_map_legend_html
-)
+from .tab_utilities import get_parameter_legend, get_site_count_message, create_map_legend_html
 from .helper_functions import create_error_state
 from utils import setup_logging
+from visualizations.map_viz import create_basic_site_map, add_parameter_colors_to_map, get_total_site_count
 
 # Initialize callback logging
 logger = setup_logging("overview_callbacks", category="callbacks")
@@ -62,7 +60,6 @@ def register_overview_callbacks(app):
             return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
         
         try:
-            from visualizations.map_viz import create_basic_site_map, add_parameter_colors_to_map, get_total_site_count
             
             dropdown_disabled = False
             saved_parameter = overview_state.get('selected_parameter') if overview_state else None
@@ -146,7 +143,6 @@ def register_overview_callbacks(app):
         - Filtered view based on active/historic toggle
         """
         try:
-            from visualizations.map_viz import create_basic_site_map, add_parameter_colors_to_map, get_total_site_count
             
             # Show basic map when no parameter selected
             if not parameter_value:

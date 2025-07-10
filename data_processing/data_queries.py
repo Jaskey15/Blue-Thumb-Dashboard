@@ -8,6 +8,8 @@ and habitat data, providing a consistent interface for other parts of the applic
 import pandas as pd
 import sqlite3
 import os
+from database.database import get_connection, close_connection
+from data_processing.chemical_utils import KEY_PARAMETERS
 from data_processing import setup_logging
 
 logger = setup_logging("data_queries", category="processing")
@@ -21,7 +23,6 @@ def get_chemical_date_range():
     Returns:
         A tuple of (min_year, max_year), or a default of (2005, 2025) if no data is found.
     """
-    from database.database import get_connection, close_connection
     
     conn = None
     try:
@@ -59,9 +60,6 @@ def get_chemical_data_from_db(site_name=None):
     Returns:
         A DataFrame containing the chemical data, pivoted for analysis.
     """
-    from database.database import get_connection, close_connection
-    from data_processing.chemical_utils import KEY_PARAMETERS
-    
     conn = get_connection()
     try:
         query = """
@@ -137,7 +135,6 @@ def get_fish_date_range():
     Returns:
         A tuple of (min_year, max_year), or a default of (2005, 2025) if no data is found.
     """
-    from database.database import get_connection, close_connection
     
     conn = None
     try:
@@ -175,8 +172,6 @@ def get_fish_dataframe(site_name=None):
     Returns:
         A DataFrame with the fish data.
     """
-    from database.database import get_connection, close_connection
-    
     conn = None
     try:
         conn = get_connection()
@@ -237,8 +232,6 @@ def get_fish_metrics_data_for_table(site_name=None):
     Returns:
         A tuple containing a metrics DataFrame and a summary DataFrame.
     """
-    from database.database import get_connection, close_connection
-    
     conn = None
     try:
         conn = get_connection()
@@ -313,8 +306,6 @@ def get_macro_date_range():
     Returns:
         A tuple of (min_year, max_year), or a default of (2005, 2025) if no data is found.
     """
-    from database.database import get_connection, close_connection
-    
     conn = None
     try:
         conn = get_connection()
@@ -351,8 +342,6 @@ def get_macroinvertebrate_dataframe(site_name=None):
     Returns:
         A DataFrame with the macroinvertebrate data.
     """
-    from database.database import get_connection, close_connection
-    
     conn = None
     try:
         conn = get_connection()
@@ -421,8 +410,6 @@ def get_macro_metrics_data_for_table(site_name=None):
     Returns:
         A tuple containing a metrics DataFrame and a summary DataFrame.
     """
-    from database.database import get_connection, close_connection
-    
     conn = None
     try:
         conn = get_connection()
@@ -505,8 +492,6 @@ def get_habitat_date_range():
     Returns:
         A tuple of (min_year, max_year), or a default of (2005, 2025) if no data is found.
     """
-    from database.database import get_connection, close_connection
-    
     conn = None
     try:
         conn = get_connection()
@@ -543,9 +528,6 @@ def get_habitat_dataframe(site_name=None):
     Returns:
         A DataFrame with the habitat data.
     """
-    from database.database import get_connection, close_connection
-    import sqlite3
-    
     conn = None
     try:
         conn = get_connection()
@@ -608,8 +590,6 @@ def get_habitat_metrics_data_for_table(site_name=None):
     Returns:
         A tuple containing a metrics DataFrame and a summary DataFrame.
     """
-    from database.database import get_connection, close_connection
-    
     conn = None
     try:
         conn = get_connection()

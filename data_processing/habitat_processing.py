@@ -8,8 +8,10 @@ and inserting the final data into the database.
 
 import pandas as pd
 import sqlite3
+from datetime import datetime
 from database.database import get_connection, close_connection
 from data_processing.data_loader import load_csv_data, clean_column_names, save_processed_data
+from data_processing.data_queries import get_habitat_dataframe
 from data_processing import setup_logging
 
 logger = setup_logging("habitat_processing", category="processing")
@@ -195,7 +197,6 @@ def load_habitat_data(site_name=None):
         close_connection(conn)
 
     # Always return the current state of the data from the database.
-    from data_processing.data_queries import get_habitat_dataframe
     if site_name:
         return get_habitat_dataframe(site_name)
     else:
@@ -265,7 +266,6 @@ def process_habitat_csv_data(site_name=None):
         elif 'year' not in habitat_df.columns:
             # If no date or year is available, use the current year as a fallback.
             logger.warning("No assessment_date or year column found, using current year as placeholder")
-            from datetime import datetime
             habitat_df['year'] = datetime.now().year
         
         save_processed_data(habitat_df, 'habitat_data')

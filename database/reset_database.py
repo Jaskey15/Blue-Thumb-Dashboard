@@ -6,13 +6,8 @@ Use this script to quickly rebuild your database after schema changes.
 import os
 import time
 import traceback
-from utils import setup_logging
-
-# Database imports
 from database.database import get_connection, close_connection
 from database.db_schema import create_tables
-
-# Data processing imports
 from data_processing.consolidate_sites import verify_cleaned_csvs, consolidate_sites_from_csvs
 from data_processing.site_processing import process_site_data, classify_active_sites, cleanup_unused_sites
 from data_processing.merge_sites import merge_duplicate_sites
@@ -21,6 +16,7 @@ from data_processing.updated_chemical_processing import load_updated_chemical_da
 from data_processing.fish_processing import load_fish_data
 from data_processing.macro_processing import load_macroinvertebrate_data
 from data_processing.habitat_processing import load_habitat_data
+from utils import setup_logging
 
 logger = setup_logging("reset_database", category="database")
 

@@ -10,6 +10,7 @@ import pandas as pd
 import sqlite3
 from database.database import get_connection, close_connection
 from data_processing.data_loader import load_csv_data, clean_column_names, save_processed_data
+from data_processing.data_queries import get_macroinvertebrate_dataframe
 from data_processing.biological_utils import (
     insert_collection_events,
     remove_invalid_biological_values,
@@ -323,7 +324,6 @@ def load_macroinvertebrate_data():
         close_connection(conn)
 
     # Always return the current state of the data from the database.
-    from data_processing.data_queries import get_macroinvertebrate_dataframe
     return get_macroinvertebrate_dataframe()
            
 if __name__ == "__main__":

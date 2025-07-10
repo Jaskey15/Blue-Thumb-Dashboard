@@ -5,10 +5,16 @@ Tab-specific visualization and UI components for data exploration.
 import dash
 from dash import html, dcc
 import dash_bootstrap_components as dbc
-from layouts.ui_data import FISH_DATA, MACRO_DATA
-from utils import setup_logging, load_markdown_content
+from layouts.ui_data import FISH_DATA, MACRO_DATA, CHEMICAL_DIAGRAMS, CHEMICAL_DIAGRAM_CAPTIONS
+from layouts.helpers import create_species_gallery
+from utils import setup_logging, load_markdown_content, create_image_with_caption
 from .helper_functions import create_empty_state, create_error_state, get_parameter_name, get_parameter_label
 from visualizations.map_viz import COLORS
+from visualizations.fish_viz import create_fish_viz, create_fish_metrics_accordion
+from visualizations.macro_viz import create_macro_viz, create_macro_metrics_accordion
+from visualizations.chemical_viz import create_time_series_plot, create_all_parameters_view
+from visualizations.habitat_viz import create_habitat_viz, create_habitat_metrics_accordion
+from data_processing.data_queries import get_fish_dataframe, get_macroinvertebrate_dataframe
 
 logger = setup_logging("tab_utilities", category="callbacks")
 
@@ -258,8 +264,6 @@ def create_biological_community_info(selected_community):
         if not selected_community or selected_community not in ['fish', 'macro']:
             return html.Div()
         
-        from layouts.helpers import create_species_gallery
-        
         content = html.Div([
             dbc.Row([
                 dbc.Col([
@@ -292,9 +296,6 @@ def create_biological_site_display(selected_community, selected_site):
     """Generate site-specific biological metrics and visualizations."""
     try:
         if selected_community == 'fish':
-            from visualizations.fish_viz import create_fish_viz, create_fish_metrics_accordion
-            from data_processing.data_queries import get_fish_dataframe
-            
             site_data = get_fish_dataframe(selected_site)
             
             if site_data.empty:
@@ -306,9 +307,6 @@ def create_biological_site_display(selected_community, selected_site):
             download_text = [html.I(className="fas fa-download me-2"), "Download Fish Data"]
             
         elif selected_community == 'macro':
-            from visualizations.macro_viz import create_macro_viz, create_macro_metrics_accordion
-            from data_processing.data_queries import get_macroinvertebrate_dataframe
-            
             all_macro_data = get_macroinvertebrate_dataframe()
             
             if all_macro_data.empty:
@@ -377,10 +375,6 @@ def create_single_parameter_visualization(df_filtered, parameter, reference_valu
             empty_state = create_empty_state(f"No {parameter} data available for the selected time period.")
             return empty_state, html.Div(), html.Div()
         
-        from visualizations.chemical_viz import create_time_series_plot
-        from layouts.ui_data import CHEMICAL_DIAGRAMS, CHEMICAL_DIAGRAM_CAPTIONS
-        from utils import load_markdown_content, create_image_with_caption
-        
         parameter_name = get_parameter_name(parameter)
         
         fig = create_time_series_plot(
@@ -432,8 +426,6 @@ def create_all_parameters_visualization(df_filtered, key_parameters, reference_v
             empty_state = create_empty_state("No data available for the selected time period.")
             return empty_state, html.Div(), html.Div()
         
-        from visualizations.chemical_viz import create_all_parameters_view
-        
         fig = create_all_parameters_view(df_filtered, key_parameters, reference_values, highlight_thresholds, site_name=site_name)
         
         graph = dcc.Graph(
@@ -460,9 +452,6 @@ def create_all_parameters_visualization(df_filtered, key_parameters, reference_v
 def create_habitat_display(site_name):
     """Generate habitat assessment visualization and metrics."""
     try:
-        from visualizations.habitat_viz import create_habitat_viz, create_habitat_metrics_accordion
-        import dash_bootstrap_components as dbc
-        
         habitat_fig = create_habitat_viz(site_name)
         habitat_accordion = create_habitat_metrics_accordion(site_name)
         
