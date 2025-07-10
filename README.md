@@ -4,18 +4,10 @@
 
 This project transforms complex water quality datasets from Oklahoma's Blue Thumb volunteer monitoring program into accessible, interactive visualizations that help communicate stream health across Oklahoma's watersheds. With data from **370+ monitoring sites**, the dashboard provides comprehensive statewide coverage enhanced by AI-powered assistance and automated cloud processing.
 
-### Key Achievements
-
-- **Interactive Statewide Monitoring**: Real-time visualization of all monitoring sites with parameter-based status indicators
-- **AI Stream Health Assistant**: Intelligent chatbot powered by Google Vertex AI with specialized stream health knowledge
-- **Automated Data Processing**: Cloud-based pipeline for processing new Survey123 submissions daily
-- **Comprehensive Analysis**: Chemical, biological, and habitat assessment tools with educational content
-- **Production-Ready Architecture**: Scalable cloud infrastructure with automated backups and monitoring
-
 ## Technology Stack
 
 ### Core Platform
-- **Python 3.8+** - Data processing and analysis
+- **Python 3.12+** - Data processing and analysis
 - **Dash & Plotly** - Interactive web dashboard and visualizations  
 - **SQLite** - Normalized database schema for comprehensive monitoring data
 - **Pandas** - Data manipulation and analysis
@@ -28,18 +20,7 @@ This project transforms complex water quality datasets from Oklahoma's Blue Thum
 - **Cloud Scheduler** - Automated daily data updates
 - **ArcGIS API** - Survey123 integration for real-time data collection
 
-### AI & Machine Learning
-- **Vertex AI Search** - Knowledge base grounding for accurate responses
-- **Google Search Integration** - Fallback knowledge source for comprehensive answers
-- **Natural Language Processing** - Context-aware stream health expertise
-
-## Features
-
-### AI Stream Health Assistant
-- **Expert Knowledge**: Trained on Blue Thumb documentation and stream health science
-- **Context-Aware**: Provides tab-specific guidance and answers
-- **Multi-Source**: Combines grounded knowledge with real-time search capabilities
-- **Interactive Chat**: Available on every tab with persistent conversation history
+## Key Features
 
 ### Interactive Statewide Site Map
 - Real-time visualization of all 370+ monitoring sites across Oklahoma
@@ -47,12 +28,25 @@ This project transforms complex water quality datasets from Oklahoma's Blue Thum
 - Active site filtering to focus on currently monitored locations
 - Click-to-navigate functionality for detailed site analysis
 
+### AI Stream Health Assistant
+- **Expert Knowledge**: Trained on Blue Thumb documentation and stream health science
+- **Context-Aware**: Provides tab-specific guidance and answers
+- **Multi-Source**: Combines grounded knowledge with real-time search capabilities
+- **Interactive Chat**: Available on every tab with persistent conversation history
+
+### Cloud-Powered Data Pipeline
+- **Automated Daily Sync**: Processes new Survey123 submissions at 6 AM Central
+- **Smart Data Processing**: Handles range-based measurements and validation
+- **Backup Management**: Automatic database backups before each update
+- **Error Handling**: Comprehensive logging and monitoring
+- **Cost-Efficient**: <$1/year operational costs
+
 ### Comprehensive Chemical Analysis
 - Time series visualization of key water quality parameters
 - Reference threshold highlighting (normal, caution, poor conditions)
 - Multi-site comparison capabilities
 - Seasonal filtering and trend analysis
-- Parameter-specific educational explanations with AI assistance
+- Parameter-specific educational explanations
 
 ### Biological Community Assessment
 - Fish community integrity scoring over time
@@ -67,14 +61,7 @@ This project transforms complex water quality datasets from Oklahoma's Blue Thum
 - Component-level habitat metrics breakdown
 - Watershed-scale habitat comparisons
 
-### Cloud-Powered Data Pipeline
-- **Automated Daily Sync**: Processes new Survey123 submissions at 6 AM Central
-- **Smart Data Processing**: Handles range-based measurements and validation
-- **Backup Management**: Automatic database backups before each update
-- **Error Handling**: Comprehensive logging and monitoring
-- **Cost-Efficient**: <$1/year operational costs
-
-## 🏗️ Project Structure
+## Project Structure
 
 ```
 ├── app.py                 # Main dashboard application
@@ -114,10 +101,10 @@ This project transforms complex water quality datasets from Oklahoma's Blue Thum
 └── assets/             # Images, icons, and styling
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
-- Python 3.8+
+- Python 3.12+
 - Git
 - Google Cloud SDK (for cloud features)
 
@@ -153,11 +140,8 @@ This project transforms complex water quality datasets from Oklahoma's Blue Thum
 6. **Open your browser**
    Navigate to http://127.0.0.1:8050
 
-## 📊 Data Source
 
-This dashboard uses data from the [Blue Thumb Volunteer Stream Monitoring Program](https://www.bluethumbok.com/), administered by the Oklahoma Conservation Commission. Blue Thumb trains citizen volunteers to collect standardized water quality data, creating one of the most comprehensive stream monitoring datasets in Oklahoma with over 370 active and historical monitoring sites.
-
-## 🔬 Technical Highlights
+## Technical Highlights
 
 ### Data Processing Pipeline
 - **ETL Architecture**: Comprehensive processes for multiple data types across 370+ sites
@@ -170,6 +154,12 @@ This dashboard uses data from the [Blue Thumb Volunteer Stream Monitoring Progra
 - **Knowledge Grounding**: Responses based on authoritative Blue Thumb documentation
 - **Intelligent Fallback**: Google Search integration for comprehensive coverage
 - **Natural Interaction**: Conversational interface with typing indicators and message history
+
+### Testing & Quality Assurance
+- **Comprehensive Test Suite**: 700+ tests ensuring reliability across all components
+- **Automated CI/CD**: Continuous integration with quality checks
+- **Data Validation**: Multi-layer validation ensuring data integrity
+- **Performance Monitoring**: Real-time tracking of system performance
 
 ## Impact & Results
 
@@ -188,20 +178,9 @@ This dashboard uses data from the [Blue Thumb Volunteer Stream Monitoring Progra
 - [ ] **Weather Integration**: Precipitation correlation analysis
 - [ ] **API Development**: Public API for researchers and third-party applications
 
-## Testing & Quality Assurance
+## Data Source
 
-- **Comprehensive Test Suite**: 700+ tests ensuring reliability across all components
-- **Automated CI/CD**: Continuous integration with quality checks
-- **Data Validation**: Multi-layer validation ensuring data integrity
-- **Performance Monitoring**: Real-time tracking of system performance
-
-## Contributing
-
-This project was developed to support Blue Thumb's mission of "stream protection through education" by making statewide water quality data accessible to the public. For questions about the monitoring program or data, contact Blue Thumb.
-
-## License
-
-This project is developed for educational and public service purposes. Please respect the data sources and maintain attribution to the Blue Thumb Program and Oklahoma Conservation Commission.
+This dashboard uses data from the [Blue Thumb Volunteer Stream Monitoring Program](https://www.bluethumbok.com/), administered by the Oklahoma Conservation Commission. Blue Thumb trains citizen volunteers to collect standardized water quality data, creating one of the most comprehensive stream monitoring datasets in Oklahoma with over 370 active and historical monitoring sites.
 
 ## Acknowledgments
 
