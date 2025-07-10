@@ -64,41 +64,41 @@ This project transforms complex water quality datasets from Oklahoma's Blue Thum
 ## Project Structure
 
 ```
-├── app.py                 # Main dashboard application
-├── requirements.txt       # Python dependencies
-├── cloud_functions/       # Google Cloud serverless functions
+├── app.py                
+├── requirements.txt       
+├── cloud_functions/     
 │   └── survey123_sync/    # Automated data synchronization
-│       ├── main.py        # Cloud Function entry point
-│       ├── chemical_processor.py # Data processing logic
-│       ├── deploy.sh      # Deployment automation
+│       ├── main.py      
+│       ├── chemical_processor.py 
+│       ├── deploy.sh      
 │       └── requirements.txt
 ├── database/             # Database schema and connection utilities
-│   ├── db_schema.py      # Normalized schema for all data types
-│   └── reset_database.py # Database initialization and loading
+│   ├── db_schema.py    
+│   └── reset_database.py 
 ├── data_processing/      # Comprehensive data cleaning and processing pipeline
-│   ├── data_loader.py    # Core data loading utilities
-│   ├── site_processing.py # Site consolidation and validation
-│   ├── chemical_processing.py # Chemical data processing
-│   ├── fish_processing.py # Fish community data processing
-│   ├── macro_processing.py # Macroinvertebrate data processing
-│   └── habitat_processing.py # Habitat assessment processing
-├── callbacks/           # Interactive dashboard logic
-│   ├── chatbot_callbacks.py # AI assistant integration
+│   ├── data_loader.py   
+│   ├── site_processing.py 
+│   ├── chemical_processing.py 
+│   ├── fish_processing.py 
+│   ├── macro_processing.py 
+│   └── habitat_processing.py 
+├── callbacks/             # Interactive dashboard logic
+│   ├── chatbot_callbacks.py 
 │   ├── chemical_callbacks.py
 │   ├── biological_callbacks.py
 │   └── habitat_callbacks.py
-├── layouts/             # Modular dashboard layouts
-│   ├── components/      # Reusable UI components
-│   │   └── chatbot.py   # Floating AI assistant widget
-│   └── tabs/            # Individual tab components
-├── visualizations/       # Chart and map generation
+├── layouts/           
+│   ├── components/     
+│   │   └── chatbot.py   
+│   └── tabs/          
+├── visualizations/      
 ├── data/
 │   ├── raw/            # Original CSV data files
 │   ├── interim/        # Cleaned and validated data
 │   └── processed/      # Database-ready outputs
 │       └── chatbot_data/ # AI knowledge base content
-├── text/               # Educational content (markdown)
-└── assets/             # Images, icons, and styling
+├── text/              
+└── assets/           
 ```
 
 ## Quick Start

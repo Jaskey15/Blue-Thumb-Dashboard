@@ -20,20 +20,49 @@ ENV/
 *.log
 tenmile_creek.log
 tenmile_creek_setup.log
+logs/
 
 # Cache files
 cache/
 *.pkl
 
-# Database files you don't want to include (uncomment if needed)
-.db
+# Database files 
+*.db
+*.sqlite
+*.sqlite3
+# Allow the main project database
+!database/blue_thumb.db
 
-# Environment variables
+# Environment variables and secrets
 .env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+service-account-key.json
+google-credentials.json
+
+# Google Cloud and deployment
+.gcloudignore
+gcloud-debug.log
+gcp-credentials/
 
 # IDE specific files
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
 # Environments
 .env
@@ -41,3 +70,76 @@ cache/
 env/
 venv/
 venv.bak/
+
+# Testing and coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+coverage.xml
+*.cover
+.hypothesis/
+
+# Jupyter Notebooks (checkpoints)
+.ipynb_checkpoints
+
+# Python packaging
+*.egg-info/
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# Backup files
+*.bak
+*.backup
+*.old
+*.orig
+
+# Temporary files
+*.tmp
+*.temp
+.tmp/
+.temp/
+
+# Compiled translations
+*.mo
+
+# Flask instance folder
+instance/
+
+# Scrapy stuff
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+target/
+
+# Celery beat schedule file
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# Streamlit
+.streamlit/
